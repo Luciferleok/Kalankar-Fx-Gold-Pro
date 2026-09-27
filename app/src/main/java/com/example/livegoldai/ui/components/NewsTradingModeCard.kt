@@ -116,26 +116,118 @@ fun NewsTradingModeCard(
                     }
                 }
 
-                // Switch to manually toggle / test News Mode
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (isNewsModeActive) "NEWS ON" else "OFF",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        fontWeight = FontWeight.Black,
-                        color = if (isNewsModeActive) alertRed else TextMuted
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Switch(
-                        checked = isNewsModeActive,
-                        onCheckedChange = { onToggleNewsMode(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = alertRed,
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = ObsidianBorder
-                        ),
-                        modifier = Modifier.testTag("news_mode_toggle_switch")
-                    )
+                // Automated News Sentinel Status (No manual switch needed)
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isNewsModeActive) alertRed.copy(alpha = 0.2f) else NeonGreen.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, if (isNewsModeActive) alertRed else NeonGreen.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (isNewsModeActive) alertRed else NeonGreen)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isNewsModeActive) {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "LIVE NEWS ACTIVE"
+                                    AppLanguage.HINDI -> "लाइव न्यूज़ सक्रिय"
+                                    AppLanguage.MARATHI -> "लाईव्ह न्यूज सक्रिय"
+                                }
+                            } else {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "AUTO-SENTINEL: ON"
+                                    AppLanguage.HINDI -> "ऑटो-सेंसर: चालू"
+                                    AppLanguage.MARATHI -> "ऑटो-सेन्सर: चालू"
+                                }
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = FontWeight.Black,
+                            color = if (isNewsModeActive) alertRed else NeonGreen
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Informational Auto-Activation Banner (Explains 15-minute automatic triggering)
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isNewsModeActive) alertRed.copy(alpha = 0.12f) else ObsidianSurfaceElevated,
+                border = BorderStroke(0.8.dp, if (isNewsModeActive) alertRed.copy(alpha = 0.4f) else ObsidianBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = if (isNewsModeActive) "🚨" else "⚡", fontSize = 14.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isNewsModeActive) {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "Auto-Sentinel Triggered: Live volatility spike window in progress. High-frequency algorithms active."
+                                    AppLanguage.HINDI -> "ऑटो-सेंसर सक्रिय: लाइव न्यूज़ स्पाइक चल रही है। मार्केट में भारी उतार-चढ़ाव जारी है।"
+                                    AppLanguage.MARATHI -> "ऑटो-सेन्सर सक्रिय: लाईव्ह न्यूज स्पाइक सुरू आहे. मार्केटमध्ये मोठी हालचाल सुरू आहे."
+                                }
+                            } else {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "100% Automated: Turns on automatically 15 minutes before high-impact news releases. No manual action needed."
+                                    AppLanguage.HINDI -> "100% स्वचालित: हाई-इम्पैक्ट न्यूज़ से ठीक 15 मिनट पहले अपने-आप ऑन हो जाएगा। मैनुअल बटन की आवश्यकता नहीं।"
+                                    AppLanguage.MARATHI -> "100% स्वयंचलित: हाय-इम्पॅक्ट न्यूजच्या बरोबर 15 मिनिटे आधी आपोआप चालू होईल. मॅन्युअल बटणाची गरज नाही."
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
+                            color = if (isNewsModeActive) alertAmber else TextSecondary
+                        )
+                    }
+
+                    // Test / Preview Button
+                    OutlinedButton(
+                        onClick = { onToggleNewsMode(!isNewsModeActive) },
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .height(30.dp)
+                            .testTag("btn_test_news_mode_toggle"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(0.8.dp, if (isNewsModeActive) alertRed.copy(alpha = 0.6f) else GoldPrimary.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (isNewsModeActive) alertRed else GoldLight
+                        )
+                    ) {
+                        Text(
+                            text = if (isNewsModeActive) {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "Exit Preview"
+                                    AppLanguage.HINDI -> "प्रीव्यू बंद"
+                                    AppLanguage.MARATHI -> "प्रीव्ह्यू बंद"
+                                }
+                            } else {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "Preview Alert 🔔"
+                                    AppLanguage.HINDI -> "अलर्ट प्रीव्यू 🔔"
+                                    AppLanguage.MARATHI -> "अलर्ट प्रीव्ह्यू 🔔"
+                                }
+                            },
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

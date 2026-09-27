@@ -1381,47 +1381,91 @@ fun IndicatorsOverallBigCard(
                 }
             }
 
-            // 4 MAJOR CATEGORY SUMMARY ROWS (1-GLANCE EASY VIEW)
+            // 7 INSTITUTIONAL CATEGORY SUMMARY ROWS (1-GLANCE EASY VIEW)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "CATEGORY-WISE INDICATOR BREAKDOWN:",
+                    text = when (currentLanguage) {
+                        AppLanguage.ENGLISH -> "7-PILLAR INSTITUTIONAL INDICATOR BREAKDOWN:"
+                        AppLanguage.HINDI -> "7-स्तंभीय तकनीकी इंडिकेटर विश्लेषण:"
+                        AppLanguage.MARATHI -> "7-स्तंभीय तांत्रिक इंडिकेटर विश्लेषण:"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,
                     fontSize = 10.sp
                 )
 
-                // 1. Moving Averages
-                CategoryStatusRow(
-                    icon = "📈",
-                    category = "Trend & Moving Averages",
-                    indicators = "EMA 9, 21, 50, 200, SuperTrend",
-                    signal = Signal.BUY,
-                    statusText = "Strong Bullish (Price above EMA 200)"
-                )
+                // Render all 7 institutional indicator groups dynamically
+                analysis.groups.forEach { group ->
+                    val icon = when (group.key.lowercase()) {
+                        "trend" -> "📈"
+                        "smc", "smart_money" -> "🏛️"
+                        "momentum" -> "⚡"
+                        "sr", "levels" -> "🎯"
+                        "volatility" -> "🌊"
+                        "candlestick" -> "🕯️"
+                        "macro" -> "🌐"
+                        else -> "📊"
+                    }
+                    val categoryTitle = when (group.key.lowercase()) {
+                        "trend" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "1. Trend & Structure"
+                            AppLanguage.HINDI -> "1. ट्रेंड व मूविंग एवरेज"
+                            AppLanguage.MARATHI -> "1. ट्रेंड व मूव्हिंग सरासरी"
+                        }
+                        "smc", "smart_money" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "2. Smart Money Concepts (SMC)"
+                            AppLanguage.HINDI -> "2. स्मार्ट मनी लिक्विडिटी (SMC)"
+                            AppLanguage.MARATHI -> "2. स्मार्ट मनी लिक्विडीटी (SMC)"
+                        }
+                        "momentum" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "3. Momentum Oscillators"
+                            AppLanguage.HINDI -> "3. मोमेंटम ऑसिलेटर्स"
+                            AppLanguage.MARATHI -> "3. मोमेंटम ऑसिलेटर्स"
+                        }
+                        "sr", "levels" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "4. Support, Resistance & Pivots"
+                            AppLanguage.HINDI -> "4. सपोर्ट, रेजिस्टेंस व पिवट्स"
+                            AppLanguage.MARATHI -> "4. सपोर्ट, रेझिस्टन्स आणि पिव्हट्स"
+                        }
+                        "volatility" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "5. Volatility & Risk Range"
+                            AppLanguage.HINDI -> "5. वोलैटिलिटी व रिस्क रेंज"
+                            AppLanguage.MARATHI -> "5. व्होलॅटिलिटी व जोखीम मर्यादा"
+                        }
+                        "candlestick" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "6. Candlestick Action"
+                            AppLanguage.HINDI -> "6. कैंडलस्टिक प्राइस एक्शन"
+                            AppLanguage.MARATHI -> "6. कॅन्डलस्टिक प्राइस अ‍ॅक्शन"
+                        }
+                        "macro" -> when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "7. Macro & Global Sentiment"
+                            AppLanguage.HINDI -> "7. मैक्रो व ग्लोबल सेंटीमेंट"
+                            AppLanguage.MARATHI -> "7. मॅक्रो व जागतिक सेन्टिमेंट"
+                        }
+                        else -> group.title
+                    }
+                    val indSummary = group.indicators.take(4).joinToString(", ") { it.name }
+                    val agreeingCount = group.indicators.count { it.signal == group.verdict }
+                    val statusText = when (currentLanguage) {
+                        AppLanguage.ENGLISH -> "$agreeingCount/${group.indicators.size} confirming ${group.verdict.name} bias"
+                        AppLanguage.HINDI -> "$agreeingCount/${group.indicators.size} इंडिकेटर्स ${group.verdict.name} की पुष्टि"
+                        AppLanguage.MARATHI -> "$agreeingCount/${group.indicators.size} इंडिकेटर्स ${group.verdict.name} पुष्टी"
+                    }
 
-                // 2. Oscillators & Momentum
-                CategoryStatusRow(
-                    icon = "⚡",
-                    category = "Momentum Oscillators",
-                    indicators = "RSI (62.4), MACD Cross, Stochastic",
-                    signal = Signal.BUY,
-                    statusText = "Buy Momentum Active (Not Overbought)"
-                )
+                    CategoryStatusRow(
+                        icon = icon,
+                        category = categoryTitle,
+                        indicators = indSummary,
+                        signal = group.verdict,
+                        statusText = statusText
+                    )
+                }
 
-                // 3. Volatility & Bands
-                CategoryStatusRow(
-                    icon = "🌊",
-                    category = "Volatility & Liquidity",
-                    indicators = "Bollinger Bands, ATR (${analysis.tradeSetup.atrPips} Pips)",
-                    signal = Signal.WAIT,
-                    statusText = "Expansion Phase (High Volatility)"
-                )
-
-                // 4. Support & Resistance Pivots
+                // Support & Resistance Pivots Summary Box
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = ObsidianSurfaceElevated,
@@ -1437,18 +1481,27 @@ fun IndicatorsOverallBigCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(text = "🎯", fontSize = 12.sp)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(text = "Key Pivot Levels", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = TextPrimary)
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "Floor Pivots & Targets"
+                                        AppLanguage.HINDI -> "फ्लोर पिवट्स व टार्गेट्स"
+                                        AppLanguage.MARATHI -> "फ्लोअर पिव्हट्स व टार्गेट्स"
+                                    },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = TextPrimary
+                                )
                             }
-                            Text(text = "Current: $${String.format(Locale.US, "%.2f", analysis.currentPrice)}", fontSize = 11.sp, fontWeight = FontWeight.Black, color = GoldLight)
+                            Text(text = "Spot: $${String.format(Locale.US, "%.2f", analysis.currentPrice)}", fontSize = 11.sp, fontWeight = FontWeight.Black, color = GoldLight)
                         }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = "Support S1: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.s1)}", fontSize = 10.sp, color = SignalBuy, fontWeight = FontWeight.SemiBold)
-                            Text(text = "Central Pivot: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.pivot)}", fontSize = 10.sp, color = TextSecondary)
-                            Text(text = "Resistance R1: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.r1)}", fontSize = 10.sp, color = SignalSell, fontWeight = FontWeight.SemiBold)
+                            Text(text = "S1: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.s1)}", fontSize = 10.sp, color = SignalBuy, fontWeight = FontWeight.SemiBold)
+                            Text(text = "Pivot: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.pivot)}", fontSize = 10.sp, color = TextSecondary)
+                            Text(text = "R1: $${String.format(Locale.US, "%.2f", analysis.pivotLevels.r1)}", fontSize = 10.sp, color = SignalSell, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

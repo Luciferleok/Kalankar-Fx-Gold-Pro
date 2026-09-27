@@ -453,17 +453,21 @@ class GoldApiService(
 
     private fun applyNewsMode(result: GoldAnalysisResult, events: List<EconomicEvent>): GoldAnalysisResult {
         val now = System.currentTimeMillis()
-        val window = 30 * 60_000L
+        val preWindow = 15 * 60_000L // Automatically activates 15 minutes prior to high-impact release
+        val postWindow = 45 * 60_000L // Stays active during high-volatility 45 min post-release window
         val hit = events.mapNotNull { ev ->
             if (!ev.impact.equals("High", ignoreCase = true)) null
-            else parseFfTimeMs(ev.isoTime)?.let { t -> if ((t - now) in -window..window) Pair(ev, t) else null }
+            else parseFfTimeMs(ev.isoTime)?.let { t -> 
+                val diff = t - now
+                if (diff in -postWindow..preWindow) Pair(ev, t) else null 
+            }
         }.minByOrNull { abs(it.second - now) } ?: return result
 
         val ev = hit.first
         val t = hit.second
         val price = result.currentPrice
         val tech = result.overallSignal
-        val fcst = if (ev.forecast.isNotBlank()) " Forecast: ${ev.forecast} | Previous: ${ev.previous.ifBlank { "N/A" }}." else ""
+        val fcst = if (ev.forecast.isNotBlank()) " [Est: ${ev.forecast} | Prev: ${ev.previous.ifBlank { "N/A" }}]" else ""
 
         val status = if (t > now) {
             newsBaseline[ev.isoTime] = price
@@ -474,8 +478,14 @@ class GoldApiService(
                 minutes = mins,
                 newsSignal = Signal.WAIT,
                 technicalSignal = tech,
-                headline = "USD ${ev.title} - $mins min mein",
-                detail = "High-impact news aane wali hai. Spread badhta hai aur price dono taraf spike kar sakta hai, naya trade mat kholo.$fcst"
+                headline = "USD ${ev.title} - In $mins min",
+                detail = "High-impact news in $mins min. Volatility spikes and spread expansion expected. Avoid fresh entries.$fcst",
+                headlineEnglish = "USD ${ev.title} • Releasing in $mins min",
+                headlineHindi = "USD ${ev.title} • ठीक $mins मिनट में रिलीज़ होगी",
+                headlineMarathi = "USD ${ev.title} • बरोबर $mins मिनिटांत प्रसिद्ध होणार",
+                detailEnglish = "High-impact economic news approaching in $mins min. Broker spreads widen rapidly and high-frequency algorithms hunt stop losses. Freeze fresh market entries until release settles.$fcst",
+                detailHindi = "हाई-इम्पैक्ट न्यूज़ ठीक $mins मिनट में आने वाली है। ब्रोकर स्प्रेड तेजी से फैलता है और दोनों तरफ स्पाइक आ सकते हैं। नई ट्रेड लेने से बचें, पहले कैंडल को स्थिर होने दें।$fcst",
+                detailMarathi = "हाय-इम्पॅक्ट न्यूज बरोबर $mins मिनिटांत येणार आहे. स्प्रेड वेगाने वाढतो आणि दोन्ही बाजूंना तीव्र स्पाइक येऊ शकतात. नवीन ट्रेड घेणे टाळा, आधी मार्केट स्थिर होऊ द्या.$fcst"
             )
         } else {
             val since = (now - t) / 60_000L
@@ -483,18 +493,29 @@ class GoldApiService(
             val base = newsBaseline.getOrPut(ev.isoTime) { price }
             val move = price - base
             val mv = String.format(Locale.US, "%+.2f", move)
-            val from = if (hadBase) "release se pehle ke price se" else "app khulne ke baad se"
             val sig = when {
                 since < 5 -> Signal.WAIT
                 move >= 5.0 -> Signal.BUY
                 move <= -5.0 -> Signal.SELL
                 else -> Signal.WAIT
             }
-            val why = when {
-                since < 5 -> "Release ke pehle 5 min spike phase hota hai, fake move bahut aate hain. Candle settle hone do."
-                move >= 5.0 -> "Gold $mv ($from) - market news ko gold ke liye positive le raha hai."
-                move <= -5.0 -> "Gold $mv ($from) - market news ko gold ke liye negative le raha hai."
-                else -> "Abhi saaf reaction nahi ($mv $from). Direction banne ka wait karo."
+            val whyEng = when {
+                since < 5 -> "First 5 minutes is high-risk spike phase. Algorithmic wicks active. Wait for initial 5-min candle to close."
+                move >= 5.0 -> "Gold surged $mv from pre-release baseline. Market interpreting release as strongly bullish for Gold."
+                move <= -5.0 -> "Gold dropped $mv from pre-release baseline. Strong USD momentum pressuring Gold lower."
+                else -> "Initial price reaction neutral ($mv move). Awaiting clean breakout direction."
+            }
+            val whyHin = when {
+                since < 5 -> "शुरुआती 5 मिनट स्पाइक चरण होता है, फेक मूव बहुत आते हैं। पहली 5 मिनट कैंडल बंद होने का इंतज़ार करें।"
+                move >= 5.0 -> "गोल्ड में $mv की तेजी आई है। मार्केट इस न्यूज़ को गोल्ड के लिए सकारात्मक मान रहा है।"
+                move <= -5.0 -> "गोल्ड में $mv की गिरावट आई है। डॉलर मजबूती से गोल्ड पर दबाव बना हुआ है।"
+                else -> "अभी कोई स्पष्ट दिशा नहीं ($mv उतार-चढ़ाव)। स्पष्ट दिशा बनने की प्रतीक्षा करें।"
+            }
+            val whyMar = when {
+                since < 5 -> "सुरुवातीची 5 मिनिटे स्पाइकचा काळ असतो, खोटे मूव्ह येतात. पहिली 5 मिनिटांची कॅन्डल पूर्ण होण्याची वाट पहा."
+                move >= 5.0 -> "गोल्डमध्ये $mv ची वाढ झाली आहे. मार्केट या बातमीला गोल्डसाठी सकारात्मक मानत आहे."
+                move <= -5.0 -> "गोल्डमध्ये $mv ची घसरण झाली आहे. डॉलरच्या मजबुतीमुळे गोल्डवर दबाव आहे."
+                else -> "अद्याप कोणतीही स्पष्ट दिशा नाही ($mv चढ-उतार). दिशा स्पष्ट होईपर्यंत थांबा."
             }
             NewsModeStatus(
                 phase = "POST",
@@ -502,10 +523,27 @@ class GoldApiService(
                 minutes = since,
                 newsSignal = sig,
                 technicalSignal = tech,
-                headline = "USD ${ev.title} - $since min pehle release hui",
-                detail = why
+                headline = "USD ${ev.title} - Released $since min ago",
+                detail = whyEng,
+                headlineEnglish = "USD ${ev.title} • Released $since min ago",
+                headlineHindi = "USD ${ev.title} • $since मिनट पहले रिलीज़ हुई",
+                headlineMarathi = "USD ${ev.title} • $since मिनिटांपूर्वी प्रसिद्ध झाली",
+                detailEnglish = whyEng,
+                detailHindi = whyHin,
+                detailMarathi = whyMar
             )
         }
-        return result.copy(overallSignal = status.newsSignal, newsMode = status)
+        val updatedPlan = result.newsTradingPlan?.copy(
+            isNewsActive = true,
+            eventName = ev.title,
+            releaseCountdownFormatted = if (t > now) "⏰ Release in ${(t - now) / 60_000L + 1}m (Auto-Active)" else "🚨 LIVE NEWS SPIKE WINDOW ACTIVE (${(now - t) / 60_000L} min elapsed)",
+            phase = if (t > now) NewsPhase.PRE_NEWS_COIL else NewsPhase.LIVE_NEWS_SPIKE
+        )
+        return result.copy(
+            overallSignal = status.newsSignal,
+            newsMode = status,
+            isNewsModeTriggered = true,
+            newsTradingPlan = updatedPlan
+        )
     }
 }

@@ -48,29 +48,44 @@ fun IndicatorGroupCard(
 
     val localizedGroupTitle = when (group.key.lowercase()) {
         "trend" -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "TREND & MOMENTUM"
-            AppLanguage.HINDI -> "ट्रेंड मोमेंटम (ट्रेंड की दिशा)"
-            AppLanguage.MARATHI -> "ट्रेंड मोमेंटम (दिशा व वेग)"
+            AppLanguage.ENGLISH -> "1. TREND STRENGTH & STRUCTURE"
+            AppLanguage.HINDI -> "1. ट्रेंड स्ट्रेंथ व मूविंग एवरेज"
+            AppLanguage.MARATHI -> "1. ट्रेंड स्ट्रेंथ व मूव्हिंग सरासरी"
         }
         "smart_money", "smc" -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "SMART MONEY & LIQUIDITY"
-            AppLanguage.HINDI -> "स्मार्ट मनी व लिक्विडिटी"
-            AppLanguage.MARATHI -> "स्मार्ट मनी व लिक्विडीटी"
+            AppLanguage.ENGLISH -> "2. SMART MONEY & LIQUIDITY (SMC)"
+            AppLanguage.HINDI -> "2. स्मार्ट मनी व लिक्विडिटी (SMC)"
+            AppLanguage.MARATHI -> "2. स्मार्ट मनी व लिक्विडीटी (SMC)"
+        }
+        "momentum" -> when (currentLanguage) {
+            AppLanguage.ENGLISH -> "3. MOMENTUM & ENTRY OSCILLATORS"
+            AppLanguage.HINDI -> "3. मोमेंटम व एंट्री ऑसिलेटर्स"
+            AppLanguage.MARATHI -> "3. मोमेंटम आणि एन्ट्री ऑसिलेटर्स"
+        }
+        "levels", "sr" -> when (currentLanguage) {
+            AppLanguage.ENGLISH -> "4. SUPPORT, RESISTANCE & PIVOTS"
+            AppLanguage.HINDI -> "4. सपोर्ट, रेजिस्टेंस व की-पिवट्स"
+            AppLanguage.MARATHI -> "4. सपोर्ट, रेझिस्टन्स आणि मुख्य पिव्हट्स"
         }
         "volatility" -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "VOLATILITY & BREAKOUT"
-            AppLanguage.HINDI -> "वोलैटिलिटी व ब्रेकआउट"
-            AppLanguage.MARATHI -> "व्होलॅटिलिटी व ब्रेकआऊट"
+            AppLanguage.ENGLISH -> "5. VOLATILITY BANDS & RISK RANGE"
+            AppLanguage.HINDI -> "5. वोलैटिलिटी बैंड्स व रिस्क रेंज"
+            AppLanguage.MARATHI -> "5. व्होलॅटिलिटी बँड्स आणि जोखीम मर्यादा"
+        }
+        "candlestick" -> when (currentLanguage) {
+            AppLanguage.ENGLISH -> "6. CANDLESTICK PRICE ACTION"
+            AppLanguage.HINDI -> "6. कैंडलस्टिक प्राइस एक्शन"
+            AppLanguage.MARATHI -> "6. कॅन्डलस्टिक प्राइस अ‍ॅक्शन"
+        }
+        "macro" -> when (currentLanguage) {
+            AppLanguage.ENGLISH -> "7. MACRO & NEWS SENTIMENT"
+            AppLanguage.HINDI -> "7. मैक्रो व न्यूज़ सेंटीमेंट"
+            AppLanguage.MARATHI -> "7. मॅक्रो आणि न्यूज सेन्टिमेंट"
         }
         "volume", "order_flow" -> when (currentLanguage) {
             AppLanguage.ENGLISH -> "VOLUME & ORDER FLOW"
             AppLanguage.HINDI -> "वॉल्यूम व ऑर्डर फ्लो"
             AppLanguage.MARATHI -> "व्हॉल्यूम व ऑर्डर फ्लो"
-        }
-        "levels", "sr" -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "SUPPORT & RESISTANCE"
-            AppLanguage.HINDI -> "सपोर्ट और रेजिस्टेंस लेवल्स"
-            AppLanguage.MARATHI -> "सपोर्ट आणि रेझिस्टन्स लेव्हल्स"
         }
         else -> group.title.uppercase()
     }

@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.livegoldai.localization.AppLanguage
+import com.example.livegoldai.localization.LocalAppLanguage
 import com.example.livegoldai.model.GoldAnalysisResult
 import com.example.livegoldai.model.Signal
 import com.example.livegoldai.theme.*
@@ -40,6 +42,7 @@ fun HeroConsensusCard(
     analysis: GoldAnalysisResult,
     modifier: Modifier = Modifier
 ) {
+    val currentLang = LocalAppLanguage.current
     val signalColor by animateColorAsState(
         targetValue = when (analysis.overallSignal) {
             Signal.BUY -> SignalBuy
@@ -100,27 +103,43 @@ fun HeroConsensusCard(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = if (nm.phase == "PRE") "⚠️ NEWS MODE • RELEASE AANE WALI HAI" else "📰 NEWS MODE • NEWS-BASED PREDICTION",
+                            text = if (nm.phase == "PRE") {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "⚠️ HIGH-IMPACT NEWS RADAR • APPROACHING"
+                                    AppLanguage.HINDI -> "⚠️ हाई-इम्पैक्ट न्यूज़ रडार • रिलीज़ होने वाली है"
+                                    AppLanguage.MARATHI -> "⚠️ हाय-इम्पॅक्ट न्यूज रडार • प्रसिद्ध होणार आहे"
+                                }
+                            } else {
+                                when (currentLang) {
+                                    AppLanguage.ENGLISH -> "📰 LIVE NEWS MODE • HIGH-VOLATILITY WINDOW"
+                                    AppLanguage.HINDI -> "📰 लाइव न्यूज़ मोड • हाई-वोलैटिलिटी विंडो"
+                                    AppLanguage.MARATHI -> "📰 लाईव्ह न्यूज मोड • हाय-व्होलॅटिलिटी विंडो"
+                                }
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = bannerColor
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = nm.headline,
+                            text = nm.getLocalizedHeadline(currentLang),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = nm.detail,
+                            text = nm.getLocalizedDetail(currentLang),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Technical signal (paused): ${nm.technicalSignal.name}",
+                            text = when (currentLang) {
+                                AppLanguage.ENGLISH -> "Standard Technical Signal (Suspended during news): ${nm.technicalSignal.name}"
+                                AppLanguage.HINDI -> "सामान्य तकनीकी सिग्नल (न्यूज़ के दौरान स्थगित): ${nm.technicalSignal.name}"
+                                AppLanguage.MARATHI -> "सामान्य तांत्रिक सिग्नल (न्यूज दरम्यान स्थगित): ${nm.technicalSignal.name}"
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             color = TextMuted
                         )

@@ -639,12 +639,12 @@ data class SingleAiPredictionInsight(
     fun getCoreThesis(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> coreThesisEnglish
         AppLanguage.HINDI -> coreThesisHindi
-        AppLanguage.MARATHI -> coreThesisMarathi.ifEmpty { coreThesisHindi }
+        AppLanguage.MARATHI -> coreThesisMarathi.ifEmpty { coreThesisEnglish }
     }
     fun getCorrectionApplied(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> correctionAppliedEnglish
         AppLanguage.HINDI -> correctionAppliedHindi
-        AppLanguage.MARATHI -> correctionAppliedMarathi.ifEmpty { correctionAppliedHindi }
+        AppLanguage.MARATHI -> correctionAppliedMarathi.ifEmpty { correctionAppliedEnglish }
     }
 }
 
@@ -669,22 +669,39 @@ data class MultiAiConsensusReport(
     fun getSummary(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> consensusSummaryEnglish
         AppLanguage.HINDI -> consensusSummaryHindi
-        AppLanguage.MARATHI -> consensusSummaryMarathi.ifEmpty { consensusSummaryHindi }
+        AppLanguage.MARATHI -> consensusSummaryMarathi.ifEmpty { consensusSummaryEnglish }
     }
     fun getJointCorrections(lang: AppLanguage): List<String> = when (lang) {
         AppLanguage.ENGLISH -> jointAiCorrections
         AppLanguage.HINDI -> jointAiCorrectionsHindi.ifEmpty { jointAiCorrections }
-        AppLanguage.MARATHI -> jointAiCorrectionsMarathi.ifEmpty { jointAiCorrectionsHindi.ifEmpty { jointAiCorrections } }
+        AppLanguage.MARATHI -> jointAiCorrectionsMarathi.ifEmpty { jointAiCorrections }
     }
 }
 
 @Serializable
 data class NewsModeStatus(
-    val phase: String, // "PRE" = release aane wali hai, "POST" = release ho chuki
+    val phase: String, // "PRE" = 15m prior radar, "POST" / "LIVE" = release window
     val eventTitle: String,
     val minutes: Long,
     val newsSignal: Signal,
     val technicalSignal: Signal,
     val headline: String,
-    val detail: String
-)
+    val detail: String,
+    val headlineEnglish: String = "",
+    val headlineHindi: String = "",
+    val headlineMarathi: String = "",
+    val detailEnglish: String = "",
+    val detailHindi: String = "",
+    val detailMarathi: String = ""
+) {
+    fun getLocalizedHeadline(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> headlineEnglish.ifBlank { headline }
+        AppLanguage.HINDI -> headlineHindi.ifBlank { headline }
+        AppLanguage.MARATHI -> headlineMarathi.ifBlank { headlineEnglish.ifBlank { headline } }
+    }
+    fun getLocalizedDetail(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> detailEnglish.ifBlank { detail }
+        AppLanguage.HINDI -> detailHindi.ifBlank { detail }
+        AppLanguage.MARATHI -> detailMarathi.ifBlank { detailEnglish.ifBlank { detail } }
+    }
+}

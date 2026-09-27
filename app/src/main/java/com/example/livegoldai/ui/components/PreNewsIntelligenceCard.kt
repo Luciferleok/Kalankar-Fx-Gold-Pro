@@ -413,44 +413,43 @@ fun PreNewsIntelligenceCard(
                         Column {
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "1-Hour Prior Notification"
-                                    AppLanguage.HINDI -> "1 घंटे पहले का फोन नोटिफिकेशन"
-                                    AppLanguage.MARATHI -> "1 तास आधीचे फोन नोटिफिकेशन"
+                                    AppLanguage.ENGLISH -> "Automated Pre-News Alert Sentinel"
+                                    AppLanguage.HINDI -> "स्वचालित प्री-न्यूज़ अलर्ट सेंटिनल"
+                                    AppLanguage.MARATHI -> "स्वयंचलित प्री-न्यूज अलर्ट सेन्टिनेल"
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isAutoNotificationEnabled) {
-                                    when (currentLang) {
-                                        AppLanguage.ENGLISH -> "Active: System will alert 60m before release"
-                                        AppLanguage.HINDI -> "सक्रिय: न्यूज़ से ठीक 60 मिनट पहले अलार्म बजेगा"
-                                        AppLanguage.MARATHI -> "सक्रिय: बातमीच्या बरोबर 60 मिनिटे आधी अलर्ट येईल"
-                                    }
-                                } else "Disabled",
+                                text = when (currentLang) {
+                                    AppLanguage.ENGLISH -> "Armed: System auto-triggers alerts & radar 15-60m before release"
+                                    AppLanguage.HINDI -> "सक्रिय: न्यूज़ से 15-60 मिनट पहले फोन अलर्ट व रडार अपने-आप चालू होगा"
+                                    AppLanguage.MARATHI -> "सक्रिय: बातमीच्या 15-60 मिनिटे आधी फोन अलर्ट व रडार आपोआप चालू होईल"
+                                },
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                color = if (isAutoNotificationEnabled) NeonGreen else TextMuted
+                                color = NeonGreen
                             )
                         }
                     }
 
-                    Switch(
-                        checked = isAutoNotificationEnabled,
-                        onCheckedChange = { checked ->
-                            isAutoNotificationEnabled = checked
-                            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = GoldPrimary,
-                            checkedTrackColor = GoldPrimary.copy(alpha = 0.3f),
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = ObsidianBackground
-                        ),
-                        modifier = Modifier.testTag("switch_auto_news_notification")
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = NeonGreen.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = when (currentLang) {
+                                AppLanguage.ENGLISH -> "AUTO-ON 🟢"
+                                AppLanguage.HINDI -> "ऑटो-चालू 🟢"
+                                AppLanguage.MARATHI -> "ऑटो-चालू 🟢"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            fontWeight = FontWeight.Black,
+                            color = NeonGreen,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 

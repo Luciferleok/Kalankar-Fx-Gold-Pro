@@ -516,14 +516,14 @@ object TechnicalEngine {
         )
         val macroVerdict = decide(macroItems.map { it.signal })
 
-        // Group Summaries (Now 7 complete institutional pillars!)
+        // Group Summaries (7 Institutional Pillars ordered in professional trading sequence)
         val groups = listOf(
             GroupAnalysis(key = "trend", title = "Trend Strength", verdict = trendVerdict, indicators = trendItems + vwapIndicator(candles) + ema50100Indicator(candles)),
-            GroupAnalysis(key = "momentum", title = "Momentum Oscillators", verdict = momentumVerdict, indicators = momentumItems),
-            GroupAnalysis(key = "volatility", title = "Volatility Bands", verdict = volatilityVerdict, indicators = volatilityItems),
-            GroupAnalysis(key = "sr", title = "Support & Resistance", verdict = srVerdict, indicators = srItems),
-            GroupAnalysis(key = "candlestick", title = "Candlestick Action", verdict = candleVerdict, indicators = candleItems),
             GroupAnalysis(key = "smc", title = "Smart Money & Institutional (SMC)", verdict = smcVerdict, indicators = smcItems),
+            GroupAnalysis(key = "momentum", title = "Momentum Oscillators", verdict = momentumVerdict, indicators = momentumItems),
+            GroupAnalysis(key = "sr", title = "Support & Resistance", verdict = srVerdict, indicators = srItems),
+            GroupAnalysis(key = "volatility", title = "Volatility Bands", verdict = volatilityVerdict, indicators = volatilityItems),
+            GroupAnalysis(key = "candlestick", title = "Candlestick Action", verdict = candleVerdict, indicators = candleItems),
             GroupAnalysis(key = "macro", title = "Macro & News Sentiment", verdict = macroVerdict, indicators = macroItems)
         )
 
