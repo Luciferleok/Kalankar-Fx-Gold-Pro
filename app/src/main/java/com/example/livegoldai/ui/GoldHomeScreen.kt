@@ -498,11 +498,14 @@ fun GoldHomeScreen(
                                 )
                             }
 
-                            // Professional Candlestick Chart
+                            // Professional Candlestick Chart (With Fullscreen Studio)
                             item(key = "cockpit_pro_chart") {
                                 ProCandleChart(
                                     candles = analysis.recentCandles,
-                                    buyerSellerRatio = analysis.buyerSellerRatio
+                                    buyerSellerRatio = analysis.buyerSellerRatio,
+                                    tradeSetup = analysis.tradeSetup,
+                                    pivotLevels = analysis.pivotLevels,
+                                    currentPrice = analysis.currentPrice
                                 )
                             }
 

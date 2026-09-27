@@ -1,8 +1,10 @@
 package com.example.livegoldai.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,8 +30,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.livegoldai.localization.AppLanguage
+import com.example.livegoldai.localization.LocalAppLanguage
 import com.example.livegoldai.model.BuyerSellerSentiment
 import com.example.livegoldai.model.CandleBar
+import com.example.livegoldai.model.PivotLevels
+import com.example.livegoldai.model.TradeSetup
 import com.example.livegoldai.theme.*
 import java.util.Locale
 import kotlin.math.max
@@ -38,9 +46,15 @@ import kotlin.math.roundToInt
 fun ProCandleChart(
     candles: List<CandleBar>,
     buyerSellerRatio: BuyerSellerSentiment? = null,
+    tradeSetup: TradeSetup? = null,
+    pivotLevels: PivotLevels? = null,
+    currentPrice: Double = 0.0,
     modifier: Modifier = Modifier
 ) {
     if (candles.isEmpty()) return
+
+    val currentLang = LocalAppLanguage.current
+    var isFullscreenOpen by remember { mutableStateOf(false) }
 
     var candleCount by remember { mutableIntStateOf(30) }
     var showSuperTrend by remember { mutableStateOf(true) }
@@ -78,7 +92,7 @@ fun ProCandleChart(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Top Bar: Title & Controls
+            // Top Bar: Title & Controls & Fullscreen Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -93,7 +107,11 @@ fun ProCandleChart(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "INTERACTIVE PRICE ACTION",
+                        text = when (currentLang) {
+                            AppLanguage.ENGLISH -> "PRICE ACTION"
+                            AppLanguage.HINDI -> "प्राइस एक्शन"
+                            AppLanguage.MARATHI -> "प्राइस अ‍ॅक्शन"
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Black,
                         color = GoldLight,
@@ -101,28 +119,67 @@ fun ProCandleChart(
                     )
                 }
 
-                // Candle count selector chips
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf(15, 30, 45).forEach { count ->
-                        val isSelected = candleCount == count
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (isSelected) GoldPrimary else ObsidianSurfaceElevated,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .pointerInput(count) {
-                                    detectTapGestures {
-                                        candleCount = count
-                                        selectedCandleIndex = null
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Candle count selector chips
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(15, 30, 45).forEach { count ->
+                            val isSelected = candleCount == count
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (isSelected) GoldPrimary else ObsidianSurfaceElevated,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .pointerInput(count) {
+                                        detectTapGestures {
+                                            candleCount = count
+                                            selectedCandleIndex = null
+                                        }
                                     }
-                                }
+                            ) {
+                                Text(
+                                    text = "${count}B",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) ObsidianBackground else TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    // FULL SCREEN BUTTON (Beside chart as requested)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = GoldPrimary.copy(alpha = 0.22f),
+                        border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.8f)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { isFullscreenOpen = true }
+                            .testTag("btn_open_fullscreen_chart")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.Fullscreen,
+                                contentDescription = "Open Full Screen",
+                                tint = GoldLight,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = "${count}B",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                text = when (currentLang) {
+                                    AppLanguage.ENGLISH -> "FULL SCREEN ⛶"
+                                    AppLanguage.HINDI -> "फुल स्क्रीन ⛶"
+                                    AppLanguage.MARATHI -> "फुल स्क्रीन ⛶"
+                                },
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) ObsidianBackground else TextSecondary
+                                fontWeight = FontWeight.Black,
+                                color = GoldLight
                             )
                         }
                     }
@@ -589,6 +646,17 @@ fun ProCandleChart(
                 )
             }
         }
+    }
+
+    if (isFullscreenOpen) {
+        FullscreenCandleChartDialog(
+            candles = candles,
+            currentPrice = currentPrice,
+            buyerSellerRatio = buyerSellerRatio,
+            tradeSetup = tradeSetup,
+            pivotLevels = pivotLevels,
+            onDismiss = { isFullscreenOpen = false }
+        )
     }
 }
 
