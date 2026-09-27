@@ -186,7 +186,11 @@ fun PredictionAccuracyAuditCard(
                             color = SignalBuy
                         )
                         Text(
-                            text = "जीत की दर (${audit.timeframe})",
+                            text = when (currentLanguage) {
+                                AppLanguage.ENGLISH -> "WIN RATE (${audit.timeframe})"
+                                AppLanguage.HINDI -> "सफलता दर (${audit.timeframe})"
+                                AppLanguage.MARATHI -> "यशाचा दर (${audit.timeframe})"
+                            },
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )
@@ -328,7 +332,7 @@ fun PredictionAccuracyAuditCard(
                             AppLanguage.HINDI -> "🔍 क्यों हुआ था (कारण): "
                             AppLanguage.MARATHI -> "🔍 का घडले होते (कारण): "
                         }
-                        val translatedWhy = LocalizationStrings.translateReason(last.whyItHappenedHindi, currentLanguage)
+                        val translatedWhy = last.getWhyItHappened(currentLanguage)
 
                         Text(
                             text = "$diagnosisTitle $translatedWhy",
@@ -344,7 +348,7 @@ fun PredictionAccuracyAuditCard(
                             AppLanguage.HINDI -> "AI ने क्या सुधार किया (आगे से क्या नहीं होगा):"
                             AppLanguage.MARATHI -> "AI ने काय सुधारणा केली (पुढे काय होणार नाही):"
                         }
-                        val translatedLesson = LocalizationStrings.translateReason(last.lessonLearnedHindi, currentLanguage)
+                        val translatedLesson = last.getLessonLearned(currentLanguage)
 
                         Surface(
                             shape = RoundedCornerShape(10.dp),
@@ -410,7 +414,11 @@ fun PredictionAccuracyAuditCard(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "AAGE GALTI NA HONE KE AI RULES (4 SAFEGUARDS)",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "AI SAFEGUARDS & ERROR PREVENTION (4 ACTIVE)"
+                                    AppLanguage.HINDI -> "गलती रोकथाम के 4 AI सुरक्षा नियम"
+                                    AppLanguage.MARATHI -> "चूक प्रतिबंधाचे 4 AI सुरक्षा नियम"
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight
@@ -429,7 +437,7 @@ fun PredictionAccuracyAuditCard(
                             modifier = Modifier.padding(top = 10.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            audit.autoCorrectionRulesHindi.forEach { rule ->
+                            audit.getAutoCorrectionRules(currentLanguage).forEach { rule ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.Top
@@ -458,7 +466,11 @@ fun PredictionAccuracyAuditCard(
 
             // Historical Verified Signals in this Timeframe (Pichhle Signals Ka History Log)
             Text(
-                text = "${audit.timeframe} KE PICHE KE SIGNALS KA RESULT (AUDIT LOG)",
+                text = when (currentLanguage) {
+                    AppLanguage.ENGLISH -> "${audit.timeframe} HISTORICAL SIGNALS AUDIT LOG"
+                    AppLanguage.HINDI -> "${audit.timeframe} पिछले सिग्नल्स का ऑडिट लॉग"
+                    AppLanguage.MARATHI -> "${audit.timeframe} मागील सिग्नल्सचा ऑडिट लॉग"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Black,
                 color = TextMuted,
@@ -601,8 +613,18 @@ fun PredictionAccuracyAuditCard(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
+                                    val whyLabel = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "💡 Reason: "
+                                        AppLanguage.HINDI -> "💡 कारण: "
+                                        AppLanguage.MARATHI -> "💡 कारण: "
+                                    }
+                                    val lessonLabel = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "🛡️ Guardrail: "
+                                        AppLanguage.HINDI -> "🛡️ सुरक्षा नियम: "
+                                        AppLanguage.MARATHI -> "🛡️ सुरक्षा नियम: "
+                                    }
                                     Text(
-                                        text = "💡 Kyu Aisa Hua: ${item.whyItHappenedHindi}",
+                                        text = "$whyLabel${item.getWhyItHappened(currentLanguage)}",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                                         color = TextPrimary
                                     )
@@ -610,7 +632,7 @@ fun PredictionAccuracyAuditCard(
                                     Spacer(modifier = Modifier.height(4.dp))
 
                                     Text(
-                                        text = "🛡️ Aage Kya Galti Na Ho: ${item.lessonLearnedHindi}",
+                                        text = "$lessonLabel${item.getLessonLearned(currentLanguage)}",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                                         color = GoldLight
                                     )

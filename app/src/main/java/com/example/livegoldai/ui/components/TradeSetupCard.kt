@@ -244,7 +244,7 @@ fun TradeSetupCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = LocalizationStrings.translateReason(setup.strategyNote, currentLanguage),
+                    text = setup.getStrategyNote(currentLanguage),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
                     color = TextSecondary,
                     modifier = Modifier.padding(12.dp)

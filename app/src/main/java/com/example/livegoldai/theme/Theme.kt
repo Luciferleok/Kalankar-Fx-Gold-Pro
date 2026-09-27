@@ -48,6 +48,12 @@ enum class ThemeMode(
         subtitle = "Prestige deep jade forest with glowing mint buy triggers",
         badge = "💎 WEALTH HEDGE",
         icon = "💎"
+    ),
+    NEWS_ALERT(
+        title = "News Volatility Alert (High-Impact)",
+        subtitle = "Emergency crimson & electric amber theme for CPI, NFP & FOMC volatility",
+        badge = "🚨 LIVE NEWS IMPACT",
+        icon = "🚨"
     )
 }
 
@@ -214,6 +220,28 @@ val EmeraldAlphaPalette = AppThemeColors(
     signalWaitBg = Color(0xFF332605)
 )
 
+val NewsAlertPalette = AppThemeColors(
+    themeMode = ThemeMode.NEWS_ALERT,
+    background = Color(0xFF0F0407), // Alarm Crimson Midnight
+    surface = Color(0xFF1E080F),
+    surfaceElevated = Color(0xFF2E0D17),
+    surfaceCard = Color(0xFF240A12),
+    border = Color(0xFF5C1525),
+    borderHighlight = Color(0xFFFF264D), // Glowing Neon Red Alert
+    primaryGold = Color(0xFFFF5500), // Electric Flame Orange
+    lightGold = Color(0xFFFF9944),
+    darkGold = Color(0xFFD63B00),
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFFFFB3BA),
+    textMuted = Color(0xFFC4717F),
+    signalBuy = Color(0xFF00FF88),
+    signalBuyBg = Color(0xFF063319),
+    signalSell = Color(0xFFFF1744),
+    signalSellBg = Color(0xFF450613),
+    signalWait = Color(0xFFFF9100),
+    signalWaitBg = Color(0xFF3B1E05)
+)
+
 fun getPaletteForMode(mode: ThemeMode): AppThemeColors {
     return when (mode) {
         ThemeMode.DUBAI_ROYALE -> DubaiRoyalePalette
@@ -222,6 +250,7 @@ fun getPaletteForMode(mode: ThemeMode): AppThemeColors {
         ThemeMode.CYBER_NEON -> CyberNeonPalette
         ThemeMode.SWISS_BANK -> SwissBankPalette
         ThemeMode.EMERALD_ALPHA -> EmeraldAlphaPalette
+        ThemeMode.NEWS_ALERT -> NewsAlertPalette
     }
 }
 
@@ -230,9 +259,10 @@ val LocalAppColors = staticCompositionLocalOf { RoyalObsidianPalette }
 @Composable
 fun LiveGoldAITheme(
     themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
+    isNewsModeActive: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val palette = getPaletteForMode(themeMode)
+    val palette = if (isNewsModeActive) NewsAlertPalette else getPaletteForMode(themeMode)
 
     val colorScheme = darkColorScheme(
         primary = palette.primaryGold,

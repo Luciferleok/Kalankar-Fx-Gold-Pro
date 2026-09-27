@@ -478,36 +478,97 @@ object LocalizationStrings {
         AppLanguage.MARATHI -> "VIP ब्रँड चिन्ह निवडा"
     }
 
+    // Dual Column Switcher
+    fun dualModeBoth(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "BOTH COLUMNS"
+        AppLanguage.HINDI -> "दोनों साथ में"
+        AppLanguage.MARATHI -> "दोन्ही एकत्र"
+    }
+
+    fun dualModeBothSub(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Combined View"
+        AppLanguage.HINDI -> "संयुक्त दृश्य"
+        AppLanguage.MARATHI -> "संयुक्त दृश्य"
+    }
+
+    fun dualModePrediction(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "1. PREDICTION"
+        AppLanguage.HINDI -> "1. प्रेडिक्शन"
+        AppLanguage.MARATHI -> "1. अंदाज"
+    }
+
+    fun dualModePredictionSub(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Prediction Focus"
+        AppLanguage.HINDI -> "केवल प्रेडिक्शन"
+        AppLanguage.MARATHI -> "फक्त अंदाज"
+    }
+
+    fun dualModeIndicators(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "2. INDICATORS"
+        AppLanguage.HINDI -> "2. इंडिकेटर्स"
+        AppLanguage.MARATHI -> "2. इंडिकेटर्स"
+    }
+
+    fun dualModeIndicatorsSub(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Indicators Focus"
+        AppLanguage.HINDI -> "केवल इंडिकेटर्स"
+        AppLanguage.MARATHI -> "फक्त इंडिकेटर्स"
+    }
+
+    fun buySignalsLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Buy Signals"
+        AppLanguage.HINDI -> "खरीदारी संकेत"
+        AppLanguage.MARATHI -> "खरेदी संकेत"
+    }
+
+    fun sellSignalsLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Sell Signals"
+        AppLanguage.HINDI -> "बिकवाली संकेत"
+        AppLanguage.MARATHI -> "विक्री संकेत"
+    }
+
+    fun waitSignalsLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> "Neutral / Hold"
+        AppLanguage.HINDI -> "तटस्थ / इंतज़ार"
+        AppLanguage.MARATHI -> "तटस्थ / वाट पहा"
+    }
+
     // Dynamic translate helpers for why it happened & lesson learned
-    fun translateReason(textHindi: String, lang: AppLanguage): String {
+    fun translateReason(text: String, lang: AppLanguage): String {
         return when (lang) {
-            AppLanguage.HINDI -> textHindi
-            AppLanguage.MARATHI -> {
-                textHindi
-                    .replace("hua", "झाले")
-                    .replace("hoga", "होईल")
-                    .replace("karne", "करण्यासाठी")
-                    .replace("karke", "करून")
-                    .replace("se", "पासून")
-                    .replace("pehle", "आधी")
-                    .replace("baad", "नंतर")
-                    .replace("upar", "वर")
-                    .replace("niche", "खाली")
-                    .replace("aage", "पुढे")
-                    .replace("pichhla", "मागील")
-                    .replace("kharidari", "खरेदी")
-                    .replace("bikwali", "विक्री")
-                    .replace("mein", "मध्ये")
-                    .replace("nahi", "नाही")
-                    .replace("karo", "करा")
-                    .replace("karein", "करावे")
-                    .replace("rakhein", "ठेवा")
-                    .replace("galti", "चूक")
-                    .replace("seekha", "शिकलो")
-            }
             AppLanguage.ENGLISH -> {
-                // Return english representation or clean terms
-                textHindi
+                // If text is already mostly English, return it directly
+                val hasDevanagari = text.any { it in '\u0900'..'\u097F' }
+                if (!hasDevanagari) {
+                    text
+                } else {
+                    // Translate typical fallback Hindi phrases to clean English
+                    text
+                        .replace("7 इंडिकेटर ग्रुप्स में बुलिश मोमेंटम की पुष्टि।", "Bullish momentum confirmed across 7 indicator groups.")
+                        .replace("इंडिकेटर्स में मंदी और सप्लाई रिजेक्शन की पुष्टि।", "Bearish rejection and supply pressure confirmed across indicators.")
+                        .replace("मार्केट अनिश्चित रेंज में फंसा है।", "Market is in sideways consolidation range.")
+                        .replace("सपोर्ट", "support")
+                        .replace("रेजिस्टेंस", "resistance")
+                        .replace("खरीदारी", "buying")
+                        .replace("बिकवाली", "selling")
+                }
+            }
+            AppLanguage.HINDI -> text
+            AppLanguage.MARATHI -> {
+                val hasDevanagari = text.any { it in '\u0900'..'\u097F' }
+                if (!hasDevanagari) {
+                    text
+                } else {
+                    text
+                        .replace("खरीदारी", "खरेदी")
+                        .replace("बिकवाली", "विक्री")
+                        .replace("संभावना", "शक्यता")
+                        .replace("हुआ", "झाले")
+                        .replace("होगा", "होईल")
+                        .replace("किया गया", "केले गेले")
+                        .replace("सुधार", "सुधारणा")
+                        .replace("गलती", "चूक")
+                }
             }
         }
     }

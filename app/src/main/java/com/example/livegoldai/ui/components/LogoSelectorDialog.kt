@@ -45,9 +45,16 @@ fun LogoSelectorDialog(
     val logoOptions = remember {
         listOf(
             LogoOption(
+                id = "kalankar_gold_crest",
+                title = "Kalankar 24K Sovereign Bullion Crest",
+                tag = "👑 ULTRA-HD 24K GOLD CREST • SIGNATURE",
+                description = "Masterpiece 3D 24K gold sovereign crest with imperial royal eagle, sovereign crown, and micro-engraved candlestick chart on dark obsidian.",
+                drawableRes = R.drawable.ic_kalankar_gold_crest
+            ),
+            LogoOption(
                 id = "vip_gold_crest",
                 title = "Dubai Imperial Bullion Crest",
-                tag = "✨ 24K DUBAI BULLION CREST • SIGNATURE",
+                tag = "✨ 24K DUBAI BULLION CREST • CLASSIC",
                 description = "Masterpiece 3D 24K pure gold imperial eagle with royal sovereign crown on obsidian velvet.",
                 drawableRes = R.drawable.ic_vip_gold_crest
             ),

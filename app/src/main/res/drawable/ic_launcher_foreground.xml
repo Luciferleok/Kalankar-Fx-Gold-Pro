@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_vip_gold_crest"
+        android:drawable="@drawable/ic_kalankar_gold_crest"
         android:gravity="center" />
 </layer-list>

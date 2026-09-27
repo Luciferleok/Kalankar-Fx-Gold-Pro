@@ -76,12 +76,27 @@ data class MacroMarketIndex(
 @Serializable
 data class NewsSentimentItem(
     val headline: String,
+    val headlineHindi: String = "",
+    val headlineMarathi: String = "",
     val source: String,
     val timestamp: String,
     val sentiment: Signal,
     val impactTag: String,
-    val reason: String
-)
+    val reason: String,
+    val reasonHindi: String = "",
+    val reasonMarathi: String = ""
+) {
+    fun getHeadline(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> headline
+        AppLanguage.HINDI -> headlineHindi.ifEmpty { headline }
+        AppLanguage.MARATHI -> headlineMarathi.ifEmpty { headlineHindi.ifEmpty { headline } }
+    }
+    fun getReason(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> reason
+        AppLanguage.HINDI -> reasonHindi.ifEmpty { reason }
+        AppLanguage.MARATHI -> reasonMarathi.ifEmpty { reasonHindi.ifEmpty { reason } }
+    }
+}
 
 @Serializable
 data class MacroSentimentRadar(
@@ -91,8 +106,16 @@ data class MacroSentimentRadar(
     val us10yYield: MacroMarketIndex,
     val upcomingEvents: List<EconomicEvent> = emptyList(),
     val newsFeed: List<NewsSentimentItem> = emptyList(),
-    val summaryInsight: String
-)
+    val summaryInsight: String,
+    val summaryInsightHindi: String = "",
+    val summaryInsightMarathi: String = ""
+) {
+    fun getSummaryInsight(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> summaryInsight
+        AppLanguage.HINDI -> summaryInsightHindi.ifEmpty { summaryInsight }
+        AppLanguage.MARATHI -> summaryInsightMarathi.ifEmpty { summaryInsightHindi.ifEmpty { summaryInsight } }
+    }
+}
 
 @Serializable
 data class SmartMoneyAnalysis(
@@ -231,19 +254,19 @@ data class NextPredictionPlaybook(
         AppLanguage.MARATHI -> invalidationRuleMarathi.ifEmpty { invalidationRuleHindi }
     }
     fun getWhereToEnter(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> whereToEnterEnglish.ifEmpty { whereToEnterHindi }
+        AppLanguage.ENGLISH -> whereToEnterEnglish.ifEmpty { "Execute limit orders in the confirmed pullback zone." }
         AppLanguage.HINDI -> whereToEnterHindi
         AppLanguage.MARATHI -> whereToEnterMarathi.ifEmpty { whereToEnterHindi }
     }
 
     fun getWhereToAvoid(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> whereToAvoidEnglish.ifEmpty { whereToAvoidHindi }
+        AppLanguage.ENGLISH -> whereToAvoidEnglish.ifEmpty { "Avoid market chasing at extended high or low levels." }
         AppLanguage.HINDI -> whereToAvoidHindi
         AppLanguage.MARATHI -> whereToAvoidMarathi.ifEmpty { whereToAvoidHindi }
     }
 
     fun getWhatToDo(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> whatToDoEnglish
+        AppLanguage.ENGLISH -> whatToDoEnglish.ifEmpty { "Maintain strict risk management and await high-confluence confirmation." }
         AppLanguage.HINDI -> whatToDoHindi
         AppLanguage.MARATHI -> whatToDoMarathi.ifEmpty { whatToDoHindi }
     }
@@ -491,9 +514,169 @@ data class GoldAnalysisResult(
     val tradingTricks: List<TradingTrick> = emptyList(),
     val buyerSellerRatio: BuyerSellerSentiment? = null,
     val timeframeAudit: TimeframeAccuracyAudit? = null,
+    val multiAiConsensus: MultiAiConsensusReport? = null,
+    val failedPredictionAutopsy: FailedPredictionCandleAutopsy? = null,
+    val newsTradingPlan: NewsTradingPlan? = null,
+    val isNewsModeTriggered: Boolean = false,
     val isSimulatedFallback: Boolean = false,
     val newsMode: NewsModeStatus? = null
 )
+
+@Serializable
+data class FailedPredictionCandleAutopsy(
+    val previousTradeId: String,
+    val failedSignal: Signal,
+    val entryPrice: Double,
+    val stopLossPrice: Double,
+    val targetPrice: Double,
+    val pipsLoss: Double,
+    val timeAgo: String,
+    val trapCandleType: String,
+    val candleOpen: Double,
+    val candleHigh: Double,
+    val candleLow: Double,
+    val candleClose: Double,
+    val upperWickPips: Double,
+    val lowerWickPips: Double,
+    val bodyPips: Double,
+    val volumeSurgeMultiplier: Double,
+    val trapDiagnosisEnglish: String,
+    val trapDiagnosisHindi: String,
+    val trapDiagnosisMarathi: String = "",
+    val geminiCandleReading: String,
+    val chatGptCandleReading: String,
+    val claudeCandleReading: String,
+    val deepSeekCandleReading: String,
+    val recalibrationActionTakenEnglish: String,
+    val recalibrationActionTakenHindi: String,
+    val recalibrationActionTakenMarathi: String = ""
+) {
+    fun getDiagnosis(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> trapDiagnosisEnglish
+        AppLanguage.HINDI -> trapDiagnosisHindi
+        AppLanguage.MARATHI -> trapDiagnosisMarathi.ifEmpty { trapDiagnosisHindi }
+    }
+    fun getRecalibrationAction(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> recalibrationActionTakenEnglish
+        AppLanguage.HINDI -> recalibrationActionTakenHindi
+        AppLanguage.MARATHI -> recalibrationActionTakenMarathi.ifEmpty { recalibrationActionTakenHindi }
+    }
+}
+
+@Serializable
+enum class NewsPhase {
+    PRE_NEWS_COIL,
+    LIVE_NEWS_SPIKE,
+    POST_NEWS_RETRACEMENT,
+    STANDBY
+}
+
+@Serializable
+data class NewsTradingPlan(
+    val isNewsActive: Boolean,
+    val eventName: String,
+    val eventImpact: String,
+    val releaseCountdownFormatted: String,
+    val phase: NewsPhase,
+    val primaryDirectionBias: Signal,
+    val straddleUpperLevel: Double,
+    val straddleLowerLevel: Double,
+    val spreadWarningBufferPips: Double,
+    val freezeRuleTitle: String,
+    val freezeRuleDescriptionEnglish: String,
+    val freezeRuleDescriptionHindi: String,
+    val freezeRuleDescriptionMarathi: String = "",
+    val newsTacticHeadingEnglish: String,
+    val newsTacticHeadingHindi: String,
+    val newsTacticHeadingMarathi: String = "",
+    val newsTacticDetailEnglish: String,
+    val newsTacticDetailHindi: String,
+    val newsTacticDetailMarathi: String = "",
+    val secondWaveRetracementLevel: String,
+    val actualVsForecastScenario: String
+) {
+    fun getFreezeRule(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> freezeRuleDescriptionEnglish
+        AppLanguage.HINDI -> freezeRuleDescriptionHindi
+        AppLanguage.MARATHI -> freezeRuleDescriptionMarathi.ifEmpty { freezeRuleDescriptionHindi }
+    }
+    fun getNewsTactic(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> newsTacticDetailEnglish
+        AppLanguage.HINDI -> newsTacticDetailHindi
+        AppLanguage.MARATHI -> newsTacticDetailMarathi.ifEmpty { newsTacticDetailHindi }
+    }
+}
+
+@Serializable
+enum class AiModelProvider(
+    val displayName: String,
+    val company: String,
+    val iconEmoji: String,
+    val roleBadge: String
+) {
+    GEMINI("Google Gemini 3.5", "Google DeepMind", "♊", "Multi-Timeframe & Patterns"),
+    CHAT_GPT("ChatGPT-4o", "OpenAI", "🤖", "Macro Economics & Order Flow"),
+    CLAUDE("Claude 3.7 Sonnet", "Anthropic", "🧠", "Risk Guardrails & Trap Elimination"),
+    DEEP_SEEK("DeepSeek R1", "DeepSeek AI", "⚡", "Algorithmic SMC & FVG Reasoning"),
+    PERPLEXITY("Perplexity Financial AI", "Perplexity AI", "🌐", "Live Market Sentiment & Cross-Asset")
+}
+
+@Serializable
+data class SingleAiPredictionInsight(
+    val provider: AiModelProvider,
+    val signal: Signal,
+    val confidencePercent: Int,
+    val coreThesisEnglish: String,
+    val coreThesisHindi: String,
+    val coreThesisMarathi: String = "",
+    val correctionAppliedEnglish: String,
+    val correctionAppliedHindi: String,
+    val correctionAppliedMarathi: String = "",
+    val suggestedStopLossPips: Double,
+    val suggestedTargetPips: Double,
+    val keyTrapWarned: String? = null
+) {
+    fun getCoreThesis(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> coreThesisEnglish
+        AppLanguage.HINDI -> coreThesisHindi
+        AppLanguage.MARATHI -> coreThesisMarathi.ifEmpty { coreThesisHindi }
+    }
+    fun getCorrectionApplied(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> correctionAppliedEnglish
+        AppLanguage.HINDI -> correctionAppliedHindi
+        AppLanguage.MARATHI -> correctionAppliedMarathi.ifEmpty { correctionAppliedHindi }
+    }
+}
+
+@Serializable
+data class MultiAiConsensusReport(
+    val unanimousAgreementPercent: Int,
+    val consensusSignal: Signal,
+    val consensusConfidence: Int,
+    val agreeingModelsCount: Int,
+    val totalModelsCount: Int = 5,
+    val consensusSummaryEnglish: String,
+    val consensusSummaryHindi: String,
+    val consensusSummaryMarathi: String = "",
+    val modelInsights: List<SingleAiPredictionInsight>,
+    val jointAiCorrections: List<String>,
+    val jointAiCorrectionsHindi: List<String>,
+    val jointAiCorrectionsMarathi: List<String> = emptyList(),
+    val calibratedEntryRecommendation: String,
+    val calibratedSlRecommendation: String,
+    val calibratedTpRecommendation: String
+) {
+    fun getSummary(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> consensusSummaryEnglish
+        AppLanguage.HINDI -> consensusSummaryHindi
+        AppLanguage.MARATHI -> consensusSummaryMarathi.ifEmpty { consensusSummaryHindi }
+    }
+    fun getJointCorrections(lang: AppLanguage): List<String> = when (lang) {
+        AppLanguage.ENGLISH -> jointAiCorrections
+        AppLanguage.HINDI -> jointAiCorrectionsHindi.ifEmpty { jointAiCorrections }
+        AppLanguage.MARATHI -> jointAiCorrectionsMarathi.ifEmpty { jointAiCorrectionsHindi.ifEmpty { jointAiCorrections } }
+    }
+}
 
 @Serializable
 data class NewsModeStatus(

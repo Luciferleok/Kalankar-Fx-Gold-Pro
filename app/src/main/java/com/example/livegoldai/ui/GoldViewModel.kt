@@ -59,14 +59,22 @@ data class GoldUiState(
     val showLotCalculator: Boolean = false,
     val selectedSlPips: Double = 90.0,
     val showPriceAlertDialog: Boolean = false,
-    val selectedLogoRes: Int = R.drawable.ic_vip_gold_crest,
+    val selectedLogoRes: Int = R.drawable.ic_kalankar_gold_crest,
     val showLogoSelectorDialog: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DUBAI_ROYALE,
     val showThemeSelectorDialog: Boolean = false,
     val isCompactEasyView: Boolean = false,
     val mainScreenMode: MainScreenMode = MainScreenMode.ALL,
-    val showPredictionDialog: Boolean = false
-)
+    val showPredictionDialog: Boolean = false,
+    val isManualNewsMode: Boolean = false
+) {
+    val isNewsModeActive: Boolean
+        get() = isManualNewsMode ||
+                data?.isNewsModeTriggered == true ||
+                data?.newsTradingPlan?.isNewsActive == true ||
+                (data?.newsMode != null && data.newsMode.minutes <= 30) ||
+                themeMode == ThemeMode.NEWS_ALERT
+}
 
 class GoldViewModel @JvmOverloads constructor(
     application: Application,
@@ -120,6 +128,16 @@ class GoldViewModel @JvmOverloads constructor(
                         countdownSeconds = 60,
                         errorMessage = null,
                         isAlertTriggered = triggered || it.isAlertTriggered
+                    )
+                }
+
+                // Check 1-Hour Pre-News upcoming events and trigger notification if due
+                analysis.macroRadar?.upcomingEvents?.let { events ->
+                    com.example.livegoldai.notification.PreNewsAlertNotificationManager.checkAndTriggerUpcomingAlert(
+                        context = getApplication(),
+                        events = events,
+                        currentPrice = analysis.currentPrice,
+                        lang = _uiState.value.language
                     )
                 }
             }.onFailure { err ->
@@ -212,6 +230,31 @@ class GoldViewModel @JvmOverloads constructor(
 
     fun closePredictionDialog() {
         _uiState.update { it.copy(showPredictionDialog = false) }
+    }
+
+    fun toggleNewsMode() {
+        val newActive = !_uiState.value.isManualNewsMode
+        setNewsModeActive(newActive)
+    }
+
+    fun setNewsModeActive(active: Boolean) {
+        _uiState.update { current ->
+            val updatedData = current.data?.let { d ->
+                val updatedPlan = d.newsTradingPlan?.copy(
+                    isNewsActive = active,
+                    releaseCountdownFormatted = if (active) "🚨 LIVE NEWS SPIKE WINDOW ACTIVE (Next 45 Mins)" else "⏰ Next Release: Today 18:30 UTC (US CPI)",
+                    phase = if (active) com.example.livegoldai.model.NewsPhase.LIVE_NEWS_SPIKE else com.example.livegoldai.model.NewsPhase.PRE_NEWS_COIL
+                )
+                d.copy(
+                    isNewsModeTriggered = active,
+                    newsTradingPlan = updatedPlan
+                )
+            }
+            current.copy(
+                isManualNewsMode = active,
+                data = updatedData
+            )
+        }
     }
 
     private fun startAutoRefreshLoop() {

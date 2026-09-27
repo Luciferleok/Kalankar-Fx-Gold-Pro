@@ -130,16 +130,29 @@ fun PredictionOracleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = logoRes),
-                        contentDescription = "Kalankar Royal Gold Emblem",
+                    Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(42.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .border(1.5.dp, GoldLight, RoundedCornerShape(10.dp))
-                            .clickable { onLogoClick() },
-                        contentScale = ContentScale.Crop
-                    )
+                            .background(Color(0xFF080A0F))
+                            .border(
+                                1.5.dp,
+                                Brush.sweepGradient(listOf(GoldLight, GoldPrimary, Color(0xFFD4AF37), GoldLight)),
+                                RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onLogoClick() }
+                            .padding(2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = logoRes),
+                            contentDescription = "Kalankar Royal Gold Emblem",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {

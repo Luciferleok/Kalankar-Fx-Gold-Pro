@@ -121,7 +121,7 @@ fun MacroNewsRadarCard(
 
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = LocalizationStrings.translateReason(radar.summaryInsight, currentLanguage),
+                text = radar.getSummaryInsight(currentLanguage),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary
             )
@@ -355,14 +355,14 @@ fun MacroNewsRadarCard(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = LocalizationStrings.translateReason(item.headline, currentLanguage),
+                            text = item.getHeadline(currentLanguage),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = LocalizationStrings.translateReason(item.reason, currentLanguage),
+                            text = item.getReason(currentLanguage),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )

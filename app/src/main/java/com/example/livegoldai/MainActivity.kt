@@ -1,5 +1,6 @@
 package com.example.livegoldai
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,13 +21,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val navTab = intent?.getIntExtra("EXTRA_NAV_TAB", -1) ?: -1
+        if (navTab >= 0) {
+            viewModel.setTab(navTab)
+        }
+
         setContent {
             val uiState by viewModel.uiState.collectAsState()
             CompositionLocalProvider(LocalAppLanguage provides uiState.language) {
-                LiveGoldAITheme(themeMode = uiState.themeMode) {
+                LiveGoldAITheme(
+                    themeMode = uiState.themeMode,
+                    isNewsModeActive = uiState.isNewsModeActive
+                ) {
                     GoldHomeScreen(viewModel = viewModel)
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val navTab = intent.getIntExtra("EXTRA_NAV_TAB", -1)
+        if (navTab >= 0) {
+            viewModel.setTab(navTab)
         }
     }
 }

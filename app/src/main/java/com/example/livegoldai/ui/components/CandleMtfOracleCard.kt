@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.livegoldai.localization.AppLanguage
+import com.example.livegoldai.localization.LocalAppLanguage
 import com.example.livegoldai.model.CandleReadingInsight
 import com.example.livegoldai.model.MultiTimeframeMatrix
 import com.example.livegoldai.model.Signal
@@ -34,6 +36,7 @@ fun CandleMtfOracleCard(
     tradingTricks: List<TradingTrick>,
     modifier: Modifier = Modifier
 ) {
+    val currentLanguage = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Next Candle AI, 1: Multi-Timeframe, 2: Trading Tricks
     var expandedTrickId by remember { mutableStateOf<String?>(tradingTricks.firstOrNull()?.id) }
 
@@ -112,7 +115,11 @@ fun CandleMtfOracleCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                val tabLabels = listOf("🕯️ Candle AI", "⏱️ 1M-1D Timeframes", "⚡ Trading Tricks")
+                val tabLabels = when (currentLanguage) {
+                    AppLanguage.ENGLISH -> listOf("🕯️ Candle AI", "⏱️ Timeframes", "⚡ Pro Tricks")
+                    AppLanguage.HINDI -> listOf("🕯️ कैंडल AI", "⏱️ टाइमफ्रेम्स", "⚡ प्रो ट्रिक्स")
+                    AppLanguage.MARATHI -> listOf("🕯️ कँडल AI", "⏱️ टाइमफ्रेम्स", "⚡ प्रो ट्रिक्स")
+                }
                 tabLabels.forEachIndexed { index, label ->
                     val isSelected = selectedTab == index
                     Surface(
@@ -285,7 +292,7 @@ fun CandleMtfOracleCard(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "💡 " + candleInsight.nextCandleTradeTactic,
+                                text = "💡 " + candleInsight.getNextCandleTradeTactic(currentLanguage),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = NeonGreen,
                                 fontWeight = FontWeight.SemiBold,
@@ -492,27 +499,31 @@ fun CandleMtfOracleCard(
                                         Divider(color = ObsidianBorder)
                                         Spacer(modifier = Modifier.height(8.dp))
 
+                                        val conditionLabel = when (currentLanguage) {
+                                            AppLanguage.ENGLISH -> "📌 Condition: "
+                                            AppLanguage.HINDI -> "📌 शर्त: "
+                                            AppLanguage.MARATHI -> "📌 अट: "
+                                        }
+                                        val actionLabel = when (currentLanguage) {
+                                            AppLanguage.ENGLISH -> "🎯 ACTION TRIGGER: "
+                                            AppLanguage.HINDI -> "🎯 एक्शन ट्रिगर: "
+                                            AppLanguage.MARATHI -> "🎯 ॲक्शन ट्रिगर: "
+                                        }
+
                                         Text(
-                                            text = "📌 Condition: ${trick.triggerCondition}",
+                                            text = "$conditionLabel${trick.getTriggerCondition(currentLanguage)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = TextSecondary,
                                             fontSize = 11.sp
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
                                         Text(
-                                            text = "🎯 ACTION TRIGGER: ${trick.howToTradeHindi}",
+                                            text = "$actionLabel${trick.getHowToTrade(currentLanguage)}",
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = TextPrimary,
                                             fontSize = 11.sp,
                                             lineHeight = 16.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "🇬🇧 PRO TIP: ${trick.howToTradeEnglish}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = TextGold,
-                                            fontSize = 10.sp
                                         )
                                     }
                                 }

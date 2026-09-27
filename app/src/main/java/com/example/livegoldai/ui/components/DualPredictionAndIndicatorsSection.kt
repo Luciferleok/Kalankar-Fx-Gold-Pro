@@ -50,6 +50,7 @@ fun DualPredictionAndIndicatorsSection(
     onOpenCalculator: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val currentLanguage = LocalAppLanguage.current
     var viewMode by remember { mutableStateOf(DualColumnViewMode.BOTH) }
     var showAllIndicatorsDetail by remember { mutableStateOf(false) }
 
@@ -74,6 +75,20 @@ fun DualPredictionAndIndicatorsSection(
             ) {
                 DualColumnViewMode.values().forEach { mode ->
                     val isSelected = viewMode == mode
+                    val (modeTitle, modeSub) = when (mode) {
+                        DualColumnViewMode.BOTH -> Pair(
+                            LocalizationStrings.dualModeBoth(currentLanguage),
+                            LocalizationStrings.dualModeBothSub(currentLanguage)
+                        )
+                        DualColumnViewMode.PREDICTION_ONLY -> Pair(
+                            LocalizationStrings.dualModePrediction(currentLanguage),
+                            LocalizationStrings.dualModePredictionSub(currentLanguage)
+                        )
+                        DualColumnViewMode.INDICATORS_ONLY -> Pair(
+                            LocalizationStrings.dualModeIndicators(currentLanguage),
+                            LocalizationStrings.dualModeIndicatorsSub(currentLanguage)
+                        )
+                    }
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = if (isSelected) GoldPrimary else Color.Transparent,
@@ -91,7 +106,7 @@ fun DualPredictionAndIndicatorsSection(
                                 Text(text = mode.icon, fontSize = 11.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = mode.title,
+                                    text = modeTitle,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
                                     color = if (isSelected) ObsidianBackground else TextSecondary,
@@ -99,7 +114,7 @@ fun DualPredictionAndIndicatorsSection(
                                 )
                             }
                             Text(
-                                text = mode.hindi,
+                                text = modeSub,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 8.sp,
                                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
@@ -197,19 +212,19 @@ fun PredictionBigCard(
 
     val verdictLocalized = when (verdict) {
         Signal.BUY -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "BUY EXPECTED (Bullish Opportunity)"
-            AppLanguage.HINDI -> "BUY HO SAKTA HAI (खरीदने का मौका)"
-            AppLanguage.MARATHI -> "BUY HO SAKTO (खरेदीची सुवर्णसंधी)"
+            AppLanguage.ENGLISH -> "STRONG BUY (Bullish Trend 🟢)"
+            AppLanguage.HINDI -> "मजबूत खरीदारी (बुलिश तेजी 🟢)"
+            AppLanguage.MARATHI -> "मजबूत खरेदी (बुलिश तेजी 🟢)"
         }
         Signal.SELL -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "SELL EXPECTED (Bearish Opportunity)"
-            AppLanguage.HINDI -> "SELL HO SAKTA HAI (बेचने का मौका)"
-            AppLanguage.MARATHI -> "SELL HO SAKTO (विक्रीची सुवर्णसंधी)"
+            AppLanguage.ENGLISH -> "STRONG SELL (Bearish Trend 🔴)"
+            AppLanguage.HINDI -> "मजबूत बिकवाली (बेयरिश मंदी 🔴)"
+            AppLanguage.MARATHI -> "मजबूत विक्री (बेअरिश मंदी 🔴)"
         }
         Signal.WAIT -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "WAIT PATIENTLY (Range-Bound / Neutral)"
-            AppLanguage.HINDI -> "WAIT KARNA CHAHIYE (इंतज़ार करें)"
-            AppLanguage.MARATHI -> "WAIT KARA (वाट पहा / घाई नको)"
+            AppLanguage.ENGLISH -> "WAIT / NEUTRAL (Range-Bound 🟡)"
+            AppLanguage.HINDI -> "इंतज़ार करें (दायरा सीमित 🟡)"
+            AppLanguage.MARATHI -> "प्रतीक्षा करा (मर्यादित हालचाल 🟡)"
         }
     }
 
@@ -306,6 +321,41 @@ fun PredictionBigCard(
                         color = TextSecondary,
                         fontSize = 9.sp
                     )
+                }
+            }
+
+            // Multi-AI Ensemble Endorsement Strip
+            analysis.multiAiConsensus?.let { consensus ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = ObsidianSurfaceElevated,
+                    border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "🤖", fontSize = 13.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "MULTI-AI COUNCIL: Gemini • ChatGPT • Claude • DeepSeek",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = GoldLight
+                            )
+                        }
+                        Text(
+                            text = "${consensus.agreeingModelsCount}/${consensus.totalModelsCount} AGREE",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            fontWeight = FontWeight.Black,
+                            color = NeonGreen
+                        )
+                    }
                 }
             }
 
@@ -870,7 +920,11 @@ fun PredictionBigCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "AAPKO KYA KARNA HAI (ACTION PLAN)",
+                            text = when (currentLanguage) {
+                                AppLanguage.ENGLISH -> "ACTION PLAN & EXECUTION RULES"
+                                AppLanguage.HINDI -> "ट्रेड एक्शन प्लान (कार्रवाई निर्देश)"
+                                AppLanguage.MARATHI -> "ट्रेड अ‍ॅक्शन प्लॅन (कृती आराखडा)"
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Black,
                             color = GoldLight,
@@ -878,16 +932,32 @@ fun PredictionBigCard(
                         )
                     }
 
-                    val hindiAdvice = prediction?.whatToDoHindi ?: if (verdict == Signal.BUY) {
-                        "Gold mein buy pressure strong hai. Price pull-back lene par BUY karein, target TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) par profit book karein."
-                    } else if (verdict == Signal.SELL) {
-                        "Gold mein selling resistance hai. Resistance ke pass SELL karein, tight SL maintain karein."
-                    } else {
-                        "Abhi market range-bound hai. Clear breakout hone tak trade avoid karein aur wait karein."
+                    val adviceText = prediction?.getWhatToDo(currentLanguage) ?: when (currentLanguage) {
+                        AppLanguage.ENGLISH -> if (verdict == Signal.BUY) {
+                            "Gold shows strong buying pressure holding above support. Look for buy confirmation on dips towards support, and take profit at TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)})."
+                        } else if (verdict == Signal.SELL) {
+                            "Gold faces heavy selling pressure beneath resistance. Look to enter short on bounces near resistance, maintaining strict Stop Loss."
+                        } else {
+                            "Market is in range-bound compression. Avoid fresh entries and wait for a clear structural breakout."
+                        }
+                        AppLanguage.HINDI -> if (verdict == Signal.BUY) {
+                            "गोल्ड में खरीदारी का मजबूत दबाव है। सपोर्ट की ओर पुलबैक पर BUY करें और TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) पर सुरक्षित मुनाफा बुक करें।"
+                        } else if (verdict == Signal.SELL) {
+                            "गोल्ड में ऊपरी स्तरों पर बिकवाली का दबाव है। रेजिस्टेंस के पास SELL करें और सख्त Stop Loss बनाए रखें।"
+                        } else {
+                            "मार्केट अभी सीमित दायरे (रेंज) में फंसा है। स्पष्ट ब्रेकआउट मिलने तक नई ट्रेड से बचें।"
+                        }
+                        AppLanguage.MARATHI -> if (verdict == Signal.BUY) {
+                            "गोल्डमध्ये खरेदीचा मोठा जोर दिसून येत आहे. सपोर्टजवळ पुलबॅक मिळाल्यावर BUY करा आणि TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) वर सुरक्षित नफा बुक करा."
+                        } else if (verdict == Signal.SELL) {
+                            "गोल्डवर वरच्या पातळीवर विक्रीचा दबाव आहे. रेझिस्टन्सजवळ SELL करा आणि कडक Stop Loss पाळा."
+                        } else {
+                            "सध्या मार्केट एका ठराविक कक्षेत अडकले आहे. जोपर्यंत स्पष्ट ब्रेकआउट होत नाही, तोपर्यंत वाट पहा."
+                        }
                     }
 
                     Text(
-                        text = hindiAdvice,
+                        text = adviceText,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextPrimary,
                         fontSize = 12.sp,
@@ -981,7 +1051,11 @@ fun PredictionBigCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "💡 Trailing Rule: Jab price TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) hit kare, Stop Loss ko Entry price par move karein — trade 100% Risk-Free ho jayega!",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "💡 Trailing Rule: When price hits TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}), immediately move Stop Loss to Entry price — trade becomes 100% Risk-Free!"
+                                    AppLanguage.HINDI -> "💡 ट्रेलिंग नियम: जब भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) छुए, तुरंत Stop Loss को एंट्री भाव पर ले आएं — ट्रेड 100% जोखिम-मुक्त हो जाएगा!"
+                                    AppLanguage.MARATHI -> "💡 ट्रेलिंग नियम: जेव्हा भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) गाठेल, लगेच Stop Loss एन्ट्री भावावर हलवा — ट्रेड 100% जोखीममुक्त होईल!"
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 color = TextPrimary,
@@ -1011,7 +1085,11 @@ fun PredictionBigCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Prediction Cancel Rule: Agar candle $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} ke paar close ho jaye to trade cancel samjhein.",
+                                text = prediction?.getInvalidationRule(currentLanguage) ?: when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "Cancellation Rule: If candle closes beyond $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)}, the trade setup is invalidated."
+                                    AppLanguage.HINDI -> "रद्दीकरण नियम: यदि कैंडल $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} के पार बंद होती है, तो ट्रेड को अमान्य समझें।"
+                                    AppLanguage.MARATHI -> "रद्दीकरण नियम: जर कॅन्डल $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} च्या पलीकडे बंद झाली, तर ट्रेड रद्द समजावा."
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 color = TextSecondary,
@@ -1039,7 +1117,11 @@ fun PredictionBigCard(
                             Icon(imageVector = Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Lot Size Calculator",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "Lot Size Calculator"
+                                    AppLanguage.HINDI -> "लॉट साइज कैलकुलेटर"
+                                    AppLanguage.MARATHI -> "लॉट साईझ कॅल्क्युलेटर"
+                                },
                                 fontWeight = FontWeight.Black,
                                 fontSize = 11.sp
                             )
@@ -1262,7 +1344,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$buyCount BUY", fontWeight = FontWeight.Black, color = SignalBuy, fontSize = 12.sp)
-                                Text(text = "खरीद संकेत", fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.buySignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
                             }
                         }
 
@@ -1277,7 +1359,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$sellCount SELL", fontWeight = FontWeight.Black, color = SignalSell, fontSize = 12.sp)
-                                Text(text = "बिक्री संकेत", fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.sellSignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
                             }
                         }
 
@@ -1292,7 +1374,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$waitCount WAIT", fontWeight = FontWeight.Black, color = SignalWait, fontSize = 12.sp)
-                                Text(text = "न्यूट्रल / होल्ड", fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.waitSignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
                             }
                         }
                     }

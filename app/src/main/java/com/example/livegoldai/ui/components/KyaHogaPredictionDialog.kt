@@ -300,7 +300,8 @@ fun KyaHogaPredictionDialog(
                                 fontWeight = FontWeight.SemiBold
                             )
 
-                            if (prediction?.whatToDoHindi?.isNotBlank() == true) {
+                            val whatToDoStr = prediction?.getWhatToDo(currentLanguage) ?: ""
+                            if (whatToDoStr.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
@@ -314,7 +315,7 @@ fun KyaHogaPredictionDialog(
                                         Text(text = "💡", fontSize = 14.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = LocalizationStrings.translateReason(prediction.whatToDoHindi, currentLanguage),
+                                            text = whatToDoStr,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = TextPrimary,
                                             fontSize = 11.sp,
@@ -689,6 +690,112 @@ fun KyaHogaPredictionDialog(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // 1.8 MULTI-AI ENSEMBLE CONSENSUS (Gemini + ChatGPT + Claude + DeepSeek + Perplexity)
+                    analysis.multiAiConsensus?.let { consensus ->
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = ObsidianSurfaceCard,
+                            border = CardDefaults.outlinedCardBorder().copy(
+                                brush = Brush.linearGradient(
+                                    listOf(GoldPrimary.copy(alpha = 0.8f), primaryColor.copy(alpha = 0.5f), ObsidianBorder)
+                                )
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("dialog_multi_ai_council_section")
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "🤖", fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = when (currentLanguage) {
+                                                    AppLanguage.ENGLISH -> "MULTI-AI ENSEMBLE CONSENSUS"
+                                                    AppLanguage.HINDI -> "5 AI मॉडल्स की संयुक्त राय (मल्टी-AI)"
+                                                    AppLanguage.MARATHI -> "5 AI मॉडेल्सची संयुक्त सहमती"
+                                                },
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Black,
+                                                color = GoldLight,
+                                                letterSpacing = 0.5.sp
+                                            )
+                                            Text(
+                                                text = "Gemini • ChatGPT • Claude • DeepSeek • Perplexity",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = primaryColor.copy(alpha = 0.2f)
+                                    ) {
+                                        Text(
+                                            text = "${consensus.agreeingModelsCount}/${consensus.totalModelsCount} AGREE",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                            fontWeight = FontWeight.Bold,
+                                            color = primaryColor
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // Quick Model Badges
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    consensus.modelInsights.forEach { model ->
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = ObsidianSurfaceElevated,
+                                            border = BorderStroke(0.8.dp, ObsidianBorderHighlight),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Text(text = model.provider.iconEmoji, fontSize = 12.sp)
+                                                Text(
+                                                    text = model.provider.displayName.substringBefore(" "),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TextPrimary
+                                                )
+                                                val voteColor = if (model.signal == Signal.BUY) SignalBuy else if (model.signal == Signal.SELL) SignalSell else SignalWait
+                                                Text(
+                                                    text = model.signal.name,
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                                    fontWeight = FontWeight.Black,
+                                                    color = voteColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Consensus summary note
+                                Text(
+                                    text = consensus.getSummary(currentLanguage),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
+                                    color = TextPrimary
+                                )
                             }
                         }
                     }
