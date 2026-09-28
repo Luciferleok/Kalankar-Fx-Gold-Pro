@@ -49,6 +49,7 @@ fun PriceHeaderCard(
     alertTargetPrice: Double? = null,
     isAlertTriggered: Boolean = false,
     onAlertClick: () -> Unit = {},
+    onOpenSpotInspector: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -200,9 +201,13 @@ fun PriceHeaderCard(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Main Price Display
+            // Main Price Display (Clickable to open Gold Spot Inspector)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onOpenSpotInspector() }
+                    .testTag("clickable_price_inspector_row"),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
@@ -221,6 +226,19 @@ fun PriceHeaderCard(
                             color = GoldLight,
                             letterSpacing = 1.sp
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = GoldPrimary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "TAP TO INSPECT 🔍",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = GoldLight
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))

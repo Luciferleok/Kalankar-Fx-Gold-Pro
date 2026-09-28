@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,13 +35,15 @@ import androidx.compose.ui.unit.sp
 import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.localization.LocalAppLanguage
 import com.example.livegoldai.model.GoldAnalysisResult
+import com.example.livegoldai.model.GroupAnalysis
 import com.example.livegoldai.model.Signal
 import com.example.livegoldai.theme.*
 
 @Composable
 fun HeroConsensusCard(
     analysis: GoldAnalysisResult,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPillarClick: ((GroupAnalysis) -> Unit)? = null
 ) {
     val currentLang = LocalAppLanguage.current
     val signalColor by animateColorAsState(
@@ -296,7 +299,11 @@ fun HeroConsensusCard(
                     }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = onPillarClick != null) { onPillarClick?.invoke(group) }
+                            .padding(vertical = 2.dp)
                     ) {
                         Text(
                             text = group.title.take(5).uppercase(),

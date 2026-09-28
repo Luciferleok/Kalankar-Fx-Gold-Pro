@@ -8,6 +8,7 @@ import com.example.livegoldai.R
 import com.example.livegoldai.data.GoldApiService
 import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.model.GoldAnalysisResult
+import com.example.livegoldai.model.GroupAnalysis
 import com.example.livegoldai.theme.ThemeMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -59,13 +60,16 @@ data class GoldUiState(
     val showLotCalculator: Boolean = false,
     val selectedSlPips: Double = 90.0,
     val showPriceAlertDialog: Boolean = false,
-    val selectedLogoRes: Int = R.drawable.ic_kalankar_gold_crest,
+    val selectedLogoRes: Int = R.drawable.ic_kalankar_royal_emblem,
     val showLogoSelectorDialog: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.DUBAI_ROYALE,
     val showThemeSelectorDialog: Boolean = false,
     val isCompactEasyView: Boolean = false,
     val mainScreenMode: MainScreenMode = MainScreenMode.ALL,
     val showPredictionDialog: Boolean = false,
+    val showPredictionErrorAnalyzerDialog: Boolean = false,
+    val showSpotInspectorDialog: Boolean = false,
+    val selectedPillarForDeepDive: GroupAnalysis? = null,
     val isManualNewsMode: Boolean = false
 ) {
     val isNewsModeActive: Boolean
@@ -235,6 +239,34 @@ class GoldViewModel @JvmOverloads constructor(
     fun toggleNewsMode() {
         val newActive = !_uiState.value.isManualNewsMode
         setNewsModeActive(newActive)
+    }
+
+    fun openPredictionErrorAnalyzer() {
+        _uiState.update { it.copy(showPredictionErrorAnalyzerDialog = true) }
+    }
+
+    fun closePredictionErrorAnalyzer() {
+        _uiState.update { it.copy(showPredictionErrorAnalyzerDialog = false) }
+    }
+
+    fun recalibratePredictionEngine() {
+        loadData(isInitial = false)
+    }
+
+    fun openSpotInspector() {
+        _uiState.update { it.copy(showSpotInspectorDialog = true) }
+    }
+
+    fun closeSpotInspector() {
+        _uiState.update { it.copy(showSpotInspectorDialog = false) }
+    }
+
+    fun openPillarDeepDive(group: GroupAnalysis) {
+        _uiState.update { it.copy(selectedPillarForDeepDive = group) }
+    }
+
+    fun closePillarDeepDive() {
+        _uiState.update { it.copy(selectedPillarForDeepDive = null) }
     }
 
     fun setNewsModeActive(active: Boolean) {

@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +40,7 @@ import java.util.Locale
 fun PredictionAccuracyAuditCard(
     audit: TimeframeAccuracyAudit?,
     selectedInterval: String,
+    onOpenPredictionErrorAnalyzer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (audit == null) return
@@ -268,6 +270,38 @@ fun PredictionAccuracyAuditCard(
                             color = TextSecondary
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // AI Error Analyzer & Recalibrator Launcher Button
+            Button(
+                onClick = onOpenPredictionErrorAnalyzer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .testTag("audit_open_error_analyzer_button"),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ObsidianSurfaceElevated,
+                    contentColor = GoldLight
+                ),
+                border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.7f))
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "🔬", fontSize = 13.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "ANALYZE WRONG PREDICTIONS & SEE AI FIXES ⚡"
+                            AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
+                            AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        fontWeight = FontWeight.Black,
+                        color = GoldLight
+                    )
                 }
             }
 

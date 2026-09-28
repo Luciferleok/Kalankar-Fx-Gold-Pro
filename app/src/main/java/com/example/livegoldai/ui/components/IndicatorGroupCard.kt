@@ -1,13 +1,16 @@
 package com.example.livegoldai.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -31,7 +34,8 @@ import com.example.livegoldai.theme.*
 @Composable
 fun IndicatorGroupCard(
     group: GroupAnalysis,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPillarClick: (() -> Unit)? = null
 ) {
     val currentLanguage = LocalAppLanguage.current
     val verdictColor = when (group.verdict) {
@@ -195,6 +199,50 @@ fun IndicatorGroupCard(
                         thickness = 1.dp,
                         modifier = Modifier.padding(vertical = 10.dp)
                     )
+                }
+            }
+
+            if (onPillarClick != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = ObsidianSurfaceElevated,
+                    border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onPillarClick() }
+                        .testTag("pillar_deep_dive_btn_${group.key}")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "🔬", fontSize = 12.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "INSPECT HISTORICAL ACCURACY & RAW DATA"
+                                    AppLanguage.HINDI -> "ऐतिहासिक एक्यूरेसी दर व रॉ डेटा देखें"
+                                    AppLanguage.MARATHI -> "ऐतिहासिक अचूकता दर व रॉ डेटा पहा"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                fontWeight = FontWeight.Black,
+                                color = GoldLight
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Inspect Pillar",
+                            tint = GoldLight,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

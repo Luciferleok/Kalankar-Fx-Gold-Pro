@@ -103,7 +103,25 @@ fun GoldHomeScreen(
         KyaHogaPredictionDialog(
             analysis = uiState.data!!,
             onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+            onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
             onDismiss = { viewModel.closePredictionDialog() }
+        )
+    }
+
+    if (uiState.showPredictionErrorAnalyzerDialog && uiState.data != null) {
+        PredictionErrorAnalyzerDialog(
+            analysis = uiState.data!!,
+            onDismiss = { viewModel.closePredictionErrorAnalyzer() },
+            onRecalibrate = { viewModel.recalibratePredictionEngine() }
+        )
+    }
+
+    if (uiState.selectedPillarForDeepDive != null && uiState.data != null) {
+        IndicatorPillarDeepDiveSheet(
+            group = uiState.selectedPillarForDeepDive!!,
+            currentPrice = uiState.data!!.currentPrice,
+            onDismiss = { viewModel.closePillarDeepDive() },
+            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
         )
     }
 
@@ -494,7 +512,9 @@ fun GoldHomeScreen(
                             item(key = "cockpit_dual_prediction_indicators") {
                                 DualPredictionAndIndicatorsSection(
                                     analysis = analysis,
-                                    onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                    onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                    onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+                                    onPillarClick = { group -> viewModel.openPillarDeepDive(group) }
                                 )
                             }
 
@@ -542,7 +562,8 @@ fun GoldHomeScreen(
                                 item(key = "multi_ai_accuracy_audit_page") {
                                     PredictionAccuracyAuditCard(
                                         audit = audit,
-                                        selectedInterval = uiState.selectedInterval
+                                        selectedInterval = uiState.selectedInterval,
+                                        onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() }
                                     )
                                 }
                             }

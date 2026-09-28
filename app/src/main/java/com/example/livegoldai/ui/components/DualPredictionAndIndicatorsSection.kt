@@ -33,6 +33,7 @@ import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.localization.LocalAppLanguage
 import com.example.livegoldai.localization.LocalizationStrings
 import com.example.livegoldai.model.GoldAnalysisResult
+import com.example.livegoldai.model.GroupAnalysis
 import com.example.livegoldai.model.PredictionOutcomeStatus
 import com.example.livegoldai.model.Signal
 import com.example.livegoldai.theme.*
@@ -48,6 +49,8 @@ enum class DualColumnViewMode(val title: String, val hindi: String, val icon: St
 fun DualPredictionAndIndicatorsSection(
     analysis: GoldAnalysisResult,
     onOpenCalculator: (Double) -> Unit,
+    onOpenPredictionErrorAnalyzer: () -> Unit = {},
+    onPillarClick: (GroupAnalysis) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -138,14 +141,16 @@ fun DualPredictionAndIndicatorsSection(
                     Box(modifier = Modifier.weight(1f)) {
                         PredictionBigCard(
                             analysis = analysis,
-                            onOpenCalculator = onOpenCalculator
+                            onOpenCalculator = onOpenCalculator,
+                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         IndicatorsOverallBigCard(
                             analysis = analysis,
                             isDetailExpanded = showAllIndicatorsDetail,
-                            onToggleDetail = { showAllIndicatorsDetail = !showAllIndicatorsDetail }
+                            onToggleDetail = { showAllIndicatorsDetail = !showAllIndicatorsDetail },
+                            onPillarClick = onPillarClick
                         )
                     }
                 }
@@ -157,7 +162,8 @@ fun DualPredictionAndIndicatorsSection(
                     if (viewMode == DualColumnViewMode.BOTH || viewMode == DualColumnViewMode.PREDICTION_ONLY) {
                         PredictionBigCard(
                             analysis = analysis,
-                            onOpenCalculator = onOpenCalculator
+                            onOpenCalculator = onOpenCalculator,
+                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
                         )
                     }
 
@@ -165,7 +171,8 @@ fun DualPredictionAndIndicatorsSection(
                         IndicatorsOverallBigCard(
                             analysis = analysis,
                             isDetailExpanded = showAllIndicatorsDetail,
-                            onToggleDetail = { showAllIndicatorsDetail = !showAllIndicatorsDetail }
+                            onToggleDetail = { showAllIndicatorsDetail = !showAllIndicatorsDetail },
+                            onPillarClick = onPillarClick
                         )
                     }
                 }
@@ -182,6 +189,7 @@ fun DualPredictionAndIndicatorsSection(
 fun PredictionBigCard(
     analysis: GoldAnalysisResult,
     onOpenCalculator: (Double) -> Unit,
+    onOpenPredictionErrorAnalyzer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -554,7 +562,10 @@ fun PredictionBigCard(
                                 shape = RoundedCornerShape(8.dp),
                                 color = SignalSell.copy(alpha = 0.12f),
                                 border = BorderStroke(1.dp, SignalSell.copy(alpha = 0.4f)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onOpenPredictionErrorAnalyzer() }
                             ) {
                                 Column(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
@@ -568,12 +579,12 @@ fun PredictionBigCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Failed (SL Hit)"
-                                            AppLanguage.HINDI -> "गलत प्रेडिक्शन"
-                                            AppLanguage.MARATHI -> "चूक अंदाज"
+                                            AppLanguage.ENGLISH -> "Analyze (Tap) 🔬"
+                                            AppLanguage.HINDI -> "जांचें (क्लिक करें) 🔬"
+                                            AppLanguage.MARATHI -> "तपासा (क्लिक) 🔬"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                                        color = TextSecondary
+                                        color = SignalSell
                                     )
                                 }
                             }
@@ -748,6 +759,38 @@ fun PredictionBigCard(
                                         color = TextPrimary
                                     )
                                 }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Direct Launch to AI Error Analyzer & Recalibrator
+                        Button(
+                            onClick = onOpenPredictionErrorAnalyzer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .testTag("open_error_analyzer_button"),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ObsidianSurfaceElevated,
+                                contentColor = GoldLight
+                            ),
+                            border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f))
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "🔬", fontSize = 13.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & SEE 6 AI FIXES ⚡"
+                                        AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
+                                        AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Black,
+                                    color = GoldLight
+                                )
                             }
                         }
                     }
@@ -1170,6 +1213,7 @@ fun IndicatorsOverallBigCard(
     analysis: GoldAnalysisResult,
     isDetailExpanded: Boolean,
     onToggleDetail: () -> Unit,
+    onPillarClick: (GroupAnalysis) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -1461,7 +1505,8 @@ fun IndicatorsOverallBigCard(
                         category = categoryTitle,
                         indicators = indSummary,
                         signal = group.verdict,
-                        statusText = statusText
+                        statusText = statusText,
+                        onClick = { onPillarClick(group) }
                     )
                 }
 
@@ -1529,7 +1574,10 @@ fun IndicatorsOverallBigCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     analysis.groups.forEach { group ->
-                        IndicatorGroupCard(group = group)
+                        IndicatorGroupCard(
+                            group = group,
+                            onPillarClick = { onPillarClick(group) }
+                        )
                     }
                 }
             }
@@ -1543,7 +1591,8 @@ private fun CategoryStatusRow(
     category: String,
     indicators: String,
     signal: Signal,
-    statusText: String
+    statusText: String,
+    onClick: () -> Unit = {}
 ) {
     val (sigColor, sigText) = when (signal) {
         Signal.BUY -> SignalBuy to "BUY"
@@ -1552,10 +1601,14 @@ private fun CategoryStatusRow(
     }
 
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = ObsidianSurfaceElevated,
         border = BorderStroke(1.dp, ObsidianBorder),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .testTag("pillar_row_${category}")
     ) {
         Row(
             modifier = Modifier
@@ -1568,26 +1621,51 @@ private fun CategoryStatusRow(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = icon, fontSize = 14.sp)
+                Text(text = icon, fontSize = 16.sp)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = category, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = TextPrimary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = category, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = TextPrimary)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = GoldPrimary.copy(alpha = 0.15f),
+                            border = BorderStroke(0.6.dp, GoldPrimary.copy(alpha = 0.4f))
+                        ) {
+                            Text(
+                                text = "🔬 Deep-Dive",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                fontSize = 8.sp,
+                                color = GoldLight,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
                     Text(text = indicators, fontSize = 9.sp, color = TextMuted)
                     Text(text = statusText, fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                 }
             }
 
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = sigColor.copy(alpha = 0.15f),
-                border = BorderStroke(1.dp, sigColor.copy(alpha = 0.4f))
-            ) {
-                Text(
-                    text = sigText,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    fontWeight = FontWeight.Black,
-                    fontSize = 10.sp,
-                    color = sigColor
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = sigColor.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, sigColor.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = sigText,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 10.sp,
+                        color = sigColor
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Inspect",
+                    tint = GoldLight.copy(alpha = 0.8f),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

@@ -40,6 +40,7 @@ import java.util.Locale
 fun KyaHogaPredictionDialog(
     analysis: GoldAnalysisResult,
     onOpenLotCalculator: (Double) -> Unit,
+    onOpenPredictionErrorAnalyzer: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -521,7 +522,13 @@ fun KyaHogaPredictionDialog(
                                         shape = RoundedCornerShape(10.dp),
                                         color = SignalSell.copy(alpha = 0.12f),
                                         border = BorderStroke(1.dp, SignalSell.copy(alpha = 0.4f)),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                onDismiss()
+                                                onOpenPredictionErrorAnalyzer()
+                                            }
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -535,12 +542,12 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "Failed / SL Hit"
-                                                    AppLanguage.HINDI -> "गलत प्रेडिक्शन"
-                                                    AppLanguage.MARATHI -> "चूक अंदाज"
+                                                    AppLanguage.ENGLISH -> "Analyze (Tap) 🔬"
+                                                    AppLanguage.HINDI -> "जांचें (क्लिक करें) 🔬"
+                                                    AppLanguage.MARATHI -> "तपासा (क्लिक) 🔬"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                                                color = TextSecondary
+                                                color = SignalSell
                                             )
                                         }
                                     }
@@ -688,6 +695,39 @@ fun KyaHogaPredictionDialog(
                                                 color = TextMuted
                                             )
                                         }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = {
+                                        onDismiss()
+                                        onOpenPredictionErrorAnalyzer()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp)
+                                        .testTag("dialog_open_error_analyzer_btn"),
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = ObsidianSurfaceElevated,
+                                        contentColor = GoldLight
+                                    ),
+                                    border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.7f))
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "🔬", fontSize = 13.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = when (currentLanguage) {
+                                                AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & 6 AI FIXES ⚡"
+                                                AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
+                                                AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            fontWeight = FontWeight.Black,
+                                            color = GoldLight
+                                        )
                                     }
                                 }
                             }
