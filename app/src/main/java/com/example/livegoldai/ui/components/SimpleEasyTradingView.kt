@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -78,11 +77,7 @@ fun SimpleEasyTradingView(
         Signal.WAIT -> SignalWaitBg
     }
 
-    val signalBorder = when (analysis.overallSignal) {
-        Signal.BUY -> SignalBuyBorder
-        Signal.SELL -> SignalSellBorder
-        Signal.WAIT -> SignalWaitBorder
-    }
+    val signalBorder = signalColor.copy(alpha = 0.5f)
 
     Column(
         modifier = modifier
@@ -179,11 +174,11 @@ fun SimpleEasyTradingView(
                             color = TextPrimary
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val isUp = analysis.priceChange >= 0
+                            val isUp = analysis.changeAmount >= 0
                             val changeColor = if (isUp) SignalBuy else SignalSell
                             val arrow = if (isUp) "▲" else "▼"
                             Text(
-                                text = "$arrow $${String.format(Locale.US, "%.2f", kotlin.math.abs(analysis.priceChange))} (${String.format(Locale.US, "%+.2f", analysis.priceChangePercent)}%)",
+                                text = "$arrow $${String.format(Locale.US, "%.2f", kotlin.math.abs(analysis.changeAmount))} (${String.format(Locale.US, "%+.2f", analysis.changePercent)}%)",
                                 color = changeColor,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -338,7 +333,7 @@ fun SimpleEasyTradingView(
                         // Copy levels button
                         IconButton(
                             onClick = {
-                                val tradeText = "XAU/USD Setup: ${analysis.overallSignal.name} @ $${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryZoneStart)} | SL: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} | TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.tp1)} | TP2: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.tp2)}"
+                                val tradeText = "XAU/USD Setup: ${analysis.overallSignal.name} @ $${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryPrice)} | SL: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} | TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)} | TP2: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)}"
                                 clipboardManager.setText(AnnotatedString(tradeText))
                                 Toast.makeText(context, "Trade Setup Copied! 📋", Toast.LENGTH_SHORT).show()
                             },
@@ -374,9 +369,9 @@ fun SimpleEasyTradingView(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🎯 ENTRY ZONE"
-                                    AppLanguage.HINDI -> "🎯 एंट्री लेवल्स"
-                                    AppLanguage.MARATHI -> "🎯 एन्ट्री लेव्हल्स"
+                                    AppLanguage.ENGLISH -> "🎯 ENTRY PRICE"
+                                    AppLanguage.HINDI -> "🎯 एंट्री प्राइस"
+                                    AppLanguage.MARATHI -> "🎯 एन्ट्री प्राइस"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -384,8 +379,8 @@ fun SimpleEasyTradingView(
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "$${String.format(Locale.US, "%.1f", analysis.tradeSetup.entryZoneStart)} - $${String.format(Locale.US, "%.1f", analysis.tradeSetup.entryZoneEnd)}",
-                                fontSize = 12.sp,
+                                text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryPrice)}",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
                                 fontFamily = FontFamily.Monospace
@@ -449,7 +444,7 @@ fun SimpleEasyTradingView(
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.tp1)}",
+                                text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = SignalBuy,
@@ -478,7 +473,7 @@ fun SimpleEasyTradingView(
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.tp2)}",
+                                text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)}",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = SignalBuy,
@@ -637,7 +632,7 @@ fun SimpleEasyTradingView(
                         Signal.SELL -> SignalSell
                         Signal.WAIT -> SignalWait
                     }
-                    val pillIcon = when (group.id) {
+                    val pillIcon = when (group.key) {
                         "trend" -> "📈"
                         "momentum" -> "⚡"
                         "smc" -> "🏦"
@@ -657,7 +652,7 @@ fun SimpleEasyTradingView(
                             .padding(vertical = 4.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { onPillarClick(group) }
-                            .testTag("easy_pillar_${group.id}")
+                            .testTag("easy_pillar_${group.key}")
                     ) {
                         Row(
                             modifier = Modifier
