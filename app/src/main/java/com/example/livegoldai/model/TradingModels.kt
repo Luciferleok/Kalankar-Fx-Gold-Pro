@@ -517,6 +517,7 @@ data class GoldAnalysisResult(
     val multiAiConsensus: MultiAiConsensusReport? = null,
     val failedPredictionAutopsy: FailedPredictionCandleAutopsy? = null,
     val newsTradingPlan: NewsTradingPlan? = null,
+    val quantBotSignal: QuantBotTradeSignal? = null,
     val isNewsModeTriggered: Boolean = false,
     val isSimulatedFallback: Boolean = false,
     val newsMode: NewsModeStatus? = null
@@ -705,3 +706,42 @@ data class NewsModeStatus(
         AppLanguage.MARATHI -> detailMarathi.ifBlank { detailEnglish.ifBlank { detail } }
     }
 }
+
+@Serializable
+data class QuantBotTradeSignal(
+    val botName: String = "KALANKAR QUANT BOT v5.2",
+    val statusText: String, // "🟢 ACTIVE SCANNING & READY", "⚡ LIVE ORDER DISPATCHED", "🛡️ STANDBY (CAPITAL GUARD)"
+    val isTradeActive: Boolean,
+    val signal: Signal,
+    val orderType: String, // "BUY LIMIT @ 50% FVG", "SELL LIMIT @ RESISTANCE", "STANDBY / WAIT"
+    val entryPrice: Double,
+    val stopLoss: Double,
+    val takeProfit1: Double,
+    val takeProfit2: Double,
+    val pipsRisk: Double,
+    val pipsRewardTp1: Double,
+    val pipsRewardTp2: Double,
+    val recommendedLot: Double, // e.g. 0.04
+    val winProbabilityPercent: Int, // e.g. 93
+    val strategyName: String, // "Institutional ICT / SMC + Multi-AI Hybrid"
+    val executionCommandEng: String, // "BUY LIMIT XAUUSD @ 2646.40 SL 2638.50 TP1 2658.00 TP2 2668.00"
+    val botReasoningEnglish: String,
+    val botReasoningHindi: String,
+    val botReasoningMarathi: String = "",
+    val autoBreakevenRuleEng: String,
+    val autoBreakevenRuleHindi: String,
+    val autoBreakevenRuleMarathi: String = "",
+    val newsLockActive: Boolean = false
+) {
+    fun getBotReasoning(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> botReasoningEnglish
+        AppLanguage.HINDI -> botReasoningHindi
+        AppLanguage.MARATHI -> botReasoningMarathi.ifEmpty { botReasoningHindi }
+    }
+    fun getBreakevenRule(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> autoBreakevenRuleEng
+        AppLanguage.HINDI -> autoBreakevenRuleHindi
+        AppLanguage.MARATHI -> autoBreakevenRuleMarathi.ifEmpty { autoBreakevenRuleHindi }
+    }
+}
+

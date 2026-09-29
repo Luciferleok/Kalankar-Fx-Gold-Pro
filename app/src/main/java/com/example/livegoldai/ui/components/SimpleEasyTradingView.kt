@@ -53,6 +53,7 @@ fun SimpleEasyTradingView(
     onIntervalSelected: (String) -> Unit,
     onOpenCalculator: (Double) -> Unit,
     onOpenPredictionDialog: () -> Unit,
+    onOpenPredictionErrorAnalyzer: () -> Unit = {},
     onPillarClick: (GroupAnalysis) -> Unit,
     onSwitchToProMode: () -> Unit,
     onRefreshClick: () -> Unit,
@@ -552,6 +553,184 @@ fun SimpleEasyTradingView(
                             fontWeight = FontWeight.Black
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 🔬 ANALYZE WRONG PREDICTIONS & 1-CLICK RECALIBRATION
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SignalSell.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, SignalSell.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onOpenPredictionErrorAnalyzer() }
+                        .testTag("easy_error_analyzer_button")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(text = "🔬", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "Why Did Predictions Fail? • AI Autopsy"
+                                        AppLanguage.HINDI -> "प्रेडिक्शन गलत क्यों हुई? • AI गलती विश्लेषण"
+                                        AppLanguage.MARATHI -> "अंदाज का चुकला? • AI चूक विश्लेषण"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = when (currentLanguage) {
+                                        AppLanguage.ENGLISH -> "Tap to view Stop-Hunt traps & 1-Click Recalibrate"
+                                        AppLanguage.HINDI -> "स्टॉप-हंट ट्रैप्स देखें और 1-क्लिक में इंजन सुधारें"
+                                        AppLanguage.MARATHI -> "स्टॉप-हंट ट्रॅप्स पहा आणि 1-क्लिकमध्ये इंजिन सुधारा"
+                                    },
+                                    fontSize = 9.sp,
+                                    color = GoldLight
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = GoldPrimary.copy(alpha = 0.2f),
+                            border = BorderStroke(0.8.dp, GoldPrimary)
+                        ) {
+                            Text(
+                                text = "RECALIBRATE ⚙️",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                color = GoldLight
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 2.5 🤖 KALANKAR QUANT BOT (HIGH-ACCURACY ALGORITHMIC TRADING) ---
+        QuantBotCard(
+            botSignal = analysis.quantBotSignal,
+            onOpenCalculator = onOpenCalculator
+        )
+
+        // --- 2.8 🧠 5-AI ENSEMBLE CONSENSUS STRIP ---
+        analysis.multiAiConsensus?.let { consensus ->
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = ObsidianSurfaceCard,
+                border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "🧠", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "5-AI COUNCIL CONSENSUS"
+                                    AppLanguage.HINDI -> "5-AI मॉडल्स की संयुक्त सहमति"
+                                    AppLanguage.MARATHI -> "5-AI मॉडेल्सची संयुक्त सहमती"
+                                },
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp,
+                                color = GoldLight
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = GoldPrimary.copy(alpha = 0.15f),
+                            border = BorderStroke(0.6.dp, GoldPrimary.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = "${consensus.unanimousAgreementPercent}% ACCURACY SCORE",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                color = GoldLight
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 5 Model status chips
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        consensus.modelInsights.forEach { model ->
+                            val dotColor = when (model.signal) {
+                                Signal.BUY -> SignalBuy
+                                Signal.SELL -> SignalSell
+                                Signal.WAIT -> SignalWait
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = ObsidianSurfaceElevated,
+                                border = BorderStroke(0.6.dp, dotColor.copy(alpha = 0.4f)),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(dotColor)
+                                    )
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = model.provider.displayName.substringBefore(" "),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = model.signal.name,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = dotColor
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = consensus.getSummary(currentLanguage),
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        color = TextMuted
+                    )
                 }
             }
         }

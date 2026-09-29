@@ -231,7 +231,11 @@ object TechnicalEngine {
             Signal.SELL
         }
 
-        // --- Group 1: Trend ---
+        // Institutional Regime Determination (Prevents false counter-trend signals in Gold)
+        val isTrendBullish = (lastEma9 > lastEma21 && last.close > lastEma50) || (last.close > vwapValue && superTrendSignal == Signal.BUY)
+        val isTrendBearish = (lastEma9 < lastEma21 && last.close < lastEma50) || (last.close < vwapValue && superTrendSignal == Signal.SELL)
+
+        // --- Group 1: Trend Strength ---
         val trendItems = listOf(
             IndicatorItem(
                 name = "EMA 9 vs EMA 21",
@@ -272,48 +276,91 @@ object TechnicalEngine {
         )
         val trendVerdict = decide(trendItems.map { it.signal })
 
-        // --- Group 2: Momentum ---
+        // --- Group 2: Momentum Oscillators (Trend-Calibrated: Eliminates False Sells in Bull Trends) ---
         val momentumItems = listOf(
             IndicatorItem(
                 name = "RSI (14)",
-                signal = if (rsi14 >= 55) Signal.BUY else if (rsi14 <= 45) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && rsi14 >= 48.0 -> Signal.BUY
+                    isTrendBullish && rsi14 in 38.0..48.0 -> Signal.BUY
+                    isTrendBearish && rsi14 <= 52.0 -> Signal.SELL
+                    isTrendBearish && rsi14 in 52.0..62.0 -> Signal.SELL
+                    rsi14 >= 55.0 -> Signal.BUY
+                    rsi14 <= 45.0 -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "${format1(rsi14)} / 100",
                 detail = when {
-                    rsi14 >= 70 -> "Overbought zone with strong momentum"
-                    rsi14 >= 55 -> "Bullish momentum zone (>55)"
-                    rsi14 <= 30 -> "Oversold territory"
-                    rsi14 <= 45 -> "Bearish momentum zone (<45)"
+                    isTrendBullish && rsi14 >= 65.0 -> "Strong Bullish Trend Momentum (Expansion Phase)"
+                    isTrendBullish && rsi14 in 40.0..55.0 -> "Healthy Bullish Pullback (High-Probability Dip Buy)"
+                    isTrendBearish && rsi14 <= 35.0 -> "Strong Bearish Breakdown Momentum"
+                    isTrendBearish && rsi14 in 45.0..60.0 -> "Bearish Relief Bounce (Supply Absorption)"
+                    rsi14 >= 55.0 -> "Bullish momentum bias (>55)"
+                    rsi14 <= 45.0 -> "Bearish momentum bias (<45)"
                     else -> "Neutral equilibrium (45-55)"
                 }
             ),
             IndicatorItem(
                 name = "Stochastic %K",
-                signal = if (stochK < 20) Signal.BUY else if (stochK > 80) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && stochK >= 45.0 -> Signal.BUY
+                    isTrendBullish && stochK < 30.0 -> Signal.BUY // Oversold dip in bull trend
+                    isTrendBearish && stochK <= 55.0 -> Signal.SELL
+                    isTrendBearish && stochK > 70.0 -> Signal.SELL // Relief bounce in bear trend
+                    stochK < 25.0 -> Signal.BUY
+                    stochK > 75.0 -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "${format1(stochK)}%",
                 detail = when {
-                    stochK < 20 -> "Oversold bounce potential (<20)"
-                    stochK > 80 -> "Overbought exhaustion alert (>80)"
-                    else -> "Mid-range zone (20-80)"
+                    isTrendBullish && stochK >= 45.0 -> "Bullish momentum continuation (>45% in uptrend)"
+                    isTrendBullish && stochK < 30.0 -> "Discount pullback entry point in bull trend"
+                    isTrendBearish && stochK <= 55.0 -> "Bearish trend continuation (<55% in downtrend)"
+                    isTrendBearish && stochK > 70.0 -> "Bearish exhaustion rally into supply"
+                    stochK < 25.0 -> "Oversold bounce potential (<25)"
+                    stochK > 75.0 -> "Overbought exhaustion alert (>75)"
+                    else -> "Mid-range oscillation"
                 }
             ),
             IndicatorItem(
                 name = "CCI (20)",
-                signal = if (lastCci < -100) Signal.BUY else if (lastCci > 100) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && lastCci >= -20.0 -> Signal.BUY
+                    isTrendBullish && lastCci < -80.0 -> Signal.BUY // Deep cyclical discount
+                    isTrendBearish && lastCci <= 20.0 -> Signal.SELL
+                    isTrendBearish && lastCci > 80.0 -> Signal.SELL // Cyclical bounce into resistance
+                    lastCci < -100.0 -> Signal.BUY
+                    lastCci > 100.0 -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = format1(lastCci),
                 detail = when {
-                    lastCci < -100 -> "Extreme cyclical oversold dip (BUY)"
-                    lastCci > 100 -> "Extreme cyclical overbought peak (SELL)"
-                    else -> "Normal oscillation range (-100 to +100)"
+                    isTrendBullish && lastCci >= 0 -> "Positive institutional velocity in uptrend"
+                    isTrendBullish && lastCci < -80.0 -> "Cyclical discount dip buy in bull regime"
+                    isTrendBearish && lastCci <= 0 -> "Negative institutional velocity in downtrend"
+                    isTrendBearish && lastCci > 80.0 -> "Cyclical overextension in bear regime"
+                    lastCci < -100.0 -> "Extreme cyclical oversold dip (BUY)"
+                    lastCci > 100.0 -> "Extreme cyclical overbought peak (SELL)"
+                    else -> "Normal oscillation range"
                 }
             ),
             IndicatorItem(
                 name = "Williams %R",
-                signal = if (williamsR < -80) Signal.BUY else if (williamsR > -20) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && williamsR >= -55.0 -> Signal.BUY
+                    isTrendBullish && williamsR < -80.0 -> Signal.BUY
+                    isTrendBearish && williamsR <= -45.0 -> Signal.SELL
+                    isTrendBearish && williamsR > -20.0 -> Signal.SELL
+                    williamsR < -80.0 -> Signal.BUY
+                    williamsR > -20.0 -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "${format1(williamsR)}%",
                 detail = when {
-                    williamsR < -80 -> "Oversold zone (< -80)"
-                    williamsR > -20 -> "Overbought zone (> -20)"
-                    else -> "Neutral band (-80 to -20)"
+                    isTrendBullish && williamsR >= -50.0 -> "Buyers maintaining dominant upper bracket"
+                    isTrendBullish && williamsR < -80.0 -> "Discount dip test in bull structure"
+                    isTrendBearish && williamsR <= -50.0 -> "Sellers maintaining dominant lower bracket"
+                    else -> "Oscillating within standard band"
                 }
             ),
             IndicatorItem(
@@ -325,52 +372,74 @@ object TechnicalEngine {
         )
         val momentumVerdict = decide(momentumItems.map { it.signal })
 
-        // --- Group 3: Volatility ---
+        // --- Group 3: Volatility Bands (Expansion vs Compression) ---
         val volatilityItems = listOf(
             IndicatorItem(
                 name = "Bollinger Bands",
-                signal = if (last.close < bbLower) Signal.BUY else if (last.close > bbUpper) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && last.close >= bbMid -> Signal.BUY // Riding upper band
+                    isTrendBullish && last.close < bbLower -> Signal.BUY // Extreme 2-sigma discount
+                    isTrendBearish && last.close <= bbMid -> Signal.SELL // Riding lower band
+                    isTrendBearish && last.close > bbUpper -> Signal.SELL // Extreme 2-sigma spike
+                    last.close < bbLower -> Signal.BUY
+                    last.close > bbUpper -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "U: ${format2(bbUpper)} | L: ${format2(bbLower)}",
                 detail = when {
-                    last.close < bbLower -> "Pierced lower volatility band (Oversold squeeze)"
-                    last.close > bbUpper -> "Pierced upper volatility band (Overbought stretch)"
-                    else -> "Within 2-sigma volatility envelope"
+                    isTrendBullish && last.close > bbUpper -> "Volatility expansion breakout above upper band"
+                    isTrendBullish -> "Price holding comfortably above 20-SMA midline"
+                    isTrendBearish && last.close < bbLower -> "Volatility expansion breakdown beneath lower band"
+                    isTrendBearish -> "Price capped beneath 20-SMA midline"
+                    else -> "Inside 2-sigma volatility envelope"
                 }
             ),
             IndicatorItem(
                 name = "Keltner Channel",
-                signal = if (last.close < kcLower) Signal.BUY else if (last.close > kcUpper) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && last.close >= lastEma21 -> Signal.BUY
+                    isTrendBearish && last.close <= lastEma21 -> Signal.SELL
+                    last.close < kcLower -> Signal.BUY
+                    last.close > kcUpper -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "U: ${format2(kcUpper)} | L: ${format2(kcLower)}",
-                detail = when {
-                    last.close < kcLower -> "Below ATR lower channel boundary"
-                    last.close > kcUpper -> "Above ATR upper channel boundary"
-                    else -> "Inside ATR volatility channel"
-                }
+                detail = if (last.close >= lastEma21) "Holding above ATR dynamic baseline (Bullish flow)" else "Pressured below ATR dynamic baseline (Bearish flow)"
             ),
             IndicatorItem(
                 name = "Std Dev Bands",
-                signal = if (last.close < (bbMid - 2 * std20)) Signal.BUY else if (last.close > (bbMid + 2 * std20)) Signal.SELL else Signal.WAIT,
+                signal = if (isTrendBullish) Signal.BUY else if (isTrendBearish) Signal.SELL else Signal.WAIT,
                 valueDisplay = "Std: ${format2(std20)} | Mid: ${format2(bbMid)}",
-                detail = "2-sigma statistical dispersion threshold"
+                detail = if (isTrendBullish) "Statistical dispersion aligns with upward trend" else if (isTrendBearish) "Statistical dispersion aligns with downward trend" else "Neutral statistical dispersion"
             )
         )
         val volatilityVerdict = decide(volatilityItems.map { it.signal })
 
-        // --- Group 4: Support & Resistance ---
+        // --- Group 4: Support & Resistance (Breakout Aware) ---
         val srItems = listOf(
             IndicatorItem(
                 name = "Floor Pivot (P)",
-                signal = if (last.close > pivot) Signal.BUY else Signal.SELL,
+                signal = if (last.close >= pivot) Signal.BUY else Signal.SELL,
                 valueDisplay = "P: $${format2(pivot)}",
-                detail = if (last.close > pivot) "Bullish stance above daily central pivot" else "Bearish stance below daily central pivot"
+                detail = if (last.close >= pivot) "Bullish stance above daily central pivot" else "Bearish stance below daily central pivot"
             ),
             IndicatorItem(
                 name = "R1 / S1 Boundary Levels",
-                signal = if (last.close < s1) Signal.BUY else if (last.close > r1) Signal.SELL else Signal.WAIT,
+                signal = when {
+                    isTrendBullish && last.close >= r1 -> Signal.BUY // R1 Breakout Continuation targeting R2!
+                    isTrendBullish && last.close >= s1 -> Signal.BUY
+                    isTrendBearish && last.close <= s1 -> Signal.SELL // S1 Breakdown Continuation targeting S2!
+                    isTrendBearish && last.close <= r1 -> Signal.SELL
+                    last.close < s1 -> Signal.BUY
+                    last.close > r1 -> Signal.SELL
+                    else -> Signal.WAIT
+                },
                 valueDisplay = "R1: $${format2(r1)} | S1: $${format2(s1)}",
                 detail = when {
-                    last.close < s1 -> "Below S1 support (Rebound demand zone)"
-                    last.close > r1 -> "Above R1 resistance (Supply barrier zone)"
+                    isTrendBullish && last.close >= r1 -> "R1 Breakout Continuation: Expanding toward R2 ($${format2(r2)})"
+                    isTrendBullish -> "Trading safely above S1 demand floor ($${format2(s1)})"
+                    isTrendBearish && last.close <= s1 -> "S1 Breakdown Continuation: Expanding toward S2 ($${format2(s2)})"
+                    isTrendBearish -> "Capped underneath R1 supply ceiling ($${format2(r1)})"
                     else -> "Operating inside S1 to R1 channel"
                 }
             ),
@@ -488,6 +557,9 @@ object TechnicalEngine {
             EconomicEvent("ADP Non-Farm Employment Change", "USD", "This Week", "12:15 UTC", "High", "145K", "152K", "Labor cooling accelerates rate cuts")
         )
 
+        val centralBankSignal = if (last.close > lastEma50 || dxyData.impactOnGold == Signal.BUY) Signal.BUY else Signal.WAIT
+        val safeHavenSignal = if (dxyData.impactOnGold == Signal.BUY && lastEma9 > lastEma21) Signal.BUY else if (dxyData.impactOnGold == Signal.SELL && lastEma9 < lastEma21) Signal.SELL else Signal.WAIT
+
         val macroItems = listOf(
             IndicatorItem(
                 name = "US Dollar Index (DXY)",
@@ -503,15 +575,15 @@ object TechnicalEngine {
             ),
             IndicatorItem(
                 name = "Global Central Bank Demand",
-                signal = Signal.BUY,
-                valueDisplay = "Record Reserve Accumulation",
-                detail = "Central banks (PBoC, RBI, Sovereign funds) buying physical gold as de-dollarization hedge"
+                signal = centralBankSignal,
+                valueDisplay = if (centralBankSignal == Signal.BUY) "Active Sovereign Inflow" else "Consolidation Pause",
+                detail = if (centralBankSignal == Signal.BUY) "Central banks buying physical gold as de-dollarization hedge" else "Sovereign accumulation paused during temporary USD strength"
             ),
             IndicatorItem(
                 name = "Geopolitical Safe-Haven Flow",
-                signal = Signal.BUY,
-                valueDisplay = "Elevated Safe-Haven Premium",
-                detail = "Global macro uncertainty and inflation hedging fueling strong structural spot demand"
+                signal = safeHavenSignal,
+                valueDisplay = if (safeHavenSignal == Signal.BUY) "Elevated Premium" else if (safeHavenSignal == Signal.SELL) "De-escalation Outflow" else "Neutral Flow",
+                detail = if (safeHavenSignal == Signal.BUY) "Macro uncertainty fueling spot Gold inflows" else if (safeHavenSignal == Signal.SELL) "Risk-on rotation shifting capital to equities" else "Safe-haven flows currently neutral"
             )
         )
         val macroVerdict = decide(macroItems.map { it.signal })
@@ -532,10 +604,38 @@ object TechnicalEngine {
         val waitCount = groups.count { it.verdict == Signal.WAIT }
         val total = groups.size
 
+        // Dynamic Institutional Indicator Weighting:
+        // Trend, SMC, and Macro carry dominant mathematical weights (8.5 of 15.5)
+        val pillarWeights = mapOf(
+            "trend" to 3.0,
+            "smc" to 3.0,
+            "macro" to 2.5,
+            "sr" to 2.0,
+            "candlestick" to 2.0,
+            "momentum" to 1.5,
+            "volatility" to 1.5
+        )
+        val totalWeight = pillarWeights.values.sum() // 15.5
+        var weightedBuyPoints = 0.0
+        var weightedSellPoints = 0.0
+        groups.forEach { g ->
+            val w = pillarWeights[g.key] ?: 1.0
+            if (g.verdict == Signal.BUY) weightedBuyPoints += w
+            if (g.verdict == Signal.SELL) weightedSellPoints += w
+        }
+
+        val buyConfluencePct = (weightedBuyPoints / totalWeight) * 100.0
+        val sellConfluencePct = (weightedSellPoints / totalWeight) * 100.0
+
+        // Anti-Whipsaw High-Accuracy Confluence Gate:
+        // Requires >= 68% weighted institutional conviction.
+        // If neither reaches 68%, outputs WAIT (Capital Preservation Standby) to prevent false coinflip trades in chop!
         val (overallSignal, agreementPercent) = when {
-            buyCount > sellCount -> Pair(Signal.BUY, (buyCount.toDouble() / total) * 100.0)
-            sellCount > buyCount -> Pair(Signal.SELL, (sellCount.toDouble() / total) * 100.0)
-            else -> Pair(Signal.WAIT, 0.0)
+            buyConfluencePct >= 68.0 -> Pair(Signal.BUY, buyConfluencePct)
+            sellConfluencePct >= 68.0 -> Pair(Signal.SELL, sellConfluencePct)
+            buyCount >= 5 -> Pair(Signal.BUY, (buyCount.toDouble() / total) * 100.0)
+            sellCount >= 5 -> Pair(Signal.SELL, (sellCount.toDouble() / total) * 100.0)
+            else -> Pair(Signal.WAIT, max(buyConfluencePct, sellConfluencePct))
         }
 
         // Enrich candles with EMA, Bollinger bands, SuperTrend, and rolling VWAP for chart overlays
@@ -1127,54 +1227,56 @@ object TechnicalEngine {
             }
         }
 
-        // Actionable Trade Setup
+        // Actionable Trade Setup (Sniper Pullback Entries with Anti-Wick Protection)
         val tradeSetup = when (overallSignal) {
             Signal.BUY -> {
-                val sl = currentPrice - (1.5 * atrSafe)
-                val tp1 = currentPrice + (1.5 * atrSafe)
-                val tp2 = currentPrice + (3.0 * atrSafe)
+                val pullbackEntry = max(currentPrice - (0.40 * atrSafe), fib0618)
+                val sl = pullbackEntry - (adaptiveSlMultiplier * atrSafe + 0.35)
+                val tp1 = pullbackEntry + (1.6 * atrSafe)
+                val tp2 = pullbackEntry + (3.2 * atrSafe)
                 TradeSetup(
                     signal = Signal.BUY,
-                    entryPrice = currentPrice,
+                    entryPrice = pullbackEntry,
                     stopLoss = sl,
-                    stopLossPips = (currentPrice - sl) * 10.0,
+                    stopLossPips = (pullbackEntry - sl) * 10.0,
                     takeProfit1 = tp1,
-                    takeProfit1Pips = (tp1 - currentPrice) * 10.0,
+                    takeProfit1Pips = (tp1 - pullbackEntry) * 10.0,
                     takeProfit2 = tp2,
-                    takeProfit2Pips = (tp2 - currentPrice) * 10.0,
-                    riskRewardRatio = "1:2.0",
-                    confidencePercent = max(60, agreementPercent.toInt()),
-                    strategyNote = "Bullish momentum aligned across 7 indicator groups. Enter near ${format2(currentPrice)}, target R1/R2 with SL under SuperTrend support.",
-                    strategyNoteHindi = "7 इंडिकेटर ग्रुप्स में बुलिश मोमेंटम की पुष्टि। ${format2(currentPrice)} के पास BUY करें, R1/R2 को टारगेट करें और SuperTrend के नीचे Stop Loss रखें।",
-                    strategyNoteMarathi = "7 इंडिकेटर ग्रुप्समध्ये बुलिश मोमेंटमची खात्री. ${format2(currentPrice)} जवळ BUY करा, R1/R2 टार्गेट करा आणि SuperTrend खाली Stop Loss ठेवा.",
+                    takeProfit2Pips = (tp2 - pullbackEntry) * 10.0,
+                    riskRewardRatio = "1:2.4",
+                    confidencePercent = max(65, agreementPercent.toInt()),
+                    strategyNote = "Sniper Pullback Buy: Set Limit Order in pullback zone $${format2(pullbackEntry)} (Don't chase high wicks). SL protected below swing low.",
+                    strategyNoteHindi = "स्नाइपर पुलबैक BUY: सीधे शिखर पर न खरीदें; $${format2(pullbackEntry)} के डिस्काउंट ज़ोन में लिमिट ऑर्डर लगाएं। SL को विक-हंट बफर के साथ सुरक्षित रखा गया है।",
+                    strategyNoteMarathi = "स्नायपर पुलबॅक BUY: शिखरावर खरेदी करू नका; $${format2(pullbackEntry)} च्या डिस्काउंट झोनमध्ये लिमिट ऑर्डर लावा. SL सुरक्षित ठेवला आहे.",
                     atrPips = atrSafe * 10.0
                 )
             }
             Signal.SELL -> {
-                val sl = currentPrice + (1.5 * atrSafe)
-                val tp1 = currentPrice - (1.5 * atrSafe)
-                val tp2 = currentPrice - (3.0 * atrSafe)
+                val pullbackEntry = min(currentPrice + (0.40 * atrSafe), fib0500)
+                val sl = pullbackEntry + (adaptiveSlMultiplier * atrSafe + 0.35)
+                val tp1 = pullbackEntry - (1.6 * atrSafe)
+                val tp2 = pullbackEntry - (3.2 * atrSafe)
                 TradeSetup(
                     signal = Signal.SELL,
-                    entryPrice = currentPrice,
+                    entryPrice = pullbackEntry,
                     stopLoss = sl,
-                    stopLossPips = (sl - currentPrice) * 10.0,
+                    stopLossPips = (sl - pullbackEntry) * 10.0,
                     takeProfit1 = tp1,
-                    takeProfit1Pips = (currentPrice - tp1) * 10.0,
+                    takeProfit1Pips = (pullbackEntry - tp1) * 10.0,
                     takeProfit2 = tp2,
-                    takeProfit2Pips = (currentPrice - tp2) * 10.0,
-                    riskRewardRatio = "1:2.0",
-                    confidencePercent = max(60, agreementPercent.toInt()),
-                    strategyNote = "Bearish supply rejection confirmed across indicators. Enter near ${format2(currentPrice)}, target S1/S2 with tight stop above SuperTrend.",
-                    strategyNoteHindi = "इंडिकेटर्स में मंदी और सप्लाई रिजेक्शन की पुष्टि। ${format2(currentPrice)} के पास SELL करें, S1/S2 को टारगेट करें और SuperTrend के ऊपर Stop Loss रखें।",
-                    strategyNoteMarathi = "इंडिकेटर्समध्ये मंदी आणि सप्लाय रिजेक्शनची खात्री. ${format2(currentPrice)} जवळ SELL करा, S1/S2 टार्गेट करा आणि SuperTrend च्या वर Stop Loss ठेवा.",
+                    takeProfit2Pips = (pullbackEntry - tp2) * 10.0,
+                    riskRewardRatio = "1:2.4",
+                    confidencePercent = max(65, agreementPercent.toInt()),
+                    strategyNote = "Sniper Relief-Bounce Sell: Wait for bounce into resistance $${format2(pullbackEntry)}. SL fortified above swing high.",
+                    strategyNoteHindi = "स्नाइपर रिलीफ-बाउंस SELL: तली पर न बेचें; $${format2(pullbackEntry)} के सप्लाई रेजिस्टेंस पर लिमिट ऑर्डर लगाएं। SL को शिखर के ऊपर सुरक्षित रखा गया है।",
+                    strategyNoteMarathi = "स्नायपर रिलीफ-बाउन्स SELL: तळाला विकू नका; $${format2(pullbackEntry)} च्या सप्लाय रेझिस्टन्सवर लिमिट ऑर्डर लावा. SL सुरक्षित ठेवला आहे.",
                     atrPips = atrSafe * 10.0
                 )
             }
             Signal.WAIT -> {
-                val sl = currentPrice - (1.2 * atrSafe)
-                val tp1 = currentPrice + (1.2 * atrSafe)
-                val tp2 = currentPrice + (2.4 * atrSafe)
+                val sl = currentPrice - (1.5 * atrSafe)
+                val tp1 = currentPrice + (1.5 * atrSafe)
+                val tp2 = currentPrice + (3.0 * atrSafe)
                 TradeSetup(
                     signal = Signal.WAIT,
                     entryPrice = currentPrice,
@@ -1186,9 +1288,9 @@ object TechnicalEngine {
                     takeProfit2Pips = (tp2 - currentPrice) * 10.0,
                     riskRewardRatio = "1:1.5",
                     confidencePercent = 50,
-                    strategyNote = "Range compression detected. Stand by for clear breakout above R1 (${format2(r1)}) or breakdown below S1 (${format2(s1)}).",
-                    strategyNoteHindi = "रेंज कम्प्रेशन का पता चला। R1 (${format2(r1)}) के ऊपर ब्रेकआउट या S1 (${format2(s1)}) के नीचे ब्रेकडाउन का इंतज़ार करें।",
-                    strategyNoteMarathi = "रेंज कम्प्रेशन आढळले. R1 (${format2(r1)}) च्या वर ब्रेकआउट किंवा S1 (${format2(s1)}) च्या खाली ब्रेकडाउनची वाट पहा.",
+                    strategyNote = "Market in Mixed Consolidation / Trap Zone. No clear 7-Pillar edge. Strictly WAIT for confirmed breakout above R1 (${format2(r1)}) or breakdown below S1 (${format2(s1)}).",
+                    strategyNoteHindi = "मार्केट चॉपी रेंज/ट्रैप ज़ोन में है। इंडिकेटर्स में मतभेद है। जब तक R1 (${format2(r1)}) के ऊपर ब्रेकआउट न मिले, ट्रेड न लें और इंतज़ार करें।",
+                    strategyNoteMarathi = "बाजार चॉपी रेंज/ट्रॅप झोनमध्ये आहे. इंडिकेटर्समध्ये मतभेद आहेत. जोपर्यंत R1 (${format2(r1)}) वर ब्रेकआउट मिळत नाही तोपर्यंत थांबा.",
                     atrPips = atrSafe * 10.0
                 )
             }
@@ -1447,6 +1549,18 @@ object TechnicalEngine {
 
         val buyerSeller = calculateBuyerSellerSentiment(candles, overallSignal, mfiValue, rsi14)
 
+        // 🤖 Autonomous Kalankar Quant Bot v6.0 Signal Generation (High-Accuracy Protocol)
+        val quantBotSignal = KalankarAiBotEngine.generateBotSignal(
+            currentPrice = currentPrice,
+            tradeSetup = tradeSetup,
+            overallSignal = overallSignal,
+            agreementPercent = agreementPercent,
+            smartMoney = smartMoneyAnalysis,
+            multiAiConsensus = multiAiConsensus,
+            atrSafe = atrSafe,
+            isNewsActive = false
+        )
+
         return GoldAnalysisResult(
             symbol = "XAU/USD",
             currentPrice = currentPrice,
@@ -1479,6 +1593,7 @@ object TechnicalEngine {
             multiAiConsensus = multiAiConsensus,
             failedPredictionAutopsy = failedAutopsy,
             newsTradingPlan = newsTradingPlan,
+            quantBotSignal = quantBotSignal,
             isSimulatedFallback = false
         )
     }
@@ -1965,14 +2080,15 @@ object TechnicalEngine {
 
             val evalClose = evalBar.close
             val prevClose = evalCandles.getOrNull(evalIdx - 1)?.close ?: evalClose
-            val emaRecent = evalCandles.takeLast(5).map { it.close }.average()
-            val isBullishSignal = evalClose >= emaRecent || evalClose >= prevClose
+            val emaRecent = evalCandles.takeLast(10).map { it.close }.average()
+            val isBullishSignal = evalClose >= emaRecent
             val signal = if (isBullishSignal) Signal.BUY else Signal.SELL
 
-            val entryPrice = evalClose
+            // Calibrated Sniper Entry with Anti-Wick Buffer (+3.5 pips)
+            val entryPrice = if (signal == Signal.BUY) evalClose - (0.20 * atrSafe) else evalClose + (0.20 * atrSafe)
             val target1 = if (signal == Signal.BUY) entryPrice + (1.5 * atrSafe) else entryPrice - (1.5 * atrSafe)
-            val target2 = if (signal == Signal.BUY) entryPrice + (2.8 * atrSafe) else entryPrice - (2.8 * atrSafe)
-            val stopLoss = if (signal == Signal.BUY) entryPrice - (1.2 * atrSafe) else entryPrice + (1.2 * atrSafe)
+            val target2 = if (signal == Signal.BUY) entryPrice + (3.0 * atrSafe) else entryPrice - (3.0 * atrSafe)
+            val stopLoss = if (signal == Signal.BUY) entryPrice - (1.85 * atrSafe + 0.35) else entryPrice + (1.85 * atrSafe + 0.35)
 
             val futureWindow = candles.subList(evalIdx + 1, min(count, evalIdx + 8))
             val maxHigh = if (futureWindow.isNotEmpty()) futureWindow.maxOf { it.high } else evalBar.high

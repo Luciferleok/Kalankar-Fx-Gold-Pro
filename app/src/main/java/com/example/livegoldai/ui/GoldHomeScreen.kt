@@ -406,7 +406,7 @@ fun GoldHomeScreen(
                             }
                         }
 
-                        // --- 🌟 MODE SELECTOR: SIMPLE (सरल) VS PRO (विस्तृत) ---
+                        // --- 🌟 MODE SELECTOR: UNIFIED VS SIMPLE VS PRO ---
                         item(key = "mode_selector_bar") {
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
@@ -418,10 +418,56 @@ fun GoldHomeScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    val isEasy = uiState.isCompactEasyView
+                                    val currentMode = uiState.dashboardViewMode
+
+                                    // 🎛️ Unified Signal Dashboard
+                                    val isUnified = currentMode == DashboardViewMode.UNIFIED
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isUnified) GoldPrimary else Color.Transparent,
+                                        border = if (isUnified) null else androidx.compose.foundation.BorderStroke(0.8.dp, ObsidianBorder),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable { viewModel.setDashboardViewMode(DashboardViewMode.UNIFIED) }
+                                            .testTag("mode_selector_unified")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = "🎛️", fontSize = 13.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "UNIFIED"
+                                                        AppLanguage.HINDI -> "संयुक्त"
+                                                        AppLanguage.MARATHI -> "संयुक्त"
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (isUnified) Color.Black else TextPrimary
+                                                )
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "Signal Gauge"
+                                                        AppLanguage.HINDI -> "सिग्नल गेज"
+                                                        AppLanguage.MARATHI -> "सिग्नल गेज"
+                                                    },
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (isUnified) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     // 🌟 Simple Easy View
+                                    val isEasy = currentMode == DashboardViewMode.SIMPLE
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
                                         color = if (isEasy) GoldPrimary else Color.Transparent,
@@ -429,20 +475,20 @@ fun GoldHomeScreen(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .clickable { if (!isEasy) viewModel.toggleCompactEasyView() }
+                                            .clickable { viewModel.setDashboardViewMode(DashboardViewMode.SIMPLE) }
                                             .testTag("mode_selector_easy")
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "🌟", fontSize = 14.sp)
-                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(text = "🌟", fontSize = 13.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Text(
                                                     text = when (uiState.language) {
-                                                        AppLanguage.ENGLISH -> "SIMPLE VIEW"
+                                                        AppLanguage.ENGLISH -> "SIMPLE"
                                                         AppLanguage.HINDI -> "सरल दृश्य"
                                                         AppLanguage.MARATHI -> "सोपे दृश्य"
                                                     },
@@ -453,10 +499,10 @@ fun GoldHomeScreen(
                                                 Text(
                                                     text = when (uiState.language) {
                                                         AppLanguage.ENGLISH -> "Clean & Sorted"
-                                                        AppLanguage.HINDI -> "आसान व सुलझा हुआ"
-                                                        AppLanguage.MARATHI -> "सुलभ व स्पष्ट"
+                                                        AppLanguage.HINDI -> "सुलझा हुआ"
+                                                        AppLanguage.MARATHI -> "सुलभ स्पष्ट"
                                                     },
-                                                    fontSize = 9.sp,
+                                                    fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,
                                                     color = if (isEasy) Color.Black.copy(alpha = 0.8f) else TextMuted
                                                 )
@@ -465,43 +511,44 @@ fun GoldHomeScreen(
                                     }
 
                                     // ⚡ Pro Cockpit
+                                    val isPro = currentMode == DashboardViewMode.PRO
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (!isEasy) GoldPrimary else Color.Transparent,
-                                        border = if (!isEasy) null else androidx.compose.foundation.BorderStroke(0.8.dp, ObsidianBorder),
+                                        color = if (isPro) GoldPrimary else Color.Transparent,
+                                        border = if (isPro) null else androidx.compose.foundation.BorderStroke(0.8.dp, ObsidianBorder),
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .clickable { if (isEasy) viewModel.toggleCompactEasyView() }
+                                            .clickable { viewModel.setDashboardViewMode(DashboardViewMode.PRO) }
                                             .testTag("mode_selector_pro")
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "⚡", fontSize = 14.sp)
-                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(text = "⚡", fontSize = 13.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Text(
                                                     text = when (uiState.language) {
-                                                        AppLanguage.ENGLISH -> "PRO COCKPIT"
+                                                        AppLanguage.ENGLISH -> "PRO"
                                                         AppLanguage.HINDI -> "प्रो कॉकपिट"
                                                         AppLanguage.MARATHI -> "प्रो कॉकपिट"
                                                     },
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
-                                                    color = if (!isEasy) Color.Black else TextPrimary
+                                                    color = if (isPro) Color.Black else TextPrimary
                                                 )
                                                 Text(
                                                     text = when (uiState.language) {
-                                                        AppLanguage.ENGLISH -> "All 32 Indicators"
-                                                        AppLanguage.HINDI -> "विस्तृत 32 इंडिकेटर्स"
-                                                        AppLanguage.MARATHI -> "सर्व 32 इंडिकेटर्स"
+                                                        AppLanguage.ENGLISH -> "All 32 Ind."
+                                                        AppLanguage.HINDI -> "32 इंडिकेटर्स"
+                                                        AppLanguage.MARATHI -> "32 इंडिकेटर्स"
                                                     },
-                                                    fontSize = 9.sp,
+                                                    fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,
-                                                    color = if (!isEasy) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                    color = if (isPro) Color.Black.copy(alpha = 0.8f) else TextMuted
                                                 )
                                             }
                                         }
@@ -511,36 +558,62 @@ fun GoldHomeScreen(
                         }
 
                         // --- CONTENT SWITCHING BASED ON MODE ---
-                        if (uiState.isCompactEasyView) {
-                            // 🌟 100% CLEAN, SORTED, UNSHAKEABLE EASY VIEW
-                            item(key = "easy_view_content") {
-                                SimpleEasyTradingView(
-                                    analysis = analysis,
-                                    selectedInterval = uiState.selectedInterval,
-                                    onIntervalSelected = { viewModel.setInterval(it) },
-                                    onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
-                                    onOpenPredictionDialog = { viewModel.openPredictionDialog() },
-                                    onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
-                                    onSwitchToProMode = { viewModel.toggleCompactEasyView() },
-                                    onRefreshClick = { viewModel.loadData(isInitial = false) }
-                                )
+                        when (uiState.dashboardViewMode) {
+                            DashboardViewMode.UNIFIED -> {
+                                // 🎛️ UNIFIED SIGNAL DASHBOARD VIEW (Speedometer Gauge + AI + Indicators + Quant Bot)
+                                item(key = "unified_dashboard_content") {
+                                    UnifiedSignalDashboardView(
+                                        analysis = analysis,
+                                        selectedInterval = uiState.selectedInterval,
+                                        onIntervalSelected = { viewModel.setInterval(it) },
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenPredictionDialog = { viewModel.openPredictionDialog() },
+                                        onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+                                        onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
+                                        onSwitchMode = { modeStr ->
+                                            val m = when (modeStr) {
+                                                "SIMPLE" -> DashboardViewMode.SIMPLE
+                                                "PRO" -> DashboardViewMode.PRO
+                                                else -> DashboardViewMode.UNIFIED
+                                            }
+                                            viewModel.setDashboardViewMode(m)
+                                        },
+                                        onRefreshClick = { viewModel.loadData(isInitial = false) }
+                                    )
+                                }
                             }
-                        } else {
-                            // ⚡ ADVANCED PRO COCKPIT (Price header, snapshot, 5 sorted tabs)
-                            // 1. Live Price Card with timeframes & alert setter
-                            item(key = "price_header") {
-                                PriceHeaderCard(
-                                    analysis = analysis,
-                                    selectedInterval = uiState.selectedInterval,
-                                    countdownSeconds = uiState.countdownSeconds,
-                                    isRefreshing = uiState.isRefreshing,
-                                    onIntervalSelected = { viewModel.setInterval(it) },
-                                    onRefreshClick = { viewModel.loadData(isInitial = false) },
-                                    alertTargetPrice = uiState.priceAlertTarget,
-                                    isAlertTriggered = uiState.isAlertTriggered,
-                                    onAlertClick = { viewModel.openPriceAlertDialog() }
-                                )
+                            DashboardViewMode.SIMPLE -> {
+                                // 🌟 100% CLEAN, SORTED, UNSHAKEABLE EASY VIEW
+                                item(key = "easy_view_content") {
+                                    SimpleEasyTradingView(
+                                        analysis = analysis,
+                                        selectedInterval = uiState.selectedInterval,
+                                        onIntervalSelected = { viewModel.setInterval(it) },
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenPredictionDialog = { viewModel.openPredictionDialog() },
+                                        onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+                                        onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
+                                        onSwitchToProMode = { viewModel.setDashboardViewMode(DashboardViewMode.PRO) },
+                                        onRefreshClick = { viewModel.loadData(isInitial = false) }
+                                    )
+                                }
                             }
+                            DashboardViewMode.PRO -> {
+                                // ⚡ ADVANCED PRO COCKPIT (Price header, snapshot, 5 sorted tabs)
+                                // 1. Live Price Card with timeframes & alert setter
+                                item(key = "price_header") {
+                                    PriceHeaderCard(
+                                        analysis = analysis,
+                                        selectedInterval = uiState.selectedInterval,
+                                        countdownSeconds = uiState.countdownSeconds,
+                                        isRefreshing = uiState.isRefreshing,
+                                        onIntervalSelected = { viewModel.setInterval(it) },
+                                        onRefreshClick = { viewModel.loadData(isInitial = false) },
+                                        alertTargetPrice = uiState.priceAlertTarget,
+                                        isAlertTriggered = uiState.isAlertTriggered,
+                                        onAlertClick = { viewModel.openPriceAlertDialog() }
+                                    )
+                                }
 
                             // 2. Sleek Executive 1-Glance Snapshot Bar
                             item(key = "executive_summary_bar") {
@@ -593,6 +666,16 @@ fun GoldHomeScreen(
 
                             // --- TAB 0: 📊 COCKPIT & LIVE TRADING ---
                             if (uiState.selectedTab == 0) {
+                                // 🤖 Kalankar Quant Bot v6.0 High-Accuracy Signal & Execution Order
+                                analysis.quantBotSignal?.let { botSignal ->
+                                    item(key = "cockpit_quant_bot_signal") {
+                                        QuantBotCard(
+                                            botSignal = botSignal,
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                        )
+                                    }
+                                }
+
                                 // Dual Columns: AI Prediction & Oscillators
                                 item(key = "cockpit_dual_prediction_indicators") {
                                     DualPredictionAndIndicatorsSection(
@@ -632,6 +715,16 @@ fun GoldHomeScreen(
 
                             // --- TAB 1: 🤖 MULTI-AI CONSENSUS & AUDIT ---
                             if (uiState.selectedTab == 1) {
+                                // 🤖 Kalankar Quant Bot v6.0 Live Algorithmic Execution Signal
+                                analysis.quantBotSignal?.let { botSignal ->
+                                    item(key = "tab1_quant_bot_signal") {
+                                        QuantBotCard(
+                                            botSignal = botSignal,
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                        )
+                                    }
+                                }
+
                                 // Multi-AI Council (Gemini + ChatGPT + Claude + DeepSeek + Perplexity)
                                 analysis.multiAiConsensus?.let { consensus ->
                                     item(key = "multi_ai_council_tab_page") {
@@ -730,6 +823,7 @@ fun GoldHomeScreen(
                                 }
                             }
                         }
+                    }
 
                         // Attribution & Disclaimer Footer
                         item(key = "footer") {

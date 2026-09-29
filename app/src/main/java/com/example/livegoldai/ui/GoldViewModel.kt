@@ -45,6 +45,17 @@ enum class MainScreenMode(
     )
 }
 
+enum class DashboardViewMode(
+    val titleEnglish: String,
+    val titleHindi: String,
+    val titleMarathi: String,
+    val iconEmoji: String
+) {
+    UNIFIED("UNIFIED SIGNAL", "संयुक्त सिग्नल", "संयुक्त सिग्नल", "🎛️"),
+    SIMPLE("SIMPLE VIEW", "सरल दृश्य", "सोपे दृश्य", "🌟"),
+    PRO("PRO COCKPIT", "प्रो कॉकपिट", "प्रो कॉकपिट", "⚡")
+}
+
 data class GoldUiState(
     val language: AppLanguage = AppLanguage.HINDI,
     val isLoading: Boolean = true,
@@ -65,6 +76,7 @@ data class GoldUiState(
     val themeMode: ThemeMode = ThemeMode.DUBAI_ROYALE,
     val showThemeSelectorDialog: Boolean = false,
     val isCompactEasyView: Boolean = false,
+    val dashboardViewMode: DashboardViewMode = DashboardViewMode.UNIFIED,
     val mainScreenMode: MainScreenMode = MainScreenMode.ALL,
     val showPredictionDialog: Boolean = false,
     val showPredictionErrorAnalyzerDialog: Boolean = false,
@@ -97,8 +109,19 @@ class GoldViewModel @JvmOverloads constructor(
     private var autoRefreshJob: Job? = null
 
     init {
-        val savedEasyView = prefs.getBoolean("is_compact_easy_view", true)
-        _uiState.update { it.copy(isCompactEasyView = savedEasyView) }
+        val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
+        val initialMode = try {
+            DashboardViewMode.valueOf(savedModeStr ?: DashboardViewMode.UNIFIED.name)
+        } catch (_: Exception) {
+            DashboardViewMode.UNIFIED
+        }
+        val savedEasyView = prefs.getBoolean("is_compact_easy_view", initialMode == DashboardViewMode.SIMPLE)
+        _uiState.update { 
+            it.copy(
+                dashboardViewMode = initialMode,
+                isCompactEasyView = (initialMode == DashboardViewMode.SIMPLE) || savedEasyView
+            ) 
+        }
         loadData(isInitial = true)
         startAutoRefreshLoop()
     }
@@ -222,10 +245,24 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(themeMode = mode, showThemeSelectorDialog = false) }
     }
 
+    fun setDashboardViewMode(mode: DashboardViewMode) {
+        prefs.edit().putString("selected_dashboard_mode", mode.name).apply()
+        _uiState.update { 
+            it.copy(
+                dashboardViewMode = mode,
+                isCompactEasyView = (mode == DashboardViewMode.SIMPLE)
+            ) 
+        }
+    }
+
     fun toggleCompactEasyView() {
-        val newMode = !_uiState.value.isCompactEasyView
-        prefs.edit().putBoolean("is_compact_easy_view", newMode).apply()
-        _uiState.update { it.copy(isCompactEasyView = newMode) }
+        val current = _uiState.value.dashboardViewMode
+        val next = when (current) {
+            DashboardViewMode.UNIFIED -> DashboardViewMode.SIMPLE
+            DashboardViewMode.SIMPLE -> DashboardViewMode.PRO
+            DashboardViewMode.PRO -> DashboardViewMode.UNIFIED
+        }
+        setDashboardViewMode(next)
     }
 
     fun setMainScreenMode(mode: MainScreenMode) {
