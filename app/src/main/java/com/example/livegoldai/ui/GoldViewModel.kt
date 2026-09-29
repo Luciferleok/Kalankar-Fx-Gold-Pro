@@ -97,6 +97,8 @@ class GoldViewModel @JvmOverloads constructor(
     private var autoRefreshJob: Job? = null
 
     init {
+        val savedEasyView = prefs.getBoolean("is_compact_easy_view", true)
+        _uiState.update { it.copy(isCompactEasyView = savedEasyView) }
         loadData(isInitial = true)
         startAutoRefreshLoop()
     }
@@ -221,7 +223,9 @@ class GoldViewModel @JvmOverloads constructor(
     }
 
     fun toggleCompactEasyView() {
-        _uiState.update { it.copy(isCompactEasyView = !it.isCompactEasyView) }
+        val newMode = !_uiState.value.isCompactEasyView
+        prefs.edit().putBoolean("is_compact_easy_view", newMode).apply()
+        _uiState.update { it.copy(isCompactEasyView = newMode) }
     }
 
     fun setMainScreenMode(mode: MainScreenMode) {

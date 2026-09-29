@@ -197,20 +197,6 @@ fun GoldHomeScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = {
-                            val slPips = uiState.data?.tradeSetup?.stopLossPips ?: 90.0
-                            viewModel.openLotCalculator(slPips)
-                        },
-                        modifier = Modifier.testTag("top_lot_calc_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Calculate,
-                            contentDescription = "Lot Calculator",
-                            tint = appColors.lightGold
-                        )
-                    }
-
-                    IconButton(
                         onClick = { viewModel.openPriceAlertDialog() },
                         modifier = Modifier.testTag("top_price_alert_button")
                     ) {
@@ -227,17 +213,6 @@ fun GoldHomeScreen(
                                 tint = if (uiState.priceAlertTarget != null) appColors.primaryGold else appColors.textSecondary
                             )
                         }
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.openPredictionDialog() },
-                        modifier = Modifier.testTag("top_prediction_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Forecast",
-                            tint = appColors.lightGold
-                        )
                     }
 
                     Surface(
@@ -298,17 +273,6 @@ fun GoldHomeScreen(
                                 color = appColors.primaryGold
                             )
                         }
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.loadData(isInitial = false) },
-                        modifier = Modifier.testTag("top_refresh_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Data",
-                            tint = appColors.textPrimary
-                        )
                     }
 
                     IconButton(
@@ -442,205 +406,327 @@ fun GoldHomeScreen(
                             }
                         }
 
-                        // 1. Live Price Card with timeframes & alert setter
-                        item(key = "price_header") {
-                            PriceHeaderCard(
-                                analysis = analysis,
-                                selectedInterval = uiState.selectedInterval,
-                                countdownSeconds = uiState.countdownSeconds,
-                                isRefreshing = uiState.isRefreshing,
-                                onIntervalSelected = { viewModel.setInterval(it) },
-                                onRefreshClick = { viewModel.loadData(isInitial = false) },
-                                alertTargetPrice = uiState.priceAlertTarget,
-                                isAlertTriggered = uiState.isAlertTriggered,
-                                onAlertClick = { viewModel.openPriceAlertDialog() }
-                            )
-                        }
-
-                        // 2. Sleek Executive 1-Glance Snapshot Bar
-                        item(key = "executive_summary_bar") {
-                            ExecutiveSummaryBar(
-                                analysis = analysis,
-                                onTabSelect = { tabIndex -> viewModel.setTab(tabIndex) }
-                            )
-                        }
-
-                        // 3. Category Navigation Tabs (Sorted, Intuitive, Aesthetic)
-                        item(key = "category_tabs") {
-                            ScrollableTabRow(
-                                selectedTabIndex = uiState.selectedTab.coerceIn(0, tabs.size - 1),
-                                edgePadding = 0.dp,
-                                containerColor = Color.Transparent,
-                                contentColor = GoldPrimary,
-                                indicator = {},
-                                divider = {}
+                        // --- 🌟 MODE SELECTOR: SIMPLE (सरल) VS PRO (विस्तृत) ---
+                        item(key = "mode_selector_bar") {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = ObsidianSurfaceCard,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorderHighlight),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                tabs.forEachIndexed { index, title ->
-                                    val isSelected = uiState.selectedTab == index
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val isEasy = uiState.isCompactEasyView
+                                    // 🌟 Simple Easy View
                                     Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (isSelected) {
-                                            if (index == 2 && uiState.isNewsModeActive) Color(0xFFFF1744) else GoldPrimary
-                                        } else ObsidianSurfaceElevated,
-                                        border = if (isSelected) null else CardDefaults.outlinedCardBorder().copy(
-                                            brush = Brush.linearGradient(
-                                                if (index == 2 && uiState.isNewsModeActive) listOf(Color(0xFFFF1744), Color(0xFFFF9100))
-                                                else listOf(ObsidianBorderHighlight, ObsidianBorder)
-                                            )
-                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isEasy) GoldPrimary else Color.Transparent,
+                                        border = if (isEasy) null else androidx.compose.foundation.BorderStroke(0.8.dp, ObsidianBorder),
                                         modifier = Modifier
-                                            .padding(end = 8.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable { viewModel.setTab(index) }
-                                            .testTag("tab_$title")
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable { if (!isEasy) viewModel.toggleCompactEasyView() }
+                                            .testTag("mode_selector_easy")
                                     ) {
-                                        Text(
-                                            text = title,
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
-                                            color = if (isSelected) Color.Black else TextSecondary
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = "🌟", fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "SIMPLE VIEW"
+                                                        AppLanguage.HINDI -> "सरल दृश्य"
+                                                        AppLanguage.MARATHI -> "सोपे दृश्य"
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (isEasy) Color.Black else TextPrimary
+                                                )
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "Clean & Sorted"
+                                                        AppLanguage.HINDI -> "आसान व सुलझा हुआ"
+                                                        AppLanguage.MARATHI -> "सुलभ व स्पष्ट"
+                                                    },
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (isEasy) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // ⚡ Pro Cockpit
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (!isEasy) GoldPrimary else Color.Transparent,
+                                        border = if (!isEasy) null else androidx.compose.foundation.BorderStroke(0.8.dp, ObsidianBorder),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable { if (isEasy) viewModel.toggleCompactEasyView() }
+                                            .testTag("mode_selector_pro")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = "⚡", fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "PRO COCKPIT"
+                                                        AppLanguage.HINDI -> "प्रो कॉकपिट"
+                                                        AppLanguage.MARATHI -> "प्रो कॉकपिट"
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = if (!isEasy) Color.Black else TextPrimary
+                                                )
+                                                Text(
+                                                    text = when (uiState.language) {
+                                                        AppLanguage.ENGLISH -> "All 32 Indicators"
+                                                        AppLanguage.HINDI -> "विस्तृत 32 इंडिकेटर्स"
+                                                        AppLanguage.MARATHI -> "सर्व 32 इंडिकेटर्स"
+                                                    },
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (!isEasy) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        // --- TAB 0: 📊 COCKPIT & LIVE TRADING ---
-                        if (uiState.selectedTab == 0) {
-                            // Dual Columns: AI Prediction & Oscillators
-                            item(key = "cockpit_dual_prediction_indicators") {
-                                DualPredictionAndIndicatorsSection(
+                        // --- CONTENT SWITCHING BASED ON MODE ---
+                        if (uiState.isCompactEasyView) {
+                            // 🌟 100% CLEAN, SORTED, UNSHAKEABLE EASY VIEW
+                            item(key = "easy_view_content") {
+                                SimpleEasyTradingView(
                                     analysis = analysis,
+                                    selectedInterval = uiState.selectedInterval,
+                                    onIntervalSelected = { viewModel.setInterval(it) },
                                     onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
-                                    onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
-                                    onPillarClick = { group -> viewModel.openPillarDeepDive(group) }
+                                    onOpenPredictionDialog = { viewModel.openPredictionDialog() },
+                                    onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
+                                    onSwitchToProMode = { viewModel.toggleCompactEasyView() },
+                                    onRefreshClick = { viewModel.loadData(isInitial = false) }
+                                )
+                            }
+                        } else {
+                            // ⚡ ADVANCED PRO COCKPIT (Price header, snapshot, 5 sorted tabs)
+                            // 1. Live Price Card with timeframes & alert setter
+                            item(key = "price_header") {
+                                PriceHeaderCard(
+                                    analysis = analysis,
+                                    selectedInterval = uiState.selectedInterval,
+                                    countdownSeconds = uiState.countdownSeconds,
+                                    isRefreshing = uiState.isRefreshing,
+                                    onIntervalSelected = { viewModel.setInterval(it) },
+                                    onRefreshClick = { viewModel.loadData(isInitial = false) },
+                                    alertTargetPrice = uiState.priceAlertTarget,
+                                    isAlertTriggered = uiState.isAlertTriggered,
+                                    onAlertClick = { viewModel.openPriceAlertDialog() }
                                 )
                             }
 
-                            // Professional Candlestick Chart (With Fullscreen Studio)
-                            item(key = "cockpit_pro_chart") {
-                                ProCandleChart(
-                                    candles = analysis.recentCandles,
-                                    buyerSellerRatio = analysis.buyerSellerRatio,
-                                    tradeSetup = analysis.tradeSetup,
-                                    pivotLevels = analysis.pivotLevels,
-                                    currentPrice = analysis.currentPrice
+                            // 2. Sleek Executive 1-Glance Snapshot Bar
+                            item(key = "executive_summary_bar") {
+                                ExecutiveSummaryBar(
+                                    analysis = analysis,
+                                    onTabSelect = { tabIndex -> viewModel.setTab(tabIndex) }
                                 )
                             }
 
-                            // Real-Time Buyers vs Sellers Order Flow Depth
-                            analysis.buyerSellerRatio?.let { bs ->
-                                item(key = "cockpit_buyer_seller_card") {
-                                    BuyerSellerDepthCard(
-                                        sentiment = bs,
+                            // 3. Category Navigation Tabs (Sorted, Intuitive, Aesthetic)
+                            item(key = "category_tabs") {
+                                ScrollableTabRow(
+                                    selectedTabIndex = uiState.selectedTab.coerceIn(0, tabs.size - 1),
+                                    edgePadding = 0.dp,
+                                    containerColor = Color.Transparent,
+                                    contentColor = GoldPrimary,
+                                    indicator = {},
+                                    divider = {}
+                                ) {
+                                    tabs.forEachIndexed { index, title ->
+                                        val isSelected = uiState.selectedTab == index
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isSelected) {
+                                                if (index == 2 && uiState.isNewsModeActive) Color(0xFFFF1744) else GoldPrimary
+                                            } else ObsidianSurfaceElevated,
+                                            border = if (isSelected) null else CardDefaults.outlinedCardBorder().copy(
+                                                brush = Brush.linearGradient(
+                                                    if (index == 2 && uiState.isNewsModeActive) listOf(Color(0xFFFF1744), Color(0xFFFF9100))
+                                                    else listOf(ObsidianBorderHighlight, ObsidianBorder)
+                                                )
+                                            ),
+                                            modifier = Modifier
+                                                .padding(end = 8.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .clickable { viewModel.setTab(index) }
+                                                .testTag("tab_$title")
+                                        ) {
+                                            Text(
+                                                text = title,
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
+                                                color = if (isSelected) Color.Black else TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- TAB 0: 📊 COCKPIT & LIVE TRADING ---
+                            if (uiState.selectedTab == 0) {
+                                // Dual Columns: AI Prediction & Oscillators
+                                item(key = "cockpit_dual_prediction_indicators") {
+                                    DualPredictionAndIndicatorsSection(
+                                        analysis = analysis,
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+                                        onPillarClick = { group -> viewModel.openPillarDeepDive(group) }
+                                    )
+                                }
+
+                                // Professional Candlestick Chart (With Fullscreen Studio)
+                                item(key = "cockpit_pro_chart") {
+                                    ProCandleChart(
+                                        candles = analysis.recentCandles,
+                                        buyerSellerRatio = analysis.buyerSellerRatio,
+                                        tradeSetup = analysis.tradeSetup,
+                                        pivotLevels = analysis.pivotLevels,
                                         currentPrice = analysis.currentPrice
                                     )
                                 }
+
+                                // Real-Time Buyers vs Sellers Order Flow Depth
+                                analysis.buyerSellerRatio?.let { bs ->
+                                    item(key = "cockpit_buyer_seller_card") {
+                                        BuyerSellerDepthCard(
+                                            sentiment = bs,
+                                            currentPrice = analysis.currentPrice
+                                        )
+                                    }
+                                }
+
+                                // Live Global Market Sessions Clock
+                                item(key = "cockpit_market_sessions") {
+                                    MarketSessionsCard(sessions = analysis.marketSessions)
+                                }
                             }
 
-                            // Live Global Market Sessions Clock
-                            item(key = "cockpit_market_sessions") {
-                                MarketSessionsCard(sessions = analysis.marketSessions)
-                            }
-                        }
+                            // --- TAB 1: 🤖 MULTI-AI CONSENSUS & AUDIT ---
+                            if (uiState.selectedTab == 1) {
+                                // Multi-AI Council (Gemini + ChatGPT + Claude + DeepSeek + Perplexity)
+                                analysis.multiAiConsensus?.let { consensus ->
+                                    item(key = "multi_ai_council_tab_page") {
+                                        MultiAiCouncilCard(
+                                            consensus = consensus,
+                                            onRefreshAiCouncil = { viewModel.loadData(isInitial = false) }
+                                        )
+                                    }
+                                }
 
-                        // --- TAB 1: 🤖 MULTI-AI CONSENSUS & AUDIT ---
-                        if (uiState.selectedTab == 1) {
-                            // Multi-AI Council (Gemini + ChatGPT + Claude + DeepSeek + Perplexity)
-                            analysis.multiAiConsensus?.let { consensus ->
-                                item(key = "multi_ai_council_tab_page") {
-                                    MultiAiCouncilCard(
-                                        consensus = consensus,
-                                        onRefreshAiCouncil = { viewModel.loadData(isInitial = false) }
+                                // AI Timeframe Prediction Accuracy Audit
+                                analysis.timeframeAudit?.let { audit ->
+                                    item(key = "multi_ai_accuracy_audit_page") {
+                                        PredictionAccuracyAuditCard(
+                                            audit = audit,
+                                            selectedInterval = uiState.selectedInterval,
+                                            onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() }
+                                        )
+                                    }
+                                }
+
+                                // AI Failed Prediction Autopsy & Self-Correction
+                                analysis.failedPredictionAutopsy?.let { autopsy ->
+                                    item(key = "multi_ai_failed_autopsy_tab_page") {
+                                        AiFailedPredictionAutopsyCard(autopsy = autopsy)
+                                    }
+                                }
+                            }
+
+                            // --- TAB 2: 🚨 NEWS RADAR & 1-HR ALERT SYSTEM ---
+                            if (uiState.selectedTab == 2) {
+                                // 1-Hour Prior Notification Radar Card (AI Pre-Analysis & Real Notification Trigger)
+                                item(key = "news_tab_pre_news_intelligence_card") {
+                                    PreNewsIntelligenceCard(
+                                        currentPrice = analysis.currentPrice,
+                                        upcomingEvents = analysis.macroRadar?.upcomingEvents ?: emptyList(),
+                                        onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                    )
+                                }
+
+                                // High-Impact News Volatility Trading Mode & Dynamic Color Shift Card
+                                analysis.newsTradingPlan?.let { newsPlan ->
+                                    item(key = "news_tab_trading_mode_card") {
+                                        NewsTradingModeCard(
+                                            newsPlan = newsPlan,
+                                            isNewsModeActive = uiState.isNewsModeActive,
+                                            onToggleNewsMode = { active -> viewModel.setNewsModeActive(active) }
+                                        )
+                                    }
+                                }
+
+                                // Macro Sentiment Radar (DXY, 10Y Yields, Calendar Feed)
+                                analysis.macroRadar?.let { radar ->
+                                    item(key = "news_tab_macro_radar_page") {
+                                        MacroNewsRadarCard(radar = radar)
+                                    }
+                                }
+                            }
+
+                            // --- TAB 3: 🏦 SMART MONEY SMC & PIVOT LADDER ---
+                            if (uiState.selectedTab == 3) {
+                                analysis.smartMoney?.let { smc ->
+                                    item(key = "smart_money_smc_page") {
+                                        SmartMoneySmcCard(
+                                            smc = smc,
+                                            currentPrice = analysis.currentPrice
+                                        )
+                                    }
+                                }
+
+                                item(key = "pivot_ladder_tab") {
+                                    PivotLadderCard(
+                                        currentPrice = analysis.currentPrice,
+                                        pivotLevels = analysis.pivotLevels
                                     )
                                 }
                             }
 
-                            // AI Timeframe Prediction Accuracy Audit
-                            analysis.timeframeAudit?.let { audit ->
-                                item(key = "multi_ai_accuracy_audit_page") {
-                                    PredictionAccuracyAuditCard(
-                                        audit = audit,
-                                        selectedInterval = uiState.selectedInterval,
-                                        onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() }
+                            // --- TAB 4: ⚡ INSTITUTIONAL PLAYBOOK & TRICKS ---
+                            if (uiState.selectedTab == 4) {
+                                item(key = "trade_setup_tricks") {
+                                    TradeSetupCard(
+                                        setup = analysis.tradeSetup,
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
                                     )
                                 }
-                            }
 
-                            // AI Failed Prediction Autopsy & Self-Correction
-                            analysis.failedPredictionAutopsy?.let { autopsy ->
-                                item(key = "multi_ai_failed_autopsy_tab_page") {
-                                    AiFailedPredictionAutopsyCard(autopsy = autopsy)
-                                }
-                            }
-                        }
-
-                        // --- TAB 2: 🚨 NEWS RADAR & 1-HR ALERT SYSTEM ---
-                        if (uiState.selectedTab == 2) {
-                            // 1-Hour Prior Notification Radar Card (AI Pre-Analysis & Real Notification Trigger)
-                            item(key = "news_tab_pre_news_intelligence_card") {
-                                PreNewsIntelligenceCard(
-                                    currentPrice = analysis.currentPrice,
-                                    upcomingEvents = analysis.macroRadar?.upcomingEvents ?: emptyList(),
-                                    onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
-                                )
-                            }
-
-                            // High-Impact News Volatility Trading Mode & Dynamic Color Shift Card
-                            analysis.newsTradingPlan?.let { newsPlan ->
-                                item(key = "news_tab_trading_mode_card") {
-                                    NewsTradingModeCard(
-                                        newsPlan = newsPlan,
-                                        isNewsModeActive = uiState.isNewsModeActive,
-                                        onToggleNewsMode = { active -> viewModel.setNewsModeActive(active) }
-                                    )
-                                }
-                            }
-
-                            // Macro Sentiment Radar (DXY, 10Y Yields, Calendar Feed)
-                            analysis.macroRadar?.let { radar ->
-                                item(key = "news_tab_macro_radar_page") {
-                                    MacroNewsRadarCard(radar = radar)
-                                }
-                            }
-                        }
-
-                        // --- TAB 3: 🏦 SMART MONEY SMC & PIVOT LADDER ---
-                        if (uiState.selectedTab == 3) {
-                            analysis.smartMoney?.let { smc ->
-                                item(key = "smart_money_smc_page") {
-                                    SmartMoneySmcCard(
-                                        smc = smc,
-                                        currentPrice = analysis.currentPrice
-                                    )
-                                }
-                            }
-
-                            item(key = "pivot_ladder_tab") {
-                                PivotLadderCard(
-                                    currentPrice = analysis.currentPrice,
-                                    pivotLevels = analysis.pivotLevels
-                                )
-                            }
-                        }
-
-                        // --- TAB 4: ⚡ INSTITUTIONAL PLAYBOOK & TRICKS ---
-                        if (uiState.selectedTab == 4) {
-                            item(key = "trade_setup_tricks") {
-                                TradeSetupCard(
-                                    setup = analysis.tradeSetup,
-                                    onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
-                                )
-                            }
-
-                            if (analysis.candleInsight != null && analysis.mtfMatrix != null) {
-                                item(key = "candle_mtf_page") {
-                                    CandleMtfOracleCard(
-                                        candleInsight = analysis.candleInsight!!,
-                                        mtfMatrix = analysis.mtfMatrix!!,
-                                        tradingTricks = analysis.tradingTricks
-                                    )
+                                if (analysis.candleInsight != null && analysis.mtfMatrix != null) {
+                                    item(key = "candle_mtf_page") {
+                                        CandleMtfOracleCard(
+                                            candleInsight = analysis.candleInsight!!,
+                                            mtfMatrix = analysis.mtfMatrix!!,
+                                            tradingTricks = analysis.tradingTricks
+                                        )
+                                    }
                                 }
                             }
                         }
