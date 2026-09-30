@@ -416,6 +416,24 @@ private fun EconomicEventRow(event: EconomicEvent) {
                         color = TextMuted
                     )
                 }
+
+                // India Time (IST) Highlight
+                val indiaTimeFormatted = event.getIndiaTimeFormatted()
+                if (indiaTimeFormatted.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "🇮🇳", fontSize = 11.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "भारत समय (IST): $indiaTimeFormatted",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GoldLight
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = event.title,

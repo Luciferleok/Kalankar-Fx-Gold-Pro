@@ -387,6 +387,12 @@ class GoldApiService(
                         val evMs = parseFfTimeMs(date)
                         val timeStr = if (evMs != null) utcFormat("HH:mm", evMs) + " UTC" else "Intraday"
                         val dateStr = if (evMs != null) utcFormat("yyyy-MM-dd", evMs) else "This Week"
+                        val istStr = if (evMs != null) {
+                            val istFormat = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.US).apply {
+                                timeZone = java.util.TimeZone.getTimeZone("Asia/Kolkata")
+                            }
+                            istFormat.format(java.util.Date(evMs)) + " IST"
+                        } else "IST (भारत समय)"
                         list.add(
                             EconomicEvent(
                                 title = title,
@@ -397,6 +403,7 @@ class GoldApiService(
                                 forecast = forecast,
                                 previous = previous,
                                 isoTime = date,
+                                indiaTime = istStr,
                                 goldImpact = when (impact.lowercase()) {
                                     "high" -> "High Volatility Spike Expected"
                                     "medium" -> "Moderate Price Reaction"
@@ -417,9 +424,39 @@ class GoldApiService(
         } catch (_: Exception) {}
 
         return listOf(
-            EconomicEvent("FOMC Member Speech & Policy Guidance", "USD", "Today", "13:00 UTC", "High", "", "", "Dovish tone sparks Gold surge"),
-            EconomicEvent("Flash Manufacturing & Services PMI", "USD", "Tomorrow", "14:45 UTC", "Medium", "53.6", "53.2", "Growth slowdown bullish for Gold"),
-            EconomicEvent("ADP Non-Farm Employment Change", "USD", "This Week", "12:15 UTC", "High", "145K", "152K", "Labor cooling accelerates rate cuts")
+            EconomicEvent(
+                title = "FOMC Member Speech & Policy Guidance",
+                country = "USD",
+                date = "Today",
+                time = "13:00 UTC",
+                impact = "High",
+                forecast = "",
+                previous = "",
+                goldImpact = "Dovish tone sparks Gold surge",
+                indiaTime = "06:30 PM IST"
+            ),
+            EconomicEvent(
+                title = "Flash Manufacturing & Services PMI",
+                country = "USD",
+                date = "Tomorrow",
+                time = "14:45 UTC",
+                impact = "Medium",
+                forecast = "53.6",
+                previous = "53.2",
+                goldImpact = "Growth slowdown bullish for Gold",
+                indiaTime = "08:15 PM IST"
+            ),
+            EconomicEvent(
+                title = "ADP Non-Farm Employment Change",
+                country = "USD",
+                date = "This Week",
+                time = "12:15 UTC",
+                impact = "High",
+                forecast = "145K",
+                previous = "152K",
+                goldImpact = "Labor cooling accelerates rate cuts",
+                indiaTime = "05:45 PM IST"
+            )
         )
     }
 

@@ -541,6 +541,14 @@ fun UnifiedSignalDashboardView(
             onOpenCalculator = onOpenCalculator
         )
 
+        // --- 3B. 🤖 MULTI-BOT ARSENAL (6 SPECIALIZED BOTS ENSEMBLE) ---
+        analysis.multiBotEnsemble?.let { ensemble ->
+            MultiBotArsenalCard(
+                ensemble = ensemble,
+                onOpenCalculator = onOpenCalculator
+            )
+        }
+
         // --- 4. 🧠 COMBINED 5-AI ENSEMBLE CONSENSUS MATRIX ---
         analysis.multiAiConsensus?.let { consensus ->
             Surface(
@@ -998,5 +1006,13 @@ fun UnifiedSignalDashboardView(
             pivotLevels = analysis.pivotLevels,
             currentPrice = analysis.currentPrice
         )
+
+        // --- 8. ⚡ AUTONOMOUS ACCURACY VERIFICATION & PRODUCTION IMPROVEMENT ENGINE ---
+        analysis.productionImprovement?.let { prodEngine ->
+            ProductionImprovementAuditCard(
+                engine = prodEngine,
+                onRunAccuracyCheck = onRefreshClick
+            )
+        }
     }
 }

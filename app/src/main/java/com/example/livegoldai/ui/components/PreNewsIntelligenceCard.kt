@@ -239,8 +239,21 @@ fun PreNewsIntelligenceCard(
                                 text = "${primaryEvent.date} • ${primaryEvent.time}",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = GoldLight
+                                color = TextSecondary
                             )
+                            val indiaTime = primaryEvent.getIndiaTimeFormatted()
+                            if (indiaTime.isNotBlank()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = "🇮🇳", fontSize = 11.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "भारत समय (IST): $indiaTime",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = GoldLight
+                                    )
+                                }
+                            }
                         }
 
                         if (primaryEvent.forecast.isNotBlank()) {

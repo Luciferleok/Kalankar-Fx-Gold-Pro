@@ -45,6 +45,7 @@ object PreNewsAlertNotificationManager {
         eventTitle: String,
         country: String = "USD",
         timeRemainingText: String = "1 Hour",
+        indiaTimeText: String = "08:30 PM IST",
         aiBias: Signal = Signal.BUY,
         forecastInfo: String = "Expected vs Previous reading",
         targetRange: String = "$2,735 - $2,765",
@@ -84,27 +85,29 @@ object PreNewsAlertNotificationManager {
         }
 
         val title = when (lang) {
-            AppLanguage.ENGLISH -> if (isTest) "🚨 [TEST 1-HR ALERT] $eventTitle" else "🚨 1-HOUR NEWS ALERT: $eventTitle"
-            AppLanguage.HINDI -> if (isTest) "🚨 [टेस्ट 1-घंटा अलर्ट] $eventTitle" else "🚨 1 घंटे में न्यूज़ अलर्ट: $eventTitle"
-            AppLanguage.MARATHI -> if (isTest) "🚨 [चाचणी 1-तास अलर्ट] $eventTitle" else "🚨 1 तासात न्यूज अलर्ट: $eventTitle"
+            AppLanguage.ENGLISH -> if (isTest) "🚨 [TEST ALERT] 🇮🇳 $indiaTimeText • $eventTitle" else "🚨 1-HR NEWS ALERT: 🇮🇳 $indiaTimeText • $eventTitle"
+            AppLanguage.HINDI -> if (isTest) "🚨 [टेस्ट अलर्ट] 🇮🇳 $indiaTimeText • $eventTitle" else "🚨 न्यूज़ अलर्ट: 🇮🇳 $indiaTimeText • $eventTitle"
+            AppLanguage.MARATHI -> if (isTest) "🚨 [चाचणी अलर्ट] 🇮🇳 $indiaTimeText • $eventTitle" else "🚨 न्यूज अलर्ट: 🇮🇳 $indiaTimeText • $eventTitle"
         }
 
         val bodySummary = when (lang) {
-            AppLanguage.ENGLISH -> "AI Pre-Analysis: $biasLabel | Forecast: $forecastInfo | Target: $targetRange"
-            AppLanguage.HINDI -> "AI पूर्व-विश्लेषण: $biasLabel | डेटा: $forecastInfo | टारगेट: $targetRange"
-            AppLanguage.MARATHI -> "AI पूर्व-विश्लेषण: $biasLabel | डेटा: $forecastInfo | लक्ष्य: $targetRange"
+            AppLanguage.ENGLISH -> "🇮🇳 IST: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
+            AppLanguage.HINDI -> "🇮🇳 भारत समय: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
+            AppLanguage.MARATHI -> "🇮🇳 भारत वेळ: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
         }
 
         val detailedBigText = when (lang) {
             AppLanguage.ENGLISH -> """
                 ⏰ High-Impact Release approaching in $timeRemainingText!
+                🇮🇳 Indian Standard Time (IST): $indiaTimeText
                 🎯 AI Predictive Bias: $biasLabel
                 📊 Forecast Analysis: $forecastInfo
                 📈 Expected Gold Volatility Range: $targetRange
-                ⚡ Action: Pre-news Straddle Levels and 90-sec freeze rule are armed in Kalankar FX Gold Pro!
+                ⚡ Action: Pre-news Straddle Levels & 90-sec freeze rule are armed in Kalankar FX Gold Pro!
             """.trimIndent()
             AppLanguage.HINDI -> """
                 ⏰ लगभग $timeRemainingText में बड़ी मार्केट मूविंग न्यूज़ आने वाली है!
+                🇮🇳 भारतीय समय (IST): $indiaTimeText (आज रात)
                 🎯 AI का पूर्व-अनुमान (Prediction): $biasLabel
                 📊 डेटा एनालिसिस: $forecastInfo
                 📈 संभावित गोल्ड वोलैटिलिटी रेंज: $targetRange
@@ -112,6 +115,7 @@ object PreNewsAlertNotificationManager {
             """.trimIndent()
             AppLanguage.MARATHI -> """
                 ⏰ अंदाजे $timeRemainingText मध्ये महत्त्वाची मार्केट हलवणारी बातमी येणार!
+                🇮🇳 भारतीय वेळ (IST): $indiaTimeText
                 🎯 AI पूर्व-अंदाज (Prediction): $biasLabel
                 📊 डेटा विश्लेषण: $forecastInfo
                 📈 संभाव्य गोल्ड व्होलॅटिलिटी रेंज: $targetRange
@@ -139,8 +143,8 @@ object PreNewsAlertNotificationManager {
     }
 
     /**
-     * Checks upcoming economic events to see if any high-impact event is approximately 1 hour away
-     * (between 40 and 75 minutes). If found and not yet alerted, automatically fires the notification.
+     * Checks upcoming economic events to see if any high-impact event is approaching
+     * (within 180 minutes). If found and not yet alerted, automatically fires the notification.
      */
     fun checkAndTriggerUpcomingAlert(
         context: Context,
@@ -154,15 +158,18 @@ object PreNewsAlertNotificationManager {
 
         for (event in events) {
             if (!event.impact.equals("High", ignoreCase = true)) continue
-            val eventMs = parseIsoTimeMs(event.isoTime) ?: continue
-            val diffMs = eventMs - now
-            val diffMins = diffMs / 60_000L
+            val eventMs = parseIsoTimeMs(event.isoTime)
+            val diffMins: Long = if (eventMs != null) {
+                (eventMs - now) / 60_000L
+            } else if (event.date.equals("Today", ignoreCase = true)) {
+                50L // Default within active radar
+            } else continue
 
-            // 1-Hour window: 45 to 75 minutes ahead
-            if (diffMins in 40..75) {
+            // Alert window: event approaching within 180 minutes
+            if (diffMins in 0..180) {
                 val eventKey = "${event.title}_${event.date}_${event.time}"
                 if (!notifiedSet.contains(eventKey)) {
-                    val bias = if (event.title.contains("CPI", true) || event.title.contains("Fed", true)) {
+                    val bias = if (event.title.contains("CPI", true) || event.title.contains("Fed", true) || event.title.contains("FOMC", true)) {
                         Signal.BUY
                     } else if (event.title.contains("NFP", true) || event.title.contains("Employment", true)) {
                         Signal.SELL
@@ -183,6 +190,7 @@ object PreNewsAlertNotificationManager {
                         eventTitle = event.title,
                         country = event.country,
                         timeRemainingText = timeRemainingText,
+                        indiaTimeText = event.getIndiaTimeFormatted(),
                         aiBias = bias,
                         forecastInfo = forecastText,
                         targetRange = rangeText,
@@ -197,6 +205,30 @@ object PreNewsAlertNotificationManager {
                 }
             }
         }
+    }
+
+    /**
+     * Instantly fires a test pre-news notification on demand so the user can verify their device alerts!
+     */
+    fun triggerInstantTestAlert(
+        context: Context,
+        eventTitle: String = "US Core CPI Inflation (MoM & YoY)",
+        indiaTime: String = "08:30 PM IST",
+        currentPrice: Double = 2742.50,
+        lang: AppLanguage = AppLanguage.HINDI
+    ): Boolean {
+        return sendPreNewsAlertNotification(
+            context = context,
+            eventTitle = eventTitle,
+            country = "USD",
+            timeRemainingText = "45 Minutes",
+            indiaTimeText = indiaTime,
+            aiBias = Signal.BUY,
+            forecastInfo = "Est: 0.3% vs Prev: 0.2%",
+            targetRange = "$${String.format(Locale.US, "%.1f", currentPrice - 20.0)} - $${String.format(Locale.US, "%.1f", currentPrice + 25.0)}",
+            lang = lang,
+            isTest = true
+        )
     }
 
     private fun parseIsoTimeMs(iso: String): Long? {

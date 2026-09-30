@@ -552,9 +552,9 @@ object TechnicalEngine {
         )
 
         val upcomingEvents = if (customEvents.isNotEmpty()) customEvents else listOf(
-            EconomicEvent("FOMC Member Speech & Policy Guidance", "USD", "Today", "13:00 UTC", "High", "", "", "Dovish tone sparks Gold surge"),
-            EconomicEvent("Flash Manufacturing & Services PMI", "USD", "Tomorrow", "14:45 UTC", "Medium", "53.6", "53.2", "Growth slowdown bullish for Gold"),
-            EconomicEvent("ADP Non-Farm Employment Change", "USD", "This Week", "12:15 UTC", "High", "145K", "152K", "Labor cooling accelerates rate cuts")
+            EconomicEvent("FOMC Member Speech & Policy Guidance", "USD", "Today", "13:00 UTC", "High", "", "", "Dovish tone sparks Gold surge", indiaTime = "06:30 PM IST"),
+            EconomicEvent("Flash Manufacturing & Services PMI", "USD", "Tomorrow", "14:45 UTC", "Medium", "53.6", "53.2", "Growth slowdown bullish for Gold", indiaTime = "08:15 PM IST"),
+            EconomicEvent("ADP Non-Farm Employment Change", "USD", "This Week", "12:15 UTC", "High", "145K", "152K", "Labor cooling accelerates rate cuts", indiaTime = "05:45 PM IST")
         )
 
         val centralBankSignal = if (last.close > lastEma50 || dxyData.impactOnGold == Signal.BUY) Signal.BUY else Signal.WAIT
@@ -1561,6 +1561,25 @@ object TechnicalEngine {
             isNewsActive = false
         )
 
+        // 🤖 Multi-Bot Algorithmic Arsenal (6 Elite Bots Consensus)
+        val multiBotEnsemble = KalankarAiBotEngine.generateMultiBotEnsemble(
+            currentPrice = currentPrice,
+            tradeSetup = tradeSetup,
+            overallSignal = overallSignal,
+            agreementPercent = agreementPercent,
+            smartMoney = smartMoneyAnalysis,
+            multiAiConsensus = multiAiConsensus,
+            atrSafe = atrSafe,
+            isNewsActive = false
+        )
+
+        // ⚡ Autonomous Accuracy Verification & Production Improvement Engine
+        val productionImprovement = KalankarAiBotEngine.generateProductionImprovementEngine(
+            currentPrice = currentPrice,
+            agreementPercent = agreementPercent,
+            isBullish = overallSignal == Signal.BUY
+        )
+
         return GoldAnalysisResult(
             symbol = "XAU/USD",
             currentPrice = currentPrice,
@@ -1594,6 +1613,8 @@ object TechnicalEngine {
             failedPredictionAutopsy = failedAutopsy,
             newsTradingPlan = newsTradingPlan,
             quantBotSignal = quantBotSignal,
+            multiBotEnsemble = multiBotEnsemble,
+            productionImprovement = productionImprovement,
             isSimulatedFallback = false
         )
     }

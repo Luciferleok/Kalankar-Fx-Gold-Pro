@@ -1,5 +1,10 @@
 package com.example.livegoldai.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,11 +34,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.livegoldai.R
 import com.example.livegoldai.localization.AppLanguage
@@ -50,7 +57,21 @@ fun GoldHomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appColors = LocalAppColors.current
+    val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
+
+    // Android 13+ Notification Permission Launcher
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { /* granted */ }
+
+        LaunchedEffect(Unit) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     if (showSettings) {
         SettingsDialog(
@@ -403,6 +424,25 @@ fun GoldHomeScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        // 🚨 HIGH-IMPACT NEWS DEFENSE MODE BANNER (Always visible on all views with India Time & Notif Test)
+                        val highImpactUpcoming = analysis.macroRadar?.upcomingEvents?.firstOrNull {
+                            it.impact.equals("High", ignoreCase = true)
+                        } ?: analysis.macroRadar?.upcomingEvents?.firstOrNull()
+
+                        if (highImpactUpcoming != null || analysis.isNewsModeTriggered) {
+                            item(key = "high_impact_news_defense_banner") {
+                                HighImpactNewsDefenseBanner(
+                                    event = highImpactUpcoming,
+                                    currentPrice = analysis.currentPrice,
+                                    isNewsModeActive = analysis.isNewsModeTriggered,
+                                    onOpenNewsPlan = {
+                                        viewModel.setDashboardViewMode(DashboardViewMode.PRO)
+                                        viewModel.setTab(2) // Jump to News Radar Tab
+                                    }
+                                )
                             }
                         }
 
@@ -805,6 +845,26 @@ fun GoldHomeScreen(
 
                             // --- TAB 4: ⚡ INSTITUTIONAL PLAYBOOK & TRICKS ---
                             if (uiState.selectedTab == 4) {
+                                // 🤖 6-Bot Arsenal & Consensus
+                                analysis.multiBotEnsemble?.let { ensemble ->
+                                    item(key = "tab4_multi_bot_arsenal") {
+                                        MultiBotArsenalCard(
+                                            ensemble = ensemble,
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                        )
+                                    }
+                                }
+
+                                // ⚡ Autonomous Accuracy Verification & Production Improvement Engine
+                                analysis.productionImprovement?.let { prodEngine ->
+                                    item(key = "tab4_production_improvement") {
+                                        ProductionImprovementAuditCard(
+                                            engine = prodEngine,
+                                            onRunAccuracyCheck = { viewModel.loadData(isInitial = false) }
+                                        )
+                                    }
+                                }
+
                                 item(key = "trade_setup_tricks") {
                                     TradeSetupCard(
                                         setup = analysis.tradeSetup,
