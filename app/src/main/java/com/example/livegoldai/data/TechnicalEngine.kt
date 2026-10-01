@@ -12,6 +12,18 @@ import kotlin.math.sqrt
 
 object TechnicalEngine {
 
+    /** Weights used by the 68% weighted-agreement gate (also shown in "Why this forecast?"). */
+    val PILLAR_WEIGHTS: Map<String, Double> = mapOf(
+        "trend" to 3.0,
+        "smc" to 3.0,
+        "macro" to 2.5,
+        "sr" to 2.0,
+        "candlestick" to 2.0,
+        "momentum" to 1.5,
+        "volatility" to 1.5
+    )
+    const val GATE_PERCENT = 68.0
+
     fun analyze(
         candles: List<CandleBar>,
         interval: String = "4h",
@@ -588,15 +600,7 @@ object TechnicalEngine {
 
         // Dynamic Institutional Indicator Weighting:
         // Trend, SMC, and Macro carry dominant mathematical weights (8.5 of 15.5)
-        val pillarWeights = mapOf(
-            "trend" to 3.0,
-            "smc" to 3.0,
-            "macro" to 2.5,
-            "sr" to 2.0,
-            "candlestick" to 2.0,
-            "momentum" to 1.5,
-            "volatility" to 1.5
-        )
+        val pillarWeights = PILLAR_WEIGHTS
         val totalWeight = pillarWeights.values.sum() // 15.5
         var weightedBuyPoints = 0.0
         var weightedSellPoints = 0.0

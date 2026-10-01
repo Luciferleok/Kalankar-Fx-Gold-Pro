@@ -47,6 +47,7 @@ import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.localization.LocalizationStrings
 import com.example.livegoldai.theme.*
 import com.example.livegoldai.ui.components.*
+import com.example.livegoldai.ui.v8.*
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,6 +153,13 @@ fun GoldHomeScreen(
             .fillMaxSize()
             .background(appColors.background),
         containerColor = appColors.background,
+        bottomBar = {
+            V8BottomNav(
+                selected = uiState.bottomTab,
+                lang = uiState.language,
+                healthStatus = uiState.data?.health?.overallStatus
+            ) { viewModel.setBottomTab(it) }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -365,6 +373,30 @@ fun GoldHomeScreen(
                         )
                     }
 
+                    when (uiState.bottomTab) {
+                    0 -> V8CockpitScreen(
+                        analysis = analysis,
+                        lang = uiState.language,
+                        selectedInterval = uiState.selectedInterval,
+                        tick = uiState.countdownSeconds,
+                        onIntervalChange = { viewModel.setInterval(it) },
+                        onOpenHealth = { viewModel.setBottomTab(2) },
+                        onOpenForecast = { viewModel.setBottomTab(1) },
+                        onOpenPlaybook = { viewModel.openPredictionDialog() }
+                    )
+                    1 -> V8ForecastScreen(
+                        analysis = analysis,
+                        lang = uiState.language,
+                        onOpenPlaybook = { viewModel.openPredictionDialog() },
+                        onOpenLearning = { viewModel.setBottomTab(3) }
+                    )
+                    2 -> V8HealthScreen(health = analysis.health, lang = uiState.language)
+                    3 -> LearningCenterContent(
+                        analysis = analysis,
+                        onRecalibrate = { viewModel.recalibratePredictionEngine() }
+                    )
+                    else -> {
+                    // MORE: the full classic dashboard (all original cards, news, SMC, bots, tricks)
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -914,6 +946,8 @@ fun GoldHomeScreen(
                                 )
                             }
                         }
+                    }
+                    }
                     }
                 }
 

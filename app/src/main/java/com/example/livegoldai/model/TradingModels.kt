@@ -551,7 +551,10 @@ data class GoldAnalysisResult(
     val isNewsModeTriggered: Boolean = false,
     val isSimulatedFallback: Boolean = false,
     val newsMode: NewsModeStatus? = null,
-    val learning: LearningSnapshot? = null
+    val learning: LearningSnapshot? = null,
+    val feed: FeedStatus? = null,
+    val health: SystemHealth? = null,
+    val insights: CockpitInsights? = null
 )
 
 @Serializable

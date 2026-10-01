@@ -26,6 +26,64 @@ class LearningCoordinator(
     private var lastReport: List<String> = listOf("Learning engine started. Waiting for the first predictions to expire.")
     private val busy = AtomicBoolean(false)
 
+    // ---- observable activity (for the Health screen)
+    @Volatile var lastVerifyAttemptAt: Long = 0L; private set
+    @Volatile var lastVerifiedCount: Int = 0; private set
+    @Volatile var totalVerifiedThisSession: Int = 0; private set
+    @Volatile var consecutiveFetchFailures: Int = 0; private set
+    @Volatile var lastCycleAt: Long = 0L; private set
+    @Volatile var lastWriteOk: Boolean = true; private set
+    @Volatile var lastWriteError: String = ""; private set
+
+    data class Stats(
+        val records: Int,
+        val results: Int,
+        val pending: Int,
+        val overdue: Int,              // due more than 10 minutes ago and still unchecked
+        val skippedLines: Int,
+        val fileBytes: Long,
+        val lastVerifyAttemptAt: Long,
+        val lastVerifiedCount: Int,
+        val totalVerifiedThisSession: Int,
+        val consecutiveFetchFailures: Int,
+        val lastCycleAt: Long,
+        val lastWriteOk: Boolean,
+        val lastWriteError: String,
+        val activeFilters: Int
+    )
+
+    fun stats(now: Long = System.currentTimeMillis()): Stats {
+        val st = state
+        val pending = st.records.filter { st.resultOf(it.id) == null }
+        return Stats(
+            records = st.records.size,
+            results = st.results.size,
+            pending = pending.size,
+            overdue = pending.count { now > it.expiresAt + SETTLE_MS + 10 * 60_000L },
+            skippedLines = st.skippedLines,
+            fileBytes = try { store.sizeBytes() } catch (_: Exception) { -1L },
+            lastVerifyAttemptAt = lastVerifyAttemptAt,
+            lastVerifiedCount = lastVerifiedCount,
+            totalVerifiedThisSession = totalVerifiedThisSession,
+            consecutiveFetchFailures = consecutiveFetchFailures,
+            lastCycleAt = lastCycleAt,
+            lastWriteOk = lastWriteOk,
+            lastWriteError = lastWriteError,
+            activeFilters = LearningEngine.activeFilterIds(st).size
+        )
+    }
+
+    private fun safeAppend(lines: List<String>): Boolean = try {
+        store.append(lines)
+        lastWriteOk = true
+        lastWriteError = ""
+        true
+    } catch (e: Exception) {
+        lastWriteOk = false
+        lastWriteError = e.message ?: e.javaClass.simpleName
+        false
+    }
+
     companion object {
         const val MAX_CHECKS_PER_REFRESH = 6
         const val GIVE_UP_AFTER_MS = 72 * 3_600_000L
@@ -67,8 +125,9 @@ class LearningCoordinator(
 
             if (existing == null && canRecord) {
                 val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter)
-                store.append(listOf(PredictionLedger.encodeRecord(rec)))
-                state = LedgerState(state.records + rec, state.results, state.events)
+                if (safeAppend(listOf(PredictionLedger.encodeRecord(rec)))) {
+                    state = LedgerState(state.records + rec, state.results, state.events, state.skippedLines)
+                }
             }
             val snap2 = LearningEngine.snapshot(state, interval, now, lastReport)
             return applied.copy(learning = snap2)
@@ -92,9 +151,11 @@ class LearningCoordinator(
     private fun runCycle(now: Long, newResults: Int) {
         val out = LearningEngine.runCycle(state, now, newResults)
         if (out.newEvents.isNotEmpty()) {
-            store.append(out.newEvents.map { PredictionLedger.encodeEvent(it) })
-            state = LedgerState(state.records, state.results, state.events + out.newEvents)
+            if (safeAppend(out.newEvents.map { PredictionLedger.encodeEvent(it) })) {
+                state = LedgerState(state.records, state.results, state.events + out.newEvents, state.skippedLines)
+            }
         }
+        lastCycleAt = now
         lastReport = listOf("Cycle at ${PredictionLedger.utcLabel(now, true)}") + out.report
     }
 
@@ -103,6 +164,7 @@ class LearningCoordinator(
             .sortedBy { it.expiresAt }
             .take(limit)
         if (due.isEmpty()) return 0
+        lastVerifyAttemptAt = now
         val newResults = LinkedHashMap<String, LedgerResult>()
         for (r in due) {
             val res: LedgerResult? = when {
@@ -110,6 +172,7 @@ class LearningCoordinator(
                     PredictionLedger.emptyResult(r, now, LedgerOutcome.MARKET_CLOSED, "weekend")
                 else -> {
                     val path = try { fetchPath(r.createdAt, r.expiresAt) } catch (_: Exception) { null }
+                    if (path == null || path.bars.isEmpty()) consecutiveFetchFailures++ else consecutiveFetchFailures = 0
                     when {
                         path != null && path.bars.isNotEmpty() -> PredictionLedger.evaluate(r, path, now)
                         now > r.expiresAt + GIVE_UP_AFTER_MS -> PredictionLedger.emptyResult(r, now, LedgerOutcome.DATA_FAILURE, "no data")
@@ -119,9 +182,11 @@ class LearningCoordinator(
             }
             if (res != null) newResults[r.id] = res
         }
+        lastVerifiedCount = newResults.size
         if (newResults.isEmpty()) return 0
-        store.append(newResults.values.map { PredictionLedger.encodeResult(it) })
-        state = LedgerState(state.records, state.results + newResults, state.events)
+        if (!safeAppend(newResults.values.map { PredictionLedger.encodeResult(it) })) return 0
+        state = LedgerState(state.records, state.results + newResults, state.events, state.skippedLines)
+        totalVerifiedThisSession += newResults.size
         return newResults.size
     }
 

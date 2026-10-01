@@ -86,7 +86,8 @@ data class GoldUiState(
     val showPredictionErrorAnalyzerDialog: Boolean = false,
     val showSpotInspectorDialog: Boolean = false,
     val selectedPillarForDeepDive: GroupAnalysis? = null,
-    val isManualNewsMode: Boolean = false
+    val isManualNewsMode: Boolean = false,
+    val bottomTab: Int = 0 // 0 Cockpit, 1 Forecast, 2 Health, 3 Learning, 4 More
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -111,6 +112,8 @@ class GoldViewModel @JvmOverloads constructor(
     val uiState: StateFlow<GoldUiState> = _uiState.asStateFlow()
 
     private var autoRefreshJob: Job? = null
+
+    private val healthMonitor = com.example.livegoldai.data.HealthMonitor()
 
     // Real Prediction Ledger (append-only file in app storage). Loaded lazily on a background thread.
     private val learning: LearningCoordinator by lazy {
@@ -158,7 +161,10 @@ class GoldViewModel @JvmOverloads constructor(
                 val analysis = try {
                     withContext(Dispatchers.IO) {
                         val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
-                        learning.process(rawAnalysis, currentInterval, mtfCandles)
+                        val learned = learning.process(rawAnalysis, currentInterval, mtfCandles)
+                        val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
+                        val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
+                        learned.copy(health = health, insights = insights)
                     }
                 } catch (_: Exception) {
                     rawAnalysis
@@ -205,6 +211,10 @@ class GoldViewModel @JvmOverloads constructor(
         if (_uiState.value.selectedInterval == interval) return
         _uiState.update { it.copy(selectedInterval = interval, isLoading = true) }
         loadData(isInitial = true)
+    }
+
+    fun setBottomTab(index: Int) {
+        _uiState.update { it.copy(bottomTab = index) }
     }
 
     fun setTab(index: Int) {

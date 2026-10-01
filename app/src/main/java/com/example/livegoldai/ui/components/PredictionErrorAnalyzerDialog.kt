@@ -70,6 +70,29 @@ fun PredictionErrorAnalyzerDialog(
     onDismiss: () -> Unit,
     onRecalibrate: () -> Unit = {}
 ) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 20.dp)
+                .testTag("prediction_error_analyzer_dialog"),
+            shape = RoundedCornerShape(22.dp),
+            color = ObsidianBackground,
+            border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f))
+        ) {
+            LearningCenterContent(analysis = analysis, onRecalibrate = onRecalibrate, onDismiss = onDismiss)
+        }
+    }
+}
+
+/** The Learning Center itself; used both in the dialog and as the LEARNING tab. */
+@Composable
+fun LearningCenterContent(
+    analysis: GoldAnalysisResult,
+    onRecalibrate: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     val lang = LocalAppLanguage.current
     var tab by remember { mutableIntStateOf(0) }
     var recalPressed by remember { mutableStateOf(false) }
@@ -84,98 +107,95 @@ fun PredictionErrorAnalyzerDialog(
         t(lang, "MODEL HISTORY", "मॉडल इतिहास", "मॉडेल इतिहास")
     )
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 20.dp)
-                .testTag("prediction_error_analyzer_dialog"),
-            shape = RoundedCornerShape(22.dp),
-            color = ObsidianBackground,
-            border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f))
-        ) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                // header
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "🧠", fontSize = 22.sp)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = t(lang, "PREDICTION LEARNING CENTER", "प्रेडिक्शन लर्निंग सेंटर", "प्रेडिक्शन लर्निंग सेंटर"),
-                            color = GoldLight, fontSize = 15.sp, fontWeight = FontWeight.Black
-                        )
-                        Text(
-                            text = t(lang, "Real results only • nothing typed in by hand", "सिर्फ असली नतीजे • कोई नंबर हाथ से नहीं", "फक्त खरे निकाल • कोणताही आकडा हाताने नाही"),
-                            color = TextSecondary, fontSize = 10.sp
-                        )
-                    }
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(34.dp).background(ObsidianSurfaceElevated, CircleShape).testTag("close_analyzer_dialog")
-                    ) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // tabs
-                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tabs.forEachIndexed { i, label ->
-                        val selected = i == tab
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (selected) GoldPrimary else ObsidianSurfaceElevated)
-                                .clickable { tab = i }
-                                .padding(horizontal = 10.dp, vertical = 7.dp)
-                        ) {
-                            Text(text = label, color = if (selected) Color.Black else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-                    if (s == null) {
-                        Note(t(lang,
-                            "The learning engine is starting. Predictions are recorded from the next refresh and checked when their validity time ends.",
-                            "लर्निंग इंजन शुरू हो रहा है। अगले रिफ्रेश से प्रेडिक्शन रिकॉर्ड होंगी और उनका समय खत्म होने पर जाँची जाएँगी।",
-                            "लर्निंग इंजिन सुरू होत आहे. पुढील रिफ्रेशपासून अंदाज नोंदवले जातील आणि त्यांची वेळ संपल्यावर तपासले जातील."))
-                    } else {
-                        when (tab) {
-                            0 -> OverviewTab(s, lang)
-                            1 -> AccuracyTab(s, lang)
-                            2 -> FailuresTab(s, lang)
-                            3 -> CorrectionsTab(s, lang)
-                            4 -> LiveTab(s, lang)
-                            else -> HistoryTab(s, lang)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { recalPressed = true; onRecalibrate() },
-                    modifier = Modifier.fillMaxWidth().height(46.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = Color.Black)
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+        // header
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "🧠", fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = t(lang, "PREDICTION LEARNING CENTER", "प्रेडिक्शन लर्निंग सेंटर", "प्रेडिक्शन लर्निंग सेंटर"),
+                    color = GoldLight, fontSize = 15.sp, fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = t(lang, "Real results only • nothing typed in by hand", "सिर्फ असली नतीजे • कोई नंबर हाथ से नहीं", "फक्त खरे निकाल • कोणताही आकडा हाताने नाही"),
+                    color = TextSecondary, fontSize = 10.sp
+                )
+            }
+            if (onDismiss != null) {
+                IconButton(
+                    onClick = { onDismiss() },
+                    modifier = Modifier.size(34.dp).background(ObsidianSurfaceElevated, CircleShape).testTag("close_analyzer_dialog")
                 ) {
-                    Text(
-                        text = t(lang, "🔄 RUN LEARNING CYCLE NOW", "🔄 अभी लर्निंग साइकिल चलाएँ", "🔄 आता लर्निंग सायकल चालवा"),
-                        fontWeight = FontWeight.Black, fontSize = 12.sp
-                    )
-                }
-                if (recalPressed) {
-                    Text(
-                        text = t(lang,
-                            "Checking expired predictions… the result appears in LIVE LEARNING after the next refresh.",
-                            "समय खत्म हुई प्रेडिक्शन जाँची जा रही हैं… नतीजा अगले रिफ्रेश के बाद लाइव लर्निंग में दिखेगा।",
-                            "वेळ संपलेले अंदाज तपासले जात आहेत… निकाल पुढील रिफ्रेशनंतर लाइव्ह लर्निंगमध्ये दिसेल."),
-                        color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextMuted, modifier = Modifier.size(18.dp))
                 }
             }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // tabs
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            tabs.forEachIndexed { i, label ->
+                val selected = i == tab
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) GoldPrimary else ObsidianSurfaceElevated)
+                        .clickable { tab = i }
+                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                ) {
+                    Text(text = label, color = if (selected) Color.Black else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+            if (s == null) {
+                Note(t(lang,
+                    "The learning engine is starting. Predictions are recorded from the next refresh and checked when their validity time ends.",
+                    "लर्निंग इंजन शुरू हो रहा है। अगले रिफ्रेश से प्रेडिक्शन रिकॉर्ड होंगी और उनका समय खत्म होने पर जाँची जाएँगी।",
+                    "लर्निंग इंजिन सुरू होत आहे. पुढील रिफ्रेशपासून अंदाज नोंदवले जातील आणि त्यांची वेळ संपल्यावर तपासले जातील."))
+            } else {
+                when (tab) {
+                    0 -> OverviewTab(s, lang)
+                    1 -> AccuracyTab(s, lang)
+                    2 -> FailuresTab(s, lang)
+                    3 -> CorrectionsTab(s, lang)
+                    4 -> LiveTab(s, lang)
+                    else -> HistoryTab(s, lang)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = { recalPressed = true; onRecalibrate() },
+            modifier = Modifier.fillMaxWidth().height(46.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = Color.Black)
+        ) {
+            Text(
+                text = t(lang, "🔄 RUN SAFE RECALIBRATION", "🔄 सुरक्षित री-कैलिब्रेशन चलाएँ", "🔄 सुरक्षित री-कॅलिब्रेशन चालवा"),
+                fontWeight = FontWeight.Black, fontSize = 12.sp
+            )
+        }
+        Text(
+            text = t(lang,
+                "Checks expired predictions, looks for patterns, starts shadow tests. Never changes the live model directly.",
+                "समय खत्म हुई प्रेडिक्शन जाँचता है, पैटर्न खोजता है, शैडो टेस्ट शुरू करता है। लाइव मॉडल को सीधे कभी नहीं बदलता।",
+                "वेळ संपलेले अंदाज तपासते, पॅटर्न शोधते, शॅडो टेस्ट सुरू करते. लाइव्ह मॉडेल थेट कधीच बदलत नाही."),
+            color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
+        )
+        if (recalPressed) {
+            Text(
+                text = t(lang,
+                    "Checking expired predictions… the result appears in LIVE LEARNING after the next refresh.",
+                    "समय खत्म हुई प्रेडिक्शन जाँची जा रही हैं… नतीजा अगले रिफ्रेश के बाद लाइव लर्निंग में दिखेगा।",
+                    "वेळ संपलेले अंदाज तपासले जात आहेत… निकाल पुढील रिफ्रेशनंतर लाइव्ह लर्निंगमध्ये दिसेल."),
+                color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

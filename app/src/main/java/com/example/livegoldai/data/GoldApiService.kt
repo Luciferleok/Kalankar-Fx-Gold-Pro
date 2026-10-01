@@ -135,7 +135,7 @@ class GoldApiService(
                                 customUs10y = us10yDeferred.await(),
                                 customEvents = eventsDeferred.await()
                             )
-                            val finalResult = applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await())
+                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Twelve Data XAU/USD", now, 1, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
                             memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                             return@withContext Result.success(finalResult)
                         }
@@ -218,7 +218,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await())
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -285,7 +285,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await())
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -295,7 +295,7 @@ class GoldApiService(
 
         // Step 3: Offline cached fallback engine (updated to current market prices)
         val fallback = TechnicalEngine.fallbackAnalysis(interval)
-        Result.success(fallback.copy(isSimulatedFallback = true))
+        Result.success(withFeed(fallback.copy(isSimulatedFallback = true), "OFFLINE DEMO", now, 4, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size))
     }
 
     /**
@@ -405,6 +405,11 @@ class GoldApiService(
         } catch (_: Exception) {}
 
         return emptyList() // calendar unavailable: show nothing rather than invented events
+    }
+
+    private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int): GoldAnalysisResult {
+        val end = System.currentTimeMillis()
+        return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried))
     }
 
     // ---------------- REAL VERIFICATION & MULTI-TIMEFRAME DATA ----------------

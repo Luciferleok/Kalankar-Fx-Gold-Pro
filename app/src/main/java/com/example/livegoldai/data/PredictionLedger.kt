@@ -79,7 +79,8 @@ data class LedgerEvent(
 class LedgerState(
     val records: List<LedgerRecord>,
     val results: Map<String, LedgerResult>,
-    val events: List<LedgerEvent>
+    val events: List<LedgerEvent>,
+    val skippedLines: Int = 0
 ) {
     fun resultOf(id: String): LedgerResult? = results[id]
 }
@@ -88,6 +89,7 @@ class LedgerState(
 interface LedgerStore {
     fun readAll(): List<String>
     fun append(lines: List<String>)
+    fun sizeBytes(): Long = -1L
 }
 
 class FileLedgerStore(private val file: File) : LedgerStore {
@@ -100,6 +102,8 @@ class FileLedgerStore(private val file: File) : LedgerStore {
         file.parentFile?.mkdirs()
         file.appendText(lines.joinToString(separator = "\n", postfix = "\n"))
     }
+
+    override fun sizeBytes(): Long = if (file.exists()) file.length() else 0L
 }
 
 class InMemoryLedgerStore : LedgerStore {
@@ -118,6 +122,7 @@ object PredictionLedger {
         val records = ArrayList<LedgerRecord>()
         val results = LinkedHashMap<String, LedgerResult>()
         val events = ArrayList<LedgerEvent>()
+        var skipped = 0
         for (line in store.readAll()) {
             if (line.isBlank()) continue
             val m = try {
@@ -125,10 +130,11 @@ object PredictionLedger {
                 MiniJson.parse(line) as? Map<String, Any?>
             } catch (_: Exception) {
                 null
-            } ?: continue
+            }
+            if (m == null) { skipped++; continue }
             when (m.str("t")) {
                 "rec" -> decodeRecord(m)?.let { records.add(it) }
-                "out" -> decodeResult(m)?.let { results[it.id] = it }  // first result wins below
+                "out" -> decodeResult(m)?.let { results[it.id] = it }
                 "evt" -> events.add(
                     LedgerEvent(
                         at = m.long("at"), kind = m.str("kind"), candidateId = m.str("cid"),
@@ -138,7 +144,7 @@ object PredictionLedger {
             }
         }
         val kept = if (records.size > MAX_RECORDS_KEPT_IN_MEMORY) records.takeLast(MAX_RECORDS_KEPT_IN_MEMORY) else records
-        return LedgerState(kept, results, events)
+        return LedgerState(kept, results, events, skipped)
     }
 
     fun encodeRecord(r: LedgerRecord): String = MiniJson.write(
