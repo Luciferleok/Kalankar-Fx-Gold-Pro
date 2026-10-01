@@ -885,19 +885,19 @@ fun PredictionBigCard(
                         .clip(RoundedCornerShape(5.dp))
                         .background(ObsidianBackground)
                 ) {
-                    Box(
+                    if (bullishProb > 0) Box(
                         modifier = Modifier
                             .weight(bullishProb.toFloat())
                             .fillMaxHeight()
                             .background(SignalBuy)
                     )
-                    Box(
+                    if (sidewaysProb > 0) Box(
                         modifier = Modifier
                             .weight(sidewaysProb.toFloat())
                             .fillMaxHeight()
                             .background(SignalWait)
                     )
-                    Box(
+                    if (bearishProb > 0) Box(
                         modifier = Modifier
                             .weight(bearishProb.toFloat())
                             .fillMaxHeight()
