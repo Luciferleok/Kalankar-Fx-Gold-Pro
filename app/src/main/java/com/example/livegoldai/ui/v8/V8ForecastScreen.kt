@@ -155,7 +155,8 @@ fun V8ForecastScreen(
                 V8KeyValue(tr(lang, "Model", "मॉडल", "मॉडेल"), analysis.learning?.modelVersion ?: "--")
                 V8KeyValue(tr(lang, "Indicators used", "इस्तेमाल इंडिकेटर", "वापरलेले इंडिकेटर"), "${analysis.groups.sumOf { it.indicators.size } - excluded.size}/${analysis.groups.sumOf { it.indicators.size }}")
                 V8KeyValue(tr(lang, "Rule bots", "नियम बॉट", "नियम बॉट"), analysis.multiBotEnsemble?.let { "${it.buyVotes} BUY • ${it.sellVotes} SELL • ${it.waitVotes} —" } ?: "--")
-                V8KeyValue(tr(lang, "External AI", "बाहरी AI", "बाहेरील AI"), tr(lang, "none (not configured)", "कोई नहीं (कनेक्ट नहीं)", "नाही (कनेक्ट नाही)"))
+                V8KeyValue(tr(lang, "External AI", "बाहरी AI", "बाहेरील AI"), analysis.aiCouncil?.let { c -> "${c.eligible} voting / ${c.configured} connected • ${c.consensus} • advisory only" }
+                    ?: tr(lang, "none connected", "कोई कनेक्ट नहीं", "काहीही कनेक्ट नाही"))
                 if (excluded.isNotEmpty()) {
                     Text(text = tr(lang, "Not usable this refresh: ", "इस रिफ्रेश में उपयोग नहीं: ", "या रिफ्रेशमध्ये वापरले नाही: ") + excluded.joinToString(", ") { it.name },
                         color = V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))

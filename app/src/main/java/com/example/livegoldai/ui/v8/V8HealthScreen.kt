@@ -61,7 +61,8 @@ fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage) {
                 V8Badge(health.overallStatus.replace('_', ' '), statusColor(health.overallStatus))
             }
             Text(
-                text = tr(lang, "Checked ", "जाँचा ", "तपासले ") + health.checkedAtLabel + tr(lang, " • share of checks passed (AI not counted: not configured)", " • पास हुई जाँचों का हिस्सा (AI गिना नहीं: कनेक्ट नहीं)", " • पास झालेल्या तपासण्यांचा वाटा (AI मोजले नाही: कनेक्ट नाही)"),
+                text = tr(lang, "Checked ", "जाँचा ", "तपासले ") + health.checkedAtLabel + tr(lang, " • share of checks passed", " • पास हुई जाँचों का हिस्सा", " • पास झालेल्या तपासण्यांचा वाटा") +
+                    if ((health.category("AI")?.score ?: -1) < 0) tr(lang, " (AI not counted: not connected)", " (AI गिना नहीं: कनेक्ट नहीं)", " (AI मोजले नाही: कनेक्ट नाही)") else "",
                 color = V8.Text3, fontSize = 9.sp
             )
         }

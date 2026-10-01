@@ -114,7 +114,7 @@ fun MultiAiCouncilCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "LOCAL RULE COUNCIL (NO AI CALL)"
+                                    AppLanguage.ENGLISH -> "ALGORITHMIC ENGINES (5 LOCAL RULES)"
                                     AppLanguage.HINDI -> "नियम सहमति परिषद (5 लोकल नियम)"
                                     AppLanguage.MARATHI -> "नियम सहमती समिती (5 लोकल नियम)"
                                 },
@@ -126,7 +126,7 @@ fun MultiAiCouncilCard(
                             )
                         }
                         Text(
-                            text = "5 local rule engines • no external AI is called",
+                            text = "Algorithms on this phone, not AI • real AI is in the AI tab",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )

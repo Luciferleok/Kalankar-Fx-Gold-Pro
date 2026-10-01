@@ -46,7 +46,8 @@ fun V8CockpitScreen(
     onIntervalChange: (String) -> Unit,
     onOpenHealth: () -> Unit,
     onOpenForecast: () -> Unit,
-    onOpenPlaybook: () -> Unit
+    onOpenPlaybook: () -> Unit,
+    onOpenAi: () -> Unit = {}
 ) {
     @Suppress("UNUSED_VARIABLE") val recomposeEverySecond = tick
     val now = System.currentTimeMillis()
@@ -130,6 +131,43 @@ fun V8CockpitScreen(
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(text = tr(lang, "Tap for the full forecast →", "पूरा अनुमान देखने के लिए टैप करें →", "पूर्ण अंदाजासाठी टॅप करा →"), color = V8.Gold, fontSize = 10.sp)
+        }
+
+        // ---------------- intelligence: quant vs bots vs AI (real answers only)
+        val council = analysis.aiCouncil
+        V8Card(level = 2, onClick = onOpenAi, accent = when (council?.conflictLevel) {
+            "HIGH" -> V8.Red.copy(alpha = 0.5f); "ALIGNED" -> V8.Green.copy(alpha = 0.4f); else -> V8.Line
+        }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                V8Label(tr(lang, "Intelligence", "इंटेलिजेंस", "इंटेलिजन्स"))
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = when (council?.conflictLevel) {
+                        "HIGH" -> tr(lang, "HIGH CONFLICT", "भारी टकराव", "मोठा संघर्ष")
+                        "MINOR" -> tr(lang, "PARTIAL", "आंशिक", "अंशतः")
+                        "ALIGNED" -> tr(lang, "STRONG", "मज़बूत", "मजबूत")
+                        else -> tr(lang, "AI not connected", "AI कनेक्ट नहीं", "AI कनेक्ट नाही")
+                    },
+                    color = when (council?.conflictLevel) { "HIGH" -> V8.Red; "MINOR" -> V8.Amber; "ALIGNED" -> V8.Green; else -> V8.Text3 },
+                    fontSize = 11.sp, fontWeight = FontWeight.Black
+                )
+                Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
+            }
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                val bots = analysis.multiBotEnsemble?.ensembleSignal
+                val ai = when (council?.consensus) { "BUY" -> Signal.BUY; "SELL" -> Signal.SELL; "WAIT" -> Signal.WAIT; else -> null }
+                listOf(
+                    Triple("QUANT", sig as Signal?, ""),
+                    Triple(tr(lang, "BOTS", "बॉट", "बॉट"), bots, analysis.multiBotEnsemble?.let { "${maxOf(it.buyVotes, it.sellVotes, it.waitVotes)}/${it.totalBots}" } ?: ""),
+                    Triple("AI", ai, council?.let { if (it.consensus == "SPLIT") "split" else if (it.eligible == 0) "0/${it.configured}" else "${maxOf(it.buyVotes, it.sellVotes, it.waitVotes)}/${it.eligible}" } ?: "--")
+                ).forEach { (t, s2, sub) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = t, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(text = if (s2 == null) "—" else arrowOf(s2) + " " + s2.name, color = s2?.let { signalColor(it) } ?: V8.Text3, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        if (sub.isNotEmpty()) Text(text = sub, color = V8.Text3, fontSize = 9.sp)
+                    }
+                }
+            }
         }
 
         // ---------------- health strip

@@ -380,18 +380,37 @@ fun GoldHomeScreen(
                         selectedInterval = uiState.selectedInterval,
                         tick = uiState.countdownSeconds,
                         onIntervalChange = { viewModel.setInterval(it) },
-                        onOpenHealth = { viewModel.setBottomTab(2) },
+                        onOpenHealth = { viewModel.setBottomTab(3) },
                         onOpenForecast = { viewModel.setBottomTab(1) },
-                        onOpenPlaybook = { viewModel.openPredictionDialog() }
+                        onOpenPlaybook = { viewModel.openPredictionDialog() },
+                        onOpenAi = { viewModel.setBottomTab(2) }
                     )
                     1 -> V8ForecastScreen(
                         analysis = analysis,
                         lang = uiState.language,
                         onOpenPlaybook = { viewModel.openPredictionDialog() },
-                        onOpenLearning = { viewModel.setBottomTab(3) }
+                        onOpenLearning = { viewModel.setBottomTab(4) }
                     )
-                    2 -> V8HealthScreen(health = analysis.health, lang = uiState.language)
-                    3 -> LearningCenterContent(
+                    2 -> V8AiScreen(
+                        analysis = analysis,
+                        lang = uiState.language,
+                        providers = uiState.aiProviders,
+                        mode = uiState.aiMode,
+                        debate = uiState.aiDebate,
+                        freshnessSec = uiState.aiFreshnessSec,
+                        tests = uiState.aiTests,
+                        running = uiState.aiRunning,
+                        tick = uiState.countdownSeconds,
+                        onSave = { id, key, model, role, enabled -> viewModel.saveAiProvider(id, key, model, role, enabled) },
+                        onRemoveKey = { viewModel.removeAiKey(it) },
+                        onTest = { viewModel.testAiProvider(it) },
+                        onMode = { viewModel.setAiMode(it) },
+                        onDebate = { viewModel.setAiDebate(it) },
+                        onFreshness = { viewModel.setAiFreshness(it) },
+                        onRunNow = { viewModel.runAiCouncil() }
+                    )
+                    3 -> V8HealthScreen(health = analysis.health, lang = uiState.language)
+                    4 -> LearningCenterContent(
                         analysis = analysis,
                         onRecalibrate = { viewModel.recalibratePredictionEngine() }
                     )

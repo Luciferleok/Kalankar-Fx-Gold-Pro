@@ -22,6 +22,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.example.livegoldai.data.HealthMonitor
+import com.example.livegoldai.data.ai.AIOrchestrator
+import com.example.livegoldai.data.ai.AiPerformanceTracker
+import com.example.livegoldai.data.ai.AiProviderConfig
+import com.example.livegoldai.data.ai.AiProviderId
+import com.example.livegoldai.data.ai.AiRole
+import com.example.livegoldai.data.ai.OkHttpAiTransport
+import com.example.livegoldai.model.AiProviderUi
+import com.example.livegoldai.model.AiTestUi
 
 enum class MainScreenMode(
     val title: String,
@@ -87,7 +96,14 @@ data class GoldUiState(
     val showSpotInspectorDialog: Boolean = false,
     val selectedPillarForDeepDive: GroupAnalysis? = null,
     val isManualNewsMode: Boolean = false,
-    val bottomTab: Int = 0 // 0 Cockpit, 1 Forecast, 2 Health, 3 Learning, 4 More
+    val bottomTab: Int = 0, // 0 Cockpit, 1 Forecast, 2 AI, 3 Health, 4 Learning, 5 More
+    // ---- external AI council (keys live encrypted in AiKeyVault, never in UI state)
+    val aiProviders: List<com.example.livegoldai.model.AiProviderUi> = emptyList(),
+    val aiMode: String = "AUTO",
+    val aiDebate: Boolean = false,
+    val aiFreshnessSec: Int = 0,
+    val aiTests: Map<String, com.example.livegoldai.model.AiTestUi> = emptyMap(),
+    val aiRunning: Boolean = false
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -116,11 +132,21 @@ class GoldViewModel @JvmOverloads constructor(
     private val healthMonitor = com.example.livegoldai.data.HealthMonitor()
 
     // Real Prediction Ledger (append-only file in app storage). Loaded lazily on a background thread.
-    private val learning: LearningCoordinator by lazy {
-        LearningCoordinator(
-            FileLedgerStore(java.io.File(getApplication<Application>().filesDir, "prediction_ledger.jsonl"))
-        ) { start, end -> apiService.fetchPricePath(start, end) }
+    // One store instance is shared by the learning engine and the AI provider ledger (same file, same lock).
+    private val ledgerStore: FileLedgerStore by lazy {
+        FileLedgerStore(java.io.File(getApplication<Application>().filesDir, "prediction_ledger.jsonl"))
     }
+    private val learning: LearningCoordinator by lazy {
+        LearningCoordinator(ledgerStore) { start, end -> apiService.fetchPricePath(start, end) }
+    }
+
+    // ---- External AI council: real API calls only to providers the user connected with their own key.
+    private val aiVault by lazy { AiKeyVault(prefs) }
+    private val aiOrchestrator: AIOrchestrator by lazy {   // first use reads the ledger file: background thread only
+        AIOrchestrator(OkHttpAiTransport(), AiPerformanceTracker(ledgerStore))
+    }
+    @Volatile private var aiConfigCache: List<AiProviderConfig>? = null
+    private var aiJob: Job? = null
 
     init {
         val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
@@ -133,9 +159,13 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { 
             it.copy(
                 dashboardViewMode = initialMode,
-                isCompactEasyView = (initialMode == DashboardViewMode.SIMPLE) || savedEasyView
+                isCompactEasyView = (initialMode == DashboardViewMode.SIMPLE) || savedEasyView,
+                aiMode = prefs.getString("ai_mode", "AUTO") ?: "AUTO",
+                aiDebate = prefs.getBoolean("ai_debate", false),
+                aiFreshnessSec = prefs.getInt("ai_freshness_sec", 0)
             ) 
         }
+        refreshAiProviders()
         loadData(isInitial = true)
         startAutoRefreshLoop()
     }
@@ -164,7 +194,9 @@ class GoldViewModel @JvmOverloads constructor(
                         val learned = learning.process(rawAnalysis, currentInterval, mtfCandles)
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
-                        learned.copy(health = health, insights = insights)
+                        // keep showing the last AI council for this timeframe until the next run finishes
+                        val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval) else null } catch (_: Exception) { null }
+                        learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
                     }
                 } catch (_: Exception) {
                     rawAnalysis
@@ -185,6 +217,8 @@ class GoldViewModel @JvmOverloads constructor(
                         isAlertTriggered = triggered || it.isAlertTriggered
                     )
                 }
+
+                runAiCouncil()
 
                 // Check 1-Hour Pre-News upcoming events and trigger notification if due
                 analysis.macroRadar?.upcomingEvents?.let { events ->
@@ -215,6 +249,134 @@ class GoldViewModel @JvmOverloads constructor(
 
     fun setBottomTab(index: Int) {
         _uiState.update { it.copy(bottomTab = index) }
+    }
+
+    // ------------------------------------------------------------------ external AI council
+
+    /** Background thread only (decrypts keys). */
+    private fun aiConfigs(): List<AiProviderConfig> =
+        aiConfigCache ?: AiProviderId.values().map { aiVault.loadConfig(it) }.also { aiConfigCache = it }
+
+    private fun refreshAiProviders() {
+        viewModelScope.launch {
+            val list = withContext(Dispatchers.IO) {
+                try {
+                    aiConfigs().map { c ->
+                        AiProviderUi(
+                            id = c.id.name, name = c.id.display, hasKey = c.isConfigured,
+                            maskedKey = AiKeyVault.mask(c.apiKey), model = c.model, defaultModel = c.id.defaultModel,
+                            role = c.role.name, enabled = c.enabled, keyUrl = c.id.keyUrl
+                        )
+                    }
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            _uiState.update { it.copy(aiProviders = list) }
+        }
+    }
+
+    /** Asks the connected providers about the current snapshot (cached per snapshot, so no repeat calls). */
+    fun runAiCouncil() {
+        if (aiJob?.isActive == true) return
+        val s0 = _uiState.value
+        val data = s0.data ?: return
+        if (data.isSimulatedFallback) return          // never ask AI about offline demo data
+        aiJob = viewModelScope.launch {
+            val report = withContext(Dispatchers.IO) {
+                try {
+                    val cfgs = aiConfigs()
+                    if (cfgs.none { it.isConfigured && it.enabled }) {
+                        null
+                    } else {
+                        _uiState.update { it.copy(aiRunning = true) }
+                        val orch = aiOrchestrator
+                        orch.mode = s0.aiMode
+                        orch.debateEnabled = s0.aiDebate
+                        orch.freshnessOverrideSec = s0.aiFreshnessSec
+                        val st = learning.currentState()
+                        val now = System.currentTimeMillis()
+                        val rid = st.records.lastOrNull { it.interval == s0.selectedInterval && now < it.expiresAt }?.id ?: ""
+                        orch.run(data, cfgs, rid, st)
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            _uiState.update { s ->
+                val d = s.data
+                if (report != null && d != null && d.interval == report.interval) {
+                    s.copy(aiRunning = false, data = d.copy(aiCouncil = report, health = HealthMonitor.withAi(d.health, report)))
+                } else s.copy(aiRunning = false)
+            }
+        }
+    }
+
+    /** newKey = null keeps the stored key. */
+    fun saveAiProvider(id: String, newKey: String?, model: String, role: String, enabled: Boolean) {
+        val pid = AiProviderId.fromName(id) ?: return
+        viewModelScope.launch {
+            val stored = withContext(Dispatchers.IO) {
+                val ok = if (!newKey.isNullOrBlank()) aiVault.putKey(pid, newKey) else true
+                aiVault.saveSettings(pid, model.ifBlank { pid.defaultModel }, AiRole.fromName(role, pid.defaultRole), enabled)
+                aiConfigCache = null
+                try { aiOrchestrator.reset(pid) } catch (_: Exception) { }
+                ok
+            }
+            _uiState.update {
+                it.copy(aiTests = if (stored) it.aiTests - id else it.aiTests + (id to AiTestUi(false, false, "ERROR", "Could not store the key securely on this phone")))
+            }
+            refreshAiProviders()
+            runAiCouncil()
+        }
+    }
+
+    fun removeAiKey(id: String) {
+        val pid = AiProviderId.fromName(id) ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                aiVault.removeKey(pid)
+                aiConfigCache = null
+                try { aiOrchestrator.reset(pid) } catch (_: Exception) { }
+            }
+            _uiState.update { it.copy(aiTests = it.aiTests - id) }
+            refreshAiProviders()
+        }
+    }
+
+    /** "Test" button: real request (model list or a tiny prompt) with the saved key. */
+    fun testAiProvider(id: String) {
+        val pid = AiProviderId.fromName(id) ?: return
+        _uiState.update { it.copy(aiTests = it.aiTests + (id to AiTestUi(running = true))) }
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                try {
+                    val cfg = aiConfigs().first { it.id == pid }
+                    aiOrchestrator.test(cfg)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            val ui = if (r == null) AiTestUi(false, false, "ERROR", "Test could not run")
+            else AiTestUi(false, r.ok, r.status, r.detail, r.models.take(40))
+            _uiState.update { it.copy(aiTests = it.aiTests + (id to ui)) }
+        }
+    }
+
+    fun setAiMode(mode: String) {
+        prefs.edit().putString("ai_mode", mode).apply()
+        _uiState.update { it.copy(aiMode = mode) }
+        runAiCouncil()
+    }
+
+    fun setAiDebate(on: Boolean) {
+        prefs.edit().putBoolean("ai_debate", on).apply()
+        _uiState.update { it.copy(aiDebate = on) }
+    }
+
+    fun setAiFreshness(sec: Int) {
+        prefs.edit().putInt("ai_freshness_sec", sec).apply()
+        _uiState.update { it.copy(aiFreshnessSec = sec) }
     }
 
     fun setTab(index: Int) {

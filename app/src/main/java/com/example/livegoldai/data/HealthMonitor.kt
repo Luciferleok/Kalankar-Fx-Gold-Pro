@@ -67,7 +67,7 @@ class HealthMonitor {
 
         // ---------------- AI
         categories.add(HealthCategory("AI", "AI providers", -1, "NOT_CONFIGURED", "Not configured",
-            listOf(HealthCheck("Providers", "OFF", "No external AI is connected. All signals come from local rules on this phone."))))
+            listOf(HealthCheck("Providers", "OFF", "No external AI is connected. Add a key in the AI tab. Signals come from local rules on this phone."))))
 
         // ---------------- LEARNING
         val learnChecks = ArrayList<HealthCheck>()
@@ -146,6 +146,30 @@ class HealthMonitor {
 
     companion object {
         fun statusOf(score: Int) = when { score >= 90 -> "HEALTHY"; score >= 60 -> "DEGRADED"; else -> "FAILED" }
+
+        /**
+         * Replaces the AI category with the real result of the last AI council run.
+         * Providers the user has not connected, switched off, or that routing did not need are not counted.
+         */
+        fun withAi(h: SystemHealth?, r: AiCouncilReport?): SystemHealth? {
+            if (h == null || r == null) return h
+            val checks = r.providers.filter { it.status !in setOf("NOT_CONFIGURED", "DISABLED", "SKIPPED") }.map { p ->
+                val st = when (p.status) {
+                    "ONLINE" -> "OK"
+                    "STALE", "PENDING", "RATE_LIMITED", "FACT_CONFLICT", "CIRCUIT_OPEN" -> if (p.status == "CIRCUIT_OPEN" && p.statusDetail.contains("change the key")) "FAIL" else "WARN"
+                    else -> "FAIL"
+                }
+                HealthCheck(p.name, st, p.status.replace('_', ' ') + " • " + p.statusDetail.take(80))
+            }
+            val ai = if (checks.isEmpty()) {
+                HealthCategory("AI", "AI providers", -1, "NOT_CONFIGURED", "Not configured",
+                    listOf(HealthCheck("Providers", "OFF", "No external AI is connected. Add a key in the AI tab.")))
+            } else category("AI", "AI providers", checks).let { c -> c.copy(summary = "${checks.count { it.status == "OK" }}/${checks.size} voting") }
+            val cats = h.categories.map { if (it.key == "AI") ai else it }
+            val configured = cats.filter { it.score >= 0 }
+            val overall = if (configured.isEmpty()) 0 else configured.map { it.score }.average().roundToInt()
+            return h.copy(categories = cats, overallScore = overall, overallStatus = statusOf(overall))
+        }
 
         fun category(key: String, title: String, checks: List<HealthCheck>): HealthCategory {
             if (checks.isEmpty()) return HealthCategory(key, title, 0, "FAILED", "No data", checks)

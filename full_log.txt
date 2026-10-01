@@ -1,0 +1,186 @@
+build	UNKNOWN STEP	﻿2026-08-19T21:00:33.1411297Z Current runner version: '2.336.0'
+build	UNKNOWN STEP	2026-08-19T21:00:33.1450471Z ##[group]Runner Image Provisioner
+build	UNKNOWN STEP	2026-08-19T21:00:33.1451902Z Hosted Compute Agent
+build	UNKNOWN STEP	2026-08-19T21:00:33.1452885Z Version: 20260729.566
+build	UNKNOWN STEP	2026-08-19T21:00:33.1453914Z Commit: cf7153fe6e25b664e8693c24944bf2b00355d109
+build	UNKNOWN STEP	2026-08-19T21:00:33.1455922Z Build Date: 2026-07-29T19:17:02Z
+build	UNKNOWN STEP	2026-08-19T21:00:33.1457177Z Worker ID: {cc32acde-ad44-45b8-b1e8-d63bf002ae9c}
+build	UNKNOWN STEP	2026-08-19T21:00:33.1458536Z Azure Region: northcentralus
+build	UNKNOWN STEP	2026-08-19T21:00:33.1459579Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:33.1462753Z ##[group]Operating System
+build	UNKNOWN STEP	2026-08-19T21:00:33.1464365Z Ubuntu
+build	UNKNOWN STEP	2026-08-19T21:00:33.1465365Z 24.04.4
+build	UNKNOWN STEP	2026-08-19T21:00:33.1466389Z LTS
+build	UNKNOWN STEP	2026-08-19T21:00:33.1467348Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:33.1468303Z ##[group]Runner Image
+build	UNKNOWN STEP	2026-08-19T21:00:33.1469495Z Image: ubuntu-24.04
+build	UNKNOWN STEP	2026-08-19T21:00:33.1470549Z Version: 20260810.271.1
+build	UNKNOWN STEP	2026-08-19T21:00:33.1472872Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260810.271/images/ubuntu/Ubuntu2404-Readme.md
+build	UNKNOWN STEP	2026-08-19T21:00:33.1476176Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260810.271
+build	UNKNOWN STEP	2026-08-19T21:00:33.1478113Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:33.1480331Z ##[group]GITHUB_TOKEN Permissions
+build	UNKNOWN STEP	2026-08-19T21:00:33.1483749Z Contents: read
+build	UNKNOWN STEP	2026-08-19T21:00:33.1485174Z Metadata: read
+build	UNKNOWN STEP	2026-08-19T21:00:33.1486138Z Packages: read
+build	UNKNOWN STEP	2026-08-19T21:00:33.1487427Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:33.1490417Z Secret source: Actions
+build	UNKNOWN STEP	2026-08-19T21:00:33.1492880Z Prepare workflow directory
+build	UNKNOWN STEP	2026-08-19T21:00:33.2014805Z Prepare all required actions
+build	UNKNOWN STEP	2026-08-19T21:00:33.2090585Z Getting action download info
+build	UNKNOWN STEP	2026-08-19T21:00:33.4717315Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+build	UNKNOWN STEP	2026-08-19T21:00:33.6656767Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+build	UNKNOWN STEP	2026-08-19T21:00:33.7597006Z Download action repository 'android-actions/setup-android@v3' (SHA:9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407)
+build	UNKNOWN STEP	2026-08-19T21:00:34.0123277Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build	UNKNOWN STEP	2026-08-19T21:00:34.2535916Z Complete job name: build
+build	UNKNOWN STEP	2026-08-19T21:00:34.3351825Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	UNKNOWN STEP	2026-08-19T21:00:34.3361658Z ##[group]Run actions/checkout@v4
+build	UNKNOWN STEP	2026-08-19T21:00:34.3362446Z with:
+build	UNKNOWN STEP	2026-08-19T21:00:34.3362943Z   repository: Luciferleok/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:34.3367332Z   token: ***
+build	UNKNOWN STEP	2026-08-19T21:00:34.3367811Z   ssh-strict: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3368282Z   ssh-user: git
+build	UNKNOWN STEP	2026-08-19T21:00:34.3368757Z   persist-credentials: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3369263Z   clean: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3369741Z   sparse-checkout-cone-mode: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3370294Z   fetch-depth: 1
+build	UNKNOWN STEP	2026-08-19T21:00:34.3370774Z   fetch-tags: false
+build	UNKNOWN STEP	2026-08-19T21:00:34.3371243Z   show-progress: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3371704Z   lfs: false
+build	UNKNOWN STEP	2026-08-19T21:00:34.3372177Z   submodules: false
+build	UNKNOWN STEP	2026-08-19T21:00:34.3372643Z   set-safe-directory: true
+build	UNKNOWN STEP	2026-08-19T21:00:34.3373165Z   allow-unsafe-pr-checkout: false
+build	UNKNOWN STEP	2026-08-19T21:00:34.3373962Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:34.4553974Z Syncing repository: Luciferleok/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:34.4558820Z ##[group]Getting Git version info
+build	UNKNOWN STEP	2026-08-19T21:00:34.4562804Z Working directory is '/home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK'
+build	UNKNOWN STEP	2026-08-19T21:00:34.4678101Z [command]/usr/bin/git version
+build	UNKNOWN STEP	2026-08-19T21:00:34.4797334Z git version 2.54.0
+build	UNKNOWN STEP	2026-08-19T21:00:34.4835984Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:34.4844034Z Temporarily overriding HOME='/home/runner/work/_temp/709d1d6e-c37b-4674-942a-4493c89846c2' before making global git config changes
+build	UNKNOWN STEP	2026-08-19T21:00:34.4846869Z Adding repository directory to the temporary git global config as a safe directory
+build	UNKNOWN STEP	2026-08-19T21:00:34.4849390Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:34.4960446Z Deleting the contents of '/home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK'
+build	UNKNOWN STEP	2026-08-19T21:00:34.4965971Z ##[group]Initializing the repository
+build	UNKNOWN STEP	2026-08-19T21:00:34.4969516Z [command]/usr/bin/git init /home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:34.5058120Z hint: Using 'master' as the name for the initial branch. This default branch name
+build	UNKNOWN STEP	2026-08-19T21:00:34.5066614Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build	UNKNOWN STEP	2026-08-19T21:00:34.5082550Z hint: to use in all of your new repositories, which will suppress this warning,
+build	UNKNOWN STEP	2026-08-19T21:00:34.5084652Z hint: call:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5086204Z hint:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5087376Z hint: 	git config --global init.defaultBranch <name>
+build	UNKNOWN STEP	2026-08-19T21:00:34.5089060Z hint:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5090303Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build	UNKNOWN STEP	2026-08-19T21:00:34.5092522Z hint: 'development'. The just-created branch can be renamed via this command:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5094054Z hint:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5095831Z hint: 	git branch -m <name>
+build	UNKNOWN STEP	2026-08-19T21:00:34.5097007Z hint:
+build	UNKNOWN STEP	2026-08-19T21:00:34.5098728Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build	UNKNOWN STEP	2026-08-19T21:00:34.5105613Z Initialized empty Git repository in /home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK/.git/
+build	UNKNOWN STEP	2026-08-19T21:00:34.5110663Z [command]/usr/bin/git remote add origin https://github.com/Luciferleok/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:34.5167081Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:34.5168689Z ##[group]Disabling automatic garbage collection
+build	UNKNOWN STEP	2026-08-19T21:00:34.5170472Z [command]/usr/bin/git config --local gc.auto 0
+build	UNKNOWN STEP	2026-08-19T21:00:34.5235697Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:34.5237184Z ##[group]Setting up auth
+build	UNKNOWN STEP	2026-08-19T21:00:34.5238985Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	UNKNOWN STEP	2026-08-19T21:00:34.5295504Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	UNKNOWN STEP	2026-08-19T21:00:34.5906417Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	UNKNOWN STEP	2026-08-19T21:00:34.5911861Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	UNKNOWN STEP	2026-08-19T21:00:34.6276299Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	UNKNOWN STEP	2026-08-19T21:00:34.6346315Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	UNKNOWN STEP	2026-08-19T21:00:34.6643613Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build	UNKNOWN STEP	2026-08-19T21:00:34.6692772Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:34.6695269Z ##[group]Fetching the repository
+build	UNKNOWN STEP	2026-08-19T21:00:34.6707450Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +cf34d4918aabbb110e67d872ff6e0bd8b87f8cc9:refs/remotes/origin/main
+build	UNKNOWN STEP	2026-08-19T21:00:35.0351374Z From https://github.com/Luciferleok/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-19T21:00:35.0355485Z  * [new ref]         cf34d4918aabbb110e67d872ff6e0bd8b87f8cc9 -> origin/main
+build	UNKNOWN STEP	2026-08-19T21:00:35.0395831Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.0398577Z ##[group]Determining the checkout info
+build	UNKNOWN STEP	2026-08-19T21:00:35.0401248Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.0404593Z [command]/usr/bin/git sparse-checkout disable
+build	UNKNOWN STEP	2026-08-19T21:00:35.0476341Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	UNKNOWN STEP	2026-08-19T21:00:35.0511370Z ##[group]Checking out the ref
+build	UNKNOWN STEP	2026-08-19T21:00:35.0513974Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build	UNKNOWN STEP	2026-08-19T21:00:35.0578078Z Switched to a new branch 'main'
+build	UNKNOWN STEP	2026-08-19T21:00:35.0586041Z branch 'main' set up to track 'origin/main'.
+build	UNKNOWN STEP	2026-08-19T21:00:35.0609480Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.0660278Z [command]/usr/bin/git log -1 --format=%H
+build	UNKNOWN STEP	2026-08-19T21:00:35.0716150Z cf34d4918aabbb110e67d872ff6e0bd8b87f8cc9
+build	UNKNOWN STEP	2026-08-19T21:00:35.1293167Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	UNKNOWN STEP	2026-08-19T21:00:35.1303255Z ##[group]Run actions/setup-python@v5
+build	UNKNOWN STEP	2026-08-19T21:00:35.1305595Z with:
+build	UNKNOWN STEP	2026-08-19T21:00:35.1307166Z   python-version: 3.11
+build	UNKNOWN STEP	2026-08-19T21:00:35.1308930Z   check-latest: false
+build	UNKNOWN STEP	2026-08-19T21:00:35.1328154Z   token: ***
+build	UNKNOWN STEP	2026-08-19T21:00:35.1329835Z   update-environment: true
+build	UNKNOWN STEP	2026-08-19T21:00:35.1331756Z   allow-prereleases: false
+build	UNKNOWN STEP	2026-08-19T21:00:35.1333614Z   freethreaded: false
+build	UNKNOWN STEP	2026-08-19T21:00:35.1335600Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.3274855Z ##[group]Installed versions
+build	UNKNOWN STEP	2026-08-19T21:00:35.3376025Z (node:2099) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+build	UNKNOWN STEP	2026-08-19T21:00:35.3380955Z Successfully set up CPython (3.11.15)
+build	UNKNOWN STEP	2026-08-19T21:00:35.3384015Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build	UNKNOWN STEP	2026-08-19T21:00:35.3388933Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.3838113Z ##[group]Run sudo apt-get update
+build	UNKNOWN STEP	2026-08-19T21:00:35.3840269Z ^[[36;1msudo apt-get update^[[0m
+build	UNKNOWN STEP	2026-08-19T21:00:35.3843760Z ^[[36;1msudo apt-get install -y build-essential git zip unzip openjdk-17-jdk^[[0m
+build	UNKNOWN STEP	2026-08-19T21:00:35.3847441Z ^[[36;1mpython -m pip install --upgrade pip setuptools wheel^[[0m
+build	UNKNOWN STEP	2026-08-19T21:00:35.3849890Z ^[[36;1mpip install buildozer cython^[[0m
+build	UNKNOWN STEP	2026-08-19T21:00:35.3987958Z shell: /usr/bin/bash -e {0}
+build	UNKNOWN STEP	2026-08-19T21:00:35.4001307Z env:
+build	UNKNOWN STEP	2026-08-19T21:00:35.4003375Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+build	UNKNOWN STEP	2026-08-19T21:00:35.4006704Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+build	UNKNOWN STEP	2026-08-19T21:00:35.4009898Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+build	UNKNOWN STEP	2026-08-19T21:00:35.4012677Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+build	UNKNOWN STEP	2026-08-19T21:00:35.4015254Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+build	UNKNOWN STEP	2026-08-19T21:00:35.4017143Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+build	UNKNOWN STEP	2026-08-19T21:00:35.4018601Z ##[endgroup]
+build	UNKNOWN STEP	2026-08-19T21:00:35.5926620Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+build	UNKNOWN STEP	2026-08-19T21:00:35.6558687Z Get:6 https://packages.microsoft.com/repos/azure-cli noble InRelease [3564 B]
+build	UNKNOWN STEP	2026-08-19T21:00:35.6747766Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+build	UNKNOWN STEP	2026-08-19T21:00:35.6846939Z Get:8 https://dl.google.com/linux/chrome-stable/deb stable InRelease [2548 B]
+build	UNKNOWN STEP	2026-08-19T21:00:35.8306685Z Get:9 https://packages.microsoft.com/repos/azure-cli noble/main amd64 Packages [2452 B]
+build	UNKNOWN STEP	2026-08-19T21:00:35.8754048Z Get:10 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.4 kB]
+build	UNKNOWN STEP	2026-08-19T21:00:35.8785915Z Get:11 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [317 kB]
+build	UNKNOWN STEP	2026-08-19T21:00:35.9096741Z Get:12 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [360 kB]
+build	UNKNOWN STEP	2026-08-19T21:00:36.0250046Z Get:13 https://dl.google.com/linux/chrome-stable/deb stable/main amd64 Packages [1419 B]
+build	UNKNOWN STEP	2026-08-19T21:02:50.1830428Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:50.1834752Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:50.1855356Z Ign:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:50.1856723Z Ign:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.1840417Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.1895486Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.1898570Z Ign:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.1900060Z Ign:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.3879238Z Hit:2 https://archive.ubuntu.com/ubuntu noble InRelease
+build	UNKNOWN STEP	2026-08-19T21:02:51.5010397Z Get:3 https://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+build	UNKNOWN STEP	2026-08-19T21:02:51.6068291Z Ign:14 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages
+build	UNKNOWN STEP	2026-08-19T21:02:51.6070668Z Ign:15 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en
+build	UNKNOWN STEP	2026-08-19T21:02:51.6076609Z Ign:16 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components
+build	UNKNOWN STEP	2026-08-19T21:02:51.6077848Z Ign:17 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages
+build	UNKNOWN STEP	2026-08-19T21:02:51.6078960Z Ign:18 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe Translation-en
+build	UNKNOWN STEP	2026-08-19T21:02:51.6079903Z Ign:19 http://azure.archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components
+build	UNKNOWN STEP	2026-08-19T21:02:51.6080873Z Ign:20 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages
+build	UNKNOWN STEP	2026-08-19T21:02:51.6081869Z Ign:21 http://azure.archive.ubuntu.com/ubuntu noble-updates/restricted Translation-en
+build	UNKNOWN STEP	2026-08-19T21:02:51.6082859Z Ign:22 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse Translation-en
+build	UNKNOWN STEP	2026-08-19T21:02:51.6084553Z Ign:23 http://azure.archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components
+build	UNKNOWN STEP	2026-08-19T21:02:51.6697989Z Get:4 https://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+build	UNKNOWN STEP	2026-08-19T21:02:51.8374684Z Get:5 https://archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+build	UNKNOWN STEP	2026-08-20T03:00:44.9977683Z ##[error]The operation was canceled.
+build	UNKNOWN STEP	2026-08-20T03:00:45.0137257Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+build	UNKNOWN STEP	2026-08-20T03:00:45.0138530Z Post job cleanup.
+build	UNKNOWN STEP	2026-08-20T03:00:45.3276048Z [command]/usr/bin/git version
+build	UNKNOWN STEP	2026-08-20T03:00:45.3285063Z git version 2.54.0
+build	UNKNOWN STEP	2026-08-20T03:00:45.3289591Z Temporarily overriding HOME='/home/runner/work/_temp/312d6cb3-d40f-45ee-bcec-3ed5eea450ab' before making global git config changes
+build	UNKNOWN STEP	2026-08-20T03:00:45.3291325Z Adding repository directory to the temporary git global config as a safe directory
+build	UNKNOWN STEP	2026-08-20T03:00:45.3292751Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/LiveGoldAI_APK/LiveGoldAI_APK
+build	UNKNOWN STEP	2026-08-20T03:00:45.3296027Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	UNKNOWN STEP	2026-08-20T03:00:45.3298711Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	UNKNOWN STEP	2026-08-20T03:00:45.3301391Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	UNKNOWN STEP	2026-08-20T03:00:45.3302499Z http.https://github.com/.extraheader
+build	UNKNOWN STEP	2026-08-20T03:00:45.3304517Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build	UNKNOWN STEP	2026-08-20T03:00:45.3307503Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	UNKNOWN STEP	2026-08-20T03:00:45.3310426Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	UNKNOWN STEP	2026-08-20T03:00:45.3312771Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	UNKNOWN STEP	2026-08-20T03:00:45.3370673Z Cleaning up orphan processes
+build	UNKNOWN STEP	2026-08-20T03:00:45.3661558Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
