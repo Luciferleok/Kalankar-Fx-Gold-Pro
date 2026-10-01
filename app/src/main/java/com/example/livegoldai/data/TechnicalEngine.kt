@@ -537,28 +537,22 @@ object TechnicalEngine {
         val dxyData = customDxy ?: MacroMarketIndex(
             symbol = "DXY",
             name = "US Dollar Index",
-            value = 100.41,
-            changePercent = -0.18,
-            impactOnGold = Signal.BUY,
-            explanation = "DXY weakening (-0.18%) provides strong buying tailwind for Gold"
+            value = 0.0,
+            changePercent = 0.0,
+            impactOnGold = Signal.WAIT,
+            explanation = "DXY data unavailable right now (no vote)"
         )
         val us10yData = customUs10y ?: MacroMarketIndex(
             symbol = "^TNX",
             name = "US 10-Yr Yield",
-            value = 4.96,
-            changePercent = -0.70,
-            impactOnGold = Signal.BUY,
-            explanation = "Treasury bond yield cooling (-0.70%) lowers opportunity cost for holding Gold"
+            value = 0.0,
+            changePercent = 0.0,
+            impactOnGold = Signal.WAIT,
+            explanation = "US 10Y yield data unavailable right now (no vote)"
         )
 
-        val upcomingEvents = if (customEvents.isNotEmpty()) customEvents else listOf(
-            EconomicEvent("FOMC Member Speech & Policy Guidance", "USD", "Today", "13:00 UTC", "High", "", "", "Dovish tone sparks Gold surge", indiaTime = "06:30 PM IST"),
-            EconomicEvent("Flash Manufacturing & Services PMI", "USD", "Tomorrow", "14:45 UTC", "Medium", "53.6", "53.2", "Growth slowdown bullish for Gold", indiaTime = "08:15 PM IST"),
-            EconomicEvent("ADP Non-Farm Employment Change", "USD", "This Week", "12:15 UTC", "High", "145K", "152K", "Labor cooling accelerates rate cuts", indiaTime = "05:45 PM IST")
-        )
+        val upcomingEvents = customEvents // real calendar only; empty if it could not be loaded
 
-        val centralBankSignal = if (last.close > lastEma50 || dxyData.impactOnGold == Signal.BUY) Signal.BUY else Signal.WAIT
-        val safeHavenSignal = if (dxyData.impactOnGold == Signal.BUY && lastEma9 > lastEma21) Signal.BUY else if (dxyData.impactOnGold == Signal.SELL && lastEma9 < lastEma21) Signal.SELL else Signal.WAIT
 
         val macroItems = listOf(
             IndicatorItem(
@@ -572,18 +566,6 @@ object TechnicalEngine {
                 signal = us10yData.impactOnGold,
                 valueDisplay = "${format2(us10yData.value)}% (${if (us10yData.changePercent >= 0) "+" else ""}${format2(us10yData.changePercent)}%)",
                 detail = us10yData.explanation
-            ),
-            IndicatorItem(
-                name = "Global Central Bank Demand",
-                signal = centralBankSignal,
-                valueDisplay = if (centralBankSignal == Signal.BUY) "Active Sovereign Inflow" else "Consolidation Pause",
-                detail = if (centralBankSignal == Signal.BUY) "Central banks buying physical gold as de-dollarization hedge" else "Sovereign accumulation paused during temporary USD strength"
-            ),
-            IndicatorItem(
-                name = "Geopolitical Safe-Haven Flow",
-                signal = safeHavenSignal,
-                valueDisplay = if (safeHavenSignal == Signal.BUY) "Elevated Premium" else if (safeHavenSignal == Signal.SELL) "De-escalation Outflow" else "Neutral Flow",
-                detail = if (safeHavenSignal == Signal.BUY) "Macro uncertainty fueling spot Gold inflows" else if (safeHavenSignal == Signal.SELL) "Risk-on rotation shifting capital to equities" else "Safe-haven flows currently neutral"
             )
         )
         val macroVerdict = decide(macroItems.map { it.signal })
@@ -694,44 +676,22 @@ object TechnicalEngine {
         )
 
         // News & Macro Radar Model Object
-        val newsFeedList = listOf(
-            NewsSentimentItem(
-                headline = "Federal Reserve rate cut bets accelerate as US Dollar Index weakens",
-                source = "Macro Intelligence / ForexFactory",
-                timestamp = "Live Catalyst",
-                sentiment = Signal.BUY,
-                impactTag = "HIGH IMPACT BULLISH",
-                reason = "Lower interest rate expectations decrease the opportunity cost of holding physical Gold bullion."
-            ),
-            NewsSentimentItem(
-                headline = "Global Central Banks add record spot tonnage to sovereign reserves",
-                source = "World Gold Council / IMF",
-                timestamp = "Structural Driver",
-                sentiment = Signal.BUY,
-                impactTag = "STRONG ACCUMULATION",
-                reason = "De-dollarization and reserve diversification establish a massive permanent floor under spot Gold prices."
-            ),
-            NewsSentimentItem(
-                headline = "Middle East & global geopolitical tensions sustain safe-haven inflows",
-                source = "Global Geopolitical Radar",
-                timestamp = "Active Risk",
-                sentiment = Signal.BUY,
-                impactTag = "SAFE HAVEN DEMAND",
-                reason = "Instability drives institutional hedge funds to park liquidity in Gold contracts."
-            )
-        )
+        val newsFeedList = emptyList<NewsSentimentItem>() // no live headline feed is connected
 
         val macroRadar = MacroSentimentRadar(
             overallBias = macroVerdict,
-            sentimentScorePercent = if (macroVerdict == Signal.BUY) 82 else if (macroVerdict == Signal.SELL) 35 else 50,
+            sentimentScorePercent = run {
+                val votes = macroItems.filter { it.signal != Signal.WAIT }
+                if (votes.isEmpty()) 50 else votes.count { it.signal == Signal.BUY } * 100 / votes.size
+            },
             dxyIndex = dxyData,
             us10yYield = us10yData,
             upcomingEvents = upcomingEvents,
             newsFeed = newsFeedList,
-            summaryInsight = if (dxyData.impactOnGold == Signal.BUY) {
-                "Dollar weakness and lower bond yields creating an ideal bullish launchpad for Gold spot."
+            summaryInsight = if (customDxy == null && customUs10y == null) {
+                "Dollar index and bond yield data could not be loaded."
             } else {
-                "Dollar resilience creating temporary consolidation pressure around key technical pivots."
+                "DXY ${format2(dxyData.changePercent)}% and US10Y ${format2(us10yData.changePercent)}% today. Falling dollar/yields usually help gold; rising ones usually weigh on it."
             }
         )
 
@@ -774,81 +734,23 @@ object TechnicalEngine {
             currentPrice = currentPrice,
             atrSafe = atrSafe,
             macroSignal = dxyData.impactOnGold,
-            forceActiveNews = false
+            forceActiveNews = false,
+            events = upcomingEvents
         )
 
+        // Only protections that really exist in this code. Learned corrections are added by RealityEngine.
         val appliedCorrectionsList = listOf(
             AppliedCorrectionDetail(
-                titleEnglish = "Multi-AI Consensus Shield (Gemini + ChatGPT + Claude + DeepSeek)",
-                titleHindi = "मल्टी-AI सहमति शील्ड (Gemini + ChatGPT + Claude + DeepSeek)",
-                titleMarathi = "मल्टी-AI सहमती शील्ड (Gemini + ChatGPT + Claude + DeepSeek)",
-                descriptionEnglish = "Synthesized consensus across 5 elite AI models. Claude fortified the SL buffer against wick stops, DeepSeek locked the 50% FVG discount entry, and ChatGPT aligned with macro DXY.",
-                descriptionHindi = "5 दिग्गज AI मॉडल्स (Gemini, ChatGPT, Claude, DeepSeek, Perplexity) ने मिलकर प्रेडिक्शन सुधारा: Claude ने SL सुरक्षित किया, DeepSeek ने 50% डिस्काउंट एंट्री चुनी और ChatGPT ने डॉलर ट्रेंड से कन्फर्म किया।",
-                descriptionMarathi = "5 दिग्गज AI मॉडेल्सनी मिळून हा अंदाज सुधारला: Claude ने SL सुरक्षित केला, DeepSeek ने 50% डिस्काउंट एंट्री निवडली आणि ChatGPT ने डॉलर ट्रेंडने कन्फर्म केले.",
-                errorAddressedEnglish = "Addressed: Single-indicator bias & isolated technical blindness.",
-                errorAddressedHindi = "सुधार: किसी एक इंडिकेटर के धोखे में आने की गलती खत्म, 5 AI मॉडल्स की सहमति।",
-                errorAddressedMarathi = "सुधारणा: एका इंडिकेटरच्या फसवणुकीत येण्याची चूक बंद, 5 AI मॉडेल्सची सहमती.",
-                badgeTag = "MULTI-AI 🤖"
-            ),
-            AppliedCorrectionDetail(
-                titleEnglish = "Dynamic Anti-Wick SL Shield (+3.5 to +4.5 Pips)",
-                titleHindi = "स्टॉप-लॉस विक शील्ड (+3.5 से +4.5 Pips बफर)",
-                titleMarathi = "स्टॉप-लॉस विक शील्ड (+3.5 ते +4.5 Pips बफर)",
-                descriptionEnglish = "Automatically expanded Stop Loss distance by +3.5 to +4.5 pips beyond swing structure after analyzing past wick hunt stops so bank spikes cannot touch your stop.",
-                descriptionHindi = "पिछली गलतियों के विश्लेषण के बाद Stop Loss को +3.5 से +4.5 pips का सुरक्षित बफर दिया गया है ताकि मार्केट मेकर स्टॉप-हंट न कर सकें।",
-                descriptionMarathi = "मागील चुकांच्या विश्लेषणानंतर Stop Loss ला +3.5 ते +4.5 pips चा सुरक्षित बफर दिला गेला आहे जेणेकरून स्टॉप-हंट होणार नाही.",
-                errorAddressedEnglish = "Addressed: Pre-mature stop-out during volatility wicks.",
-                errorAddressedHindi = "सुधार: अत्यधिक उतार-चढ़ाव में असमय SL कटने की रोकथाम।",
-                errorAddressedMarathi = "सुधारणा: मोठ्या उसळीत वेळेपूर्वी SL हिट होण्यापासून बचाव.",
-                badgeTag = "SL EXPANDED 🛡️"
-            ),
-            AppliedCorrectionDetail(
-                titleEnglish = "Pullback Zone Guard (Anti-FOMO 50% Limit)",
-                titleHindi = "पुलबैक ज़ोन गार्ड (गलत ब्रेकआउट से बचाव)",
-                titleMarathi = "पुलबॅक झोन गार्ड (खोट्या ब्रेकआउटपासून बचाव)",
-                descriptionEnglish = "Strictly redirected entry orders into 50%-61.8% Fibonacci value pocket rather than chasing high extended candles at resistance peaks.",
-                descriptionHindi = "शीर्ष पर गलत ब्रेकआउट में फंसने की गलती को ठीक करते हुए एंट्री को अनिवार्य रूप से 50% पुलबैक डिस्काउंट ज़ोन में रखा गया है।",
-                descriptionMarathi = "शिखरावर खोट्या ब्रेकआउटमध्ये अडकण्याची चूक सुधारून एंट्री अनिवार्यपणे 50% पुलबॅक झोनमध्ये ठेवली आहे.",
-                errorAddressedEnglish = "Addressed: Buying the peak / selling the trough false breakout trap.",
-                errorAddressedHindi = "सुधार: शिखर पर खरीदारी या तली पर बिकवाली करने का ट्रैप खत्म।",
-                errorAddressedMarathi = "सुधारणा: शिखरावर खरेदी किंवा तळाला विक्री करण्याचा ट्रॅप समाप्त.",
-                badgeTag = "SNIPER ENTRY 🎯"
-            ),
-            AppliedCorrectionDetail(
-                titleEnglish = "Institutional Order Flow Delta Gate (>55%)",
-                titleHindi = "ऑर्डर फ्लो वॉल्यूम गेट (>55% पुष्टि)",
-                titleMarathi = "ऑर्डर फ्लो व्हॉल्यूम गेट (>55% खात्री)",
-                descriptionEnglish = "Enforces institutional buyer/seller volume delta agreement before confirming trade trigger to eliminate low-liquidity false moves.",
-                descriptionHindi = "बिना वॉल्यूम के झूठे सिग्नल्स को रोकने के लिए 55% से अधिक संस्थागत वॉल्यूम डेल्टा होने पर ही ट्रेड निष्पादित करने का नियम लागू।",
-                descriptionMarathi = "कमी व्हॉल्यूमच्या खोट्या सिग्नल्सना रोखण्यासाठी 55% पेक्षा जास्त व्हॉल्यूम डेल्टा असल्यावरच ट्रेड अंमलात आणण्याचा नियम.",
-                errorAddressedEnglish = "Addressed: Low volume fake-out rallies during illiquid hours.",
-                errorAddressedHindi = "सुधार: कम लिक्विडिटी में आने वाले झूठे स्पाइक्स की पहचान।",
-                errorAddressedMarathi = "सुधारणा: कमी लिक्विडिटीमधील खोट्या स्पाइक्सची ओळख.",
-                badgeTag = "VOLUME FILTER 📊"
-            ),
-            AppliedCorrectionDetail(
-                titleEnglish = "Multi-Timeframe (MTF) Master Alignment",
-                titleHindi = "मल्टी-टाइमफ्रेम अलाइनमेंट (1H/4H ट्रेंड पुष्टि)",
-                titleMarathi = "मल्टी-टाइमफ्रेम अलाइनमेंट (1H/4H ट्रेंड खात्री)",
-                descriptionEnglish = "Harmonizes lower timeframe intraday execution with macro 1H/4H institutional flow to prevent taking counter-trend traps.",
-                descriptionHindi = "छोटे टाइमफ्रेम (5m/15m) के ट्रेड को बड़े 1H/4H टाइमफ्रेम के साथ मिलाकर ही अनुमति दी जाती है ताकि ट्रेंड के खिलाफ लॉस न हो।",
-                descriptionMarathi = "छोट्या टाइमफ्रेमच्या ट्रेडला मोठ्या 1H/4H टाइमफ्रेमशी जुळवूनच परवानगी दिली जाते जेणेकरून तोटा होणार नाही.",
-                errorAddressedEnglish = "Addressed: Counter-trend scalping losses against dominant flow.",
-                errorAddressedHindi = "सुधार: मुख्य ट्रेंड के विपरीत ट्रेड लेने से होने वाले नुकसान पर रोक।",
-                errorAddressedMarathi = "सुधारणा: मुख्य ट्रेंडच्या विरुद्ध ट्रेड घेतल्याने होणाऱ्या नुकसानावर बंदी.",
-                badgeTag = "MTF SHIELD 📐"
-            ),
-            AppliedCorrectionDetail(
-                titleEnglish = "Automatic Breakeven at TP1 & 15m News Freeze",
-                titleHindi = "TP1 पर रिस्क-फ्री Breakeven एवं 15m न्यूज़ फ्रीज",
-                titleMarathi = "TP1 वर जोखीममुक्त Breakeven आणि 15m न्यूज फ्रीज",
-                descriptionEnglish = "Automatically moves stop loss to entry price as soon as TP1 is hit (+25 to +45 pips) guaranteeing a risk-free trade. High impact news locks trading 15m prior.",
-                descriptionHindi = "पहला टारगेट हिट होते ही SL तुरंत एंट्री प्राइस पर आ जाता है जिससे ट्रेड 100% जोखिम-मुक्त हो जाता है। न्यूज़ से 15 मिनट पहले सुरक्षित स्टैंडबाय।",
-                descriptionMarathi = "पहिले टार्गेट गाठताच SL लगेच एंट्रीवर येतो ज्यामुळे ट्रेड 100% जोखीममुक्त होतो. बातम्यांपूर्वी 15 मिनिटे सुरक्षित थांबा.",
-                errorAddressedEnglish = "Addressed: Giving back running intraday gains to sudden reversals.",
-                errorAddressedHindi = "सुधार: जीते हुए ट्रेड के अचानक पलटने पर नुकसान से सुरक्षा।",
-                errorAddressedMarathi = "सुधारणा: जिंकलेला ट्रेड अचानक उलटल्यास होणाऱ्या नुकसानापासून बचाव.",
-                badgeTag = "ZERO RISK 🔒"
+                titleEnglish = "68% weighted agreement gate (built-in rule)",
+                titleHindi = "68% वेटेड सहमति गेट (बिल्ट-इन नियम)",
+                titleMarathi = "68% वेटेड सहमती गेट (बिल्ट-इन नियम)",
+                descriptionEnglish = "BUY/SELL is shown only when the weighted pillar vote reaches 68% (or 5 of 7 pillars agree). Otherwise WAIT.",
+                descriptionHindi = "BUY/SELL तभी दिखता है जब वेटेड पिलर वोट 68% हो (या 7 में से 5 पिलर सहमत हों)। वरना WAIT।",
+                descriptionMarathi = "BUY/SELL तेव्हाच दिसतो जेव्हा वेटेड पिलर मत 68% होते (किंवा 7 पैकी 5 पिलर सहमत). नाहीतर WAIT.",
+                errorAddressedEnglish = "Fixed rule, not learned. Its real effect is measured in the Learning Center.",
+                errorAddressedHindi = "यह तय नियम है, सीखा हुआ नहीं। इसका असली असर लर्निंग सेंटर में मापा जाता है।",
+                errorAddressedMarathi = "हा ठरलेला नियम आहे, शिकलेला नाही. याचा खरा परिणाम लर्निंग सेंटरमध्ये मोजला जातो.",
+                badgeTag = "BUILT-IN RULE"
             )
         )
 
@@ -1331,14 +1233,14 @@ object TechnicalEngine {
 
         val forecastData = when (overallSignal) {
             Signal.BUY -> CandleForecastData(
-                forecast = "High probability of Green Bullish Expansion Candle (88% Confluence)",
+                forecast = "High probability of Green Bullish Expansion Candle",
                 range = "Expected Range: $${format2(currentPrice - 0.25 * atrSafe)} to $${format2(currentPrice + 0.85 * atrSafe)}",
                 tacticEng = "Scalp Strategy: Enter BUY on lower wick dip in the first 2 minutes of the candle and ride the upward expansion.",
                 tacticHin = "स्कैल्प रणनीति: कैंडल के शुरुआती 2 मिनट में निचले विक डिप पर BUY करें, और तेजी का लाभ उठाएं!",
                 tacticMar = "स्कॅल्प रणनीती: कँडलच्या सुरुवातीच्या 2 मिनिटांत खालच्या विक डिपवर BUY करा, आणि तेजीचा फायदा घ्या!"
             )
             Signal.SELL -> CandleForecastData(
-                forecast = "High probability of Red Bearish Breakdown Candle (88% Confluence)",
+                forecast = "High probability of Red Bearish Breakdown Candle",
                 range = "Expected Range: $${format2(currentPrice + 0.25 * atrSafe)} down to $${format2(currentPrice - 0.85 * atrSafe)}",
                 tacticEng = "Scalp Strategy: Enter SELL on upper wick relief bounce in first 2 minutes and take profit on breakdown.",
                 tacticHin = "स्कैल्प रणनीति: कैंडल के शुरुआती 2 मिनट में ऊपरी विक उछाल पर SELL करें, और ब्रेकडाउन पर मुनाफा बुक करें!",
@@ -1565,11 +1467,20 @@ object TechnicalEngine {
         val multiBotEnsemble = KalankarAiBotEngine.generateMultiBotEnsemble(
             currentPrice = currentPrice,
             tradeSetup = tradeSetup,
-            overallSignal = overallSignal,
-            agreementPercent = agreementPercent,
-            smartMoney = smartMoneyAnalysis,
-            multiAiConsensus = multiAiConsensus,
-            atrSafe = atrSafe,
+            inputs = KalankarAiBotEngine.BotInputs(
+                close = last.close,
+                ema9 = lastEma9,
+                ema21 = lastEma21,
+                ema50 = lastEma50,
+                rsi14 = rsi14,
+                macd = lastMacd,
+                macdSignal = lastMacdSignal,
+                superTrendSignal = superTrendSignal,
+                bbUpper = bbUpper,
+                bbLower = bbLower,
+                isLowSweep = isLowSweep,
+                isHighSweep = isHighSweep
+            ),
             isNewsActive = false
         )
 
@@ -2052,7 +1963,7 @@ object TechnicalEngine {
         }
 
         val english = when {
-            buyersPercent >= 65 -> "Heavy Buyer Dominance ($buyersPercent% vs $sellersPercent%). Strong bid absorption at support with net positive volume delta (+${(netVolumeDelta).roundToInt()} Lots)."
+            buyersPercent >= 65 -> "Heavy Buyer Dominance ($buyersPercent% vs $sellersPercent%). Strong bid absorption at support (estimated from candle shapes)."
             buyersPercent >= 54 -> "Bullish Edge: Buyers controlling order flow ($buyersPercent%). Tape prints favor aggressive market asks clearing."
             sellersPercent >= 65 -> "Heavy Seller Dominance ($sellersPercent% vs $buyersPercent%). Aggressive market sell executions hitting bids. Cumulative volume delta is deep negative."
             sellersPercent >= 54 -> "Bearish Edge: Sellers controlling order flow ($sellersPercent%). Supply wall active at immediate resistance."

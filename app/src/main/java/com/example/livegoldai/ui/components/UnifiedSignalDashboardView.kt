@@ -511,13 +511,13 @@ fun UnifiedSignalDashboardView(
                         Text(
                             text = when (analysis.overallSignal) {
                                 Signal.BUY -> when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "High Confluence Bullish Regime: Institutional trend, Smart Money (SMC) order blocks, and 5-AI models are aligned for upward expansion."
-                                    AppLanguage.HINDI -> "उच्च सटीकता तेजी का दौर: ट्रेंड, स्मार्ट मनी (SMC) और 5 AI मॉडल्स एक साथ BUY की पुष्टि कर रहे हैं। पुलबैक पर खरीदारी सर्वश्रेष्ठ है।"
-                                    AppLanguage.MARATHI -> "उच्च अचूकता तेजीचा टप्पा: ट्रेंड, स्मार्ट मनी आणि 5 AI मॉडेल्स BUY ची पुष्टी करत आहेत."
+                                    AppLanguage.ENGLISH -> "Bullish: the weighted pillar vote passed the 68% gate for BUY."
+                                    AppLanguage.HINDI -> "तेजी: वेटेड पिलर वोट ने BUY के लिए 68% गेट पार किया।"
+                                    AppLanguage.MARATHI -> "तेजी: वेटेड पिलर मताने BUY साठी 68% गेट पार केला."
                                 }
                                 Signal.SELL -> when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "High Confluence Bearish Regime: Heavy institutional supply and dollar resilience driving downward pressure on Gold spot."
-                                    AppLanguage.HINDI -> "उच्च सटीकता मंदी का दौर: रेजिस्टेंस पर भारी सप्लाई और डॉलर मजबूती गोल्ड पर दबाव बना रही है। उछाल पर SELL करें।"
+                                    AppLanguage.ENGLISH -> "Bearish: the weighted pillar vote passed the 68% gate for SELL."
+                                    AppLanguage.HINDI -> "मंदी: वेटेड पिलर वोट ने SELL के लिए 68% गेट पार किया।"
                                     AppLanguage.MARATHI -> "उच्च अचूकता मंदीचा टप्पा: वरच्या स्तरावर मोठी विक्री सुरू आहे."
                                 }
                                 Signal.WAIT -> when (currentLanguage) {
@@ -572,9 +572,9 @@ fun UnifiedSignalDashboardView(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "5-AI COMMITTEE ALIGNMENT"
-                                    AppLanguage.HINDI -> "5-AI मॉडल्स की वोटिंग व सहमति"
-                                    AppLanguage.MARATHI -> "5-AI मॉडेल्सचे मतदान व सहमती"
+                                    AppLanguage.ENGLISH -> "5-RULE COUNCIL ALIGNMENT"
+                                    AppLanguage.HINDI -> "5 नियमों की वोटिंग व सहमति"
+                                    AppLanguage.MARATHI -> "5 नियमांचे मतदान व सहमती"
                                 },
                                 fontWeight = FontWeight.Black,
                                 fontSize = 12.sp,
@@ -645,7 +645,7 @@ fun UnifiedSignalDashboardView(
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "${model.confidencePercent}%",
+                                        text = "${model.confidencePercent}% pillars",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,

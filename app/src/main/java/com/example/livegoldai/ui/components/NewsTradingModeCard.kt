@@ -186,9 +186,9 @@ fun NewsTradingModeCard(
                                 }
                             } else {
                                 when (currentLang) {
-                                    AppLanguage.ENGLISH -> "100% Automated: Turns on automatically 15 minutes before high-impact news releases. No manual action needed."
-                                    AppLanguage.HINDI -> "100% स्वचालित: हाई-इम्पैक्ट न्यूज़ से ठीक 15 मिनट पहले अपने-आप ऑन हो जाएगा। मैनुअल बटन की आवश्यकता नहीं।"
-                                    AppLanguage.MARATHI -> "100% स्वयंचलित: हाय-इम्पॅक्ट न्यूजच्या बरोबर 15 मिनिटे आधी आपोआप चालू होईल. मॅन्युअल बटणाची गरज नाही."
+                                    AppLanguage.ENGLISH -> "Automatic: turns on 30 minutes before a high-impact USD release from the real calendar (while the app is open)."
+                                    AppLanguage.HINDI -> "स्वचालित: असली कैलेंडर की हाई-इम्पैक्ट USD न्यूज़ से 30 मिनट पहले अपने-आप ऑन (ऐप खुला होने पर)।"
+                                    AppLanguage.MARATHI -> "स्वयंचलित: खऱ्या कॅलेंडरमधील हाय-इम्पॅक्ट USD बातमीच्या 30 मिनिटे आधी आपोआप सुरू (ॲप उघडे असताना)."
                                 }
                             },
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),

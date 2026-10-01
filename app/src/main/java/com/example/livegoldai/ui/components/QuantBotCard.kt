@@ -127,7 +127,7 @@ fun QuantBotCard(
                                 border = BorderStroke(0.6.dp, GoldPrimary)
                             ) {
                                 Text(
-                                    text = "${botSignal.winProbabilityPercent}% WIN RATE",
+                                    text = "${botSignal.winProbabilityPercent}% CONFIDENCE",
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
@@ -137,7 +137,7 @@ fun QuantBotCard(
                         }
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "High-Accuracy Confluence Algorithmic Bot"
+                                AppLanguage.ENGLISH -> "Rule bot (follows main signal at 70%+ agreement)"
                                 AppLanguage.HINDI -> "उच्च-सटीकता क्वांट ट्रेडिंग बॉट (सटीक सिग्नल)"
                                 AppLanguage.MARATHI -> "उच्च-अचूकता क्वांट ट्रेडिंग बॉट"
                             },
@@ -328,7 +328,7 @@ fun QuantBotCard(
                                         color = TextPrimary
                                     )
                                     Text(
-                                        text = "50% FVG Discount",
+                                        text = "Setup entry",
                                         fontSize = 9.sp,
                                         color = SignalBuy
                                     )
@@ -516,9 +516,9 @@ fun QuantBotCard(
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = when (currentLanguage) {
-                                                AppLanguage.ENGLISH -> "Why standby? Avoids 50/50 chop losses. The bot only trades when high-conviction institutional confluence is ≥75%."
-                                                AppLanguage.HINDI -> "स्टैंडबाय क्यों? चॉपी मार्केट में बार-बार SL कटने से बचाता है। बॉट केवल तभी ट्रेड लगाता है जब 75%+ कन्फर्मेशन हो।"
-                                                AppLanguage.MARATHI -> "स्टँडबाय का? चॉपी मार्केटमध्ये तोटा टाळतो. बॉट फक्त 75%+ खात्री असतानाच ट्रेड करतो."
+                                                AppLanguage.ENGLISH -> "Why standby? The rule needs a BUY/SELL main signal with 70%+ agreement."
+                                                AppLanguage.HINDI -> "स्टैंडबाय क्यों? नियम के लिए 70%+ सहमति वाला BUY/SELL मुख्य सिग्नल चाहिए।"
+                                                AppLanguage.MARATHI -> "स्टँडबाय का? नियमासाठी 70%+ सहमतीचा BUY/SELL मुख्य सिग्नल हवा."
                                             },
                                             fontSize = 10.sp,
                                             color = TextMuted
@@ -541,9 +541,9 @@ fun QuantBotCard(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "HIGH-ACCURACY ENGINE SAFEGUARDS"
-                                    AppLanguage.HINDI -> "सटीक प्रेडिक्शन के 4 सुरक्षा नियम"
-                                    AppLanguage.MARATHI -> "अचूक अंदाजाचे 4 सुरक्षा नियम"
+                                    AppLanguage.ENGLISH -> "BOT RULES"
+                                    AppLanguage.HINDI -> "बॉट के नियम"
+                                    AppLanguage.MARATHI -> "बॉटचे नियम"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
@@ -552,22 +552,22 @@ fun QuantBotCard(
                             Spacer(modifier = Modifier.height(4.dp))
                             val rules = when (currentLanguage) {
                                 AppLanguage.ENGLISH -> listOf(
-                                    "1. Trend-Filtered Oscillators: Prevents false sells during rallies",
-                                    "2. 5-AI Council Consensus: Gemini + ChatGPT + Claude + DeepSeek + Perplexity",
-                                    "3. Anti-Wick Buffer: SL placed +3.5 pips outside bank liquidity reach",
-                                    "4. Pullback Limit Order: Never buys candle peaks or sells bottoms"
+                                    "1. Signal only when the main signal is BUY/SELL with 70%+ weighted agreement",
+                                    "2. No order during a high-impact news window",
+                                    "3. SL / targets come from the trade setup (ATR based)",
+                                    "4. Its real accuracy is tracked in the Learning Center"
                                 )
                                 AppLanguage.HINDI -> listOf(
-                                    "1. ट्रेंड-फिल्टर्ड इंडिकेटर्स: तेजी के दौरान झूठे SELL सिग्नल्स पूरी तरह बंद",
-                                    "2. 5-AI काउंसिल सहमति: Gemini, ChatGPT, Claude, DeepSeek व Perplexity",
-                                    "3. एंटी-विक शील्ड: बैंकों के स्टॉप हंट से +3.5 pips बाहर सुरक्षित SL",
-                                    "4. पुलबैक लिमिट एंट्री: कभी भी शिखर पर खरीदारी या तली पर बिकवाली नहीं"
+                                    "1. सिग्नल तभी जब मुख्य सिग्नल BUY/SELL हो और वेटेड सहमति 70%+ हो",
+                                    "2. हाई-इम्पैक्ट न्यूज़ विंडो में कोई ऑर्डर नहीं",
+                                    "3. SL / टारगेट ट्रेड सेटअप से (ATR आधारित)",
+                                    "4. इसकी असली सटीकता लर्निंग सेंटर में दर्ज होती है"
                                 )
                                 AppLanguage.MARATHI -> listOf(
-                                    "1. ट्रेंड-फिल्टर्ड इंडिकेटर्स: तेजीमध्ये खोटे SELL सिग्नल्स बंद",
-                                    "2. 5-AI कौन्सिल सहमती: सर्व AI मॉडेल्सची पडताळणी",
-                                    "3. अँटी-विक शील्ड: स्टॉप हंटपासून +3.5 pips बाहेर सुरक्षित SL",
-                                    "4. पुलबॅक लिमिट एंट्री: शिखरावर खरेदी किंवा तळाला विक्री नाही"
+                                    "1. मुख्य सिग्नल BUY/SELL आणि वेटेड सहमती 70%+ असेल तरच सिग्नल",
+                                    "2. हाय-इम्पॅक्ट न्यूज विंडोमध्ये ऑर्डर नाही",
+                                    "3. SL / टार्गेट ट्रेड सेटअपमधून (ATR आधारित)",
+                                    "4. याची खरी अचूकता लर्निंग सेंटरमध्ये नोंदवली जाते"
                                 )
                             }
                             rules.forEach { rule ->

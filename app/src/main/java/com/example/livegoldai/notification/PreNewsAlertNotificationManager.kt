@@ -78,9 +78,9 @@ object PreNewsAlertNotificationManager {
                 AppLanguage.MARATHI -> "SELL (सोन्यात मंदीची शक्यता 🔴)"
             }
             Signal.WAIT -> when (lang) {
-                AppLanguage.ENGLISH -> "WAIT 🟡 (Straddle Pre-Coil)"
-                AppLanguage.HINDI -> "WAIT (सावधानी - स्ट्रैडल तैयार रखें 🟡)"
-                AppLanguage.MARATHI -> "WAIT (सावध राहा - स्ट्रॅडल तयार ठेवा 🟡)"
+                AppLanguage.ENGLISH -> "WAIT 🟡 (no new trade before the release)"
+                AppLanguage.HINDI -> "WAIT (रिलीज़ से पहले नया ट्रेड नहीं 🟡)"
+                AppLanguage.MARATHI -> "WAIT (रिलीजपूर्वी नवीन ट्रेड नाही 🟡)"
             }
         }
 
@@ -91,35 +91,35 @@ object PreNewsAlertNotificationManager {
         }
 
         val bodySummary = when (lang) {
-            AppLanguage.ENGLISH -> "🇮🇳 IST: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
-            AppLanguage.HINDI -> "🇮🇳 भारत समय: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
-            AppLanguage.MARATHI -> "🇮🇳 भारत वेळ: $indiaTimeText ($timeRemainingText) | AI: $biasLabel"
+            AppLanguage.ENGLISH -> "🇮🇳 IST: $indiaTimeText ($timeRemainingText) | Signal: $biasLabel"
+            AppLanguage.HINDI -> "🇮🇳 भारत समय: $indiaTimeText ($timeRemainingText) | Signal: $biasLabel"
+            AppLanguage.MARATHI -> "🇮🇳 भारत वेळ: $indiaTimeText ($timeRemainingText) | Signal: $biasLabel"
         }
 
         val detailedBigText = when (lang) {
             AppLanguage.ENGLISH -> """
                 ⏰ High-Impact Release approaching in $timeRemainingText!
                 🇮🇳 Indian Standard Time (IST): $indiaTimeText
-                🎯 AI Predictive Bias: $biasLabel
+                🎯 App signal: $biasLabel
                 📊 Forecast Analysis: $forecastInfo
-                📈 Expected Gold Volatility Range: $targetRange
-                ⚡ Action: Pre-news Straddle Levels & 90-sec freeze rule are armed in Kalankar FX Gold Pro!
+                📈 Price: $targetRange
+                ⚡ Spreads usually widen around the release. The app shows WAIT 30 minutes before it.
             """.trimIndent()
             AppLanguage.HINDI -> """
                 ⏰ लगभग $timeRemainingText में बड़ी मार्केट मूविंग न्यूज़ आने वाली है!
                 🇮🇳 भारतीय समय (IST): $indiaTimeText (आज रात)
-                🎯 AI का पूर्व-अनुमान (Prediction): $biasLabel
+                🎯 ऐप सिग्नल: $biasLabel
                 📊 डेटा एनालिसिस: $forecastInfo
-                📈 संभावित गोल्ड वोलैटिलिटी रेंज: $targetRange
-                ⚡ एक्शन: न्यूज़ स्ट्रैडल लेवल्स और 90-सेकंड नो-ऑर्डर रूल ऐप में लोड हैं!
+                📈 भाव: $targetRange
+                ⚡ रिलीज़ के आसपास स्प्रेड बढ़ता है। ऐप 30 मिनट पहले से WAIT दिखाता है।
             """.trimIndent()
             AppLanguage.MARATHI -> """
                 ⏰ अंदाजे $timeRemainingText मध्ये महत्त्वाची मार्केट हलवणारी बातमी येणार!
                 🇮🇳 भारतीय वेळ (IST): $indiaTimeText
-                🎯 AI पूर्व-अंदाज (Prediction): $biasLabel
+                🎯 ॲप सिग्नल: $biasLabel
                 📊 डेटा विश्लेषण: $forecastInfo
-                📈 संभाव्य गोल्ड व्होलॅटिलिटी रेंज: $targetRange
-                ⚡ ॲक्शन: न्यूज स्ट्रॅडल लेव्हल्स व 90-सेकंद नो-ऑर्डर नियम ॲपमध्ये तयार आहेत!
+                📈 भाव: $targetRange
+                ⚡ रिलीजच्या वेळी स्प्रेड वाढतो. ॲप 30 मिनिटे आधीपासून WAIT दाखवते.
             """.trimIndent()
         }
 
@@ -161,23 +161,15 @@ object PreNewsAlertNotificationManager {
             val eventMs = parseIsoTimeMs(event.isoTime)
             val diffMins: Long = if (eventMs != null) {
                 (eventMs - now) / 60_000L
-            } else if (event.date.equals("Today", ignoreCase = true)) {
-                50L // Default within active radar
-            } else continue
+            } else continue // only alert when the real release time is known
 
             // Alert window: event approaching within 180 minutes
             if (diffMins in 0..180) {
                 val eventKey = "${event.title}_${event.date}_${event.time}"
                 if (!notifiedSet.contains(eventKey)) {
-                    val bias = if (event.title.contains("CPI", true) || event.title.contains("Fed", true) || event.title.contains("FOMC", true)) {
-                        Signal.BUY
-                    } else if (event.title.contains("NFP", true) || event.title.contains("Employment", true)) {
-                        Signal.SELL
-                    } else {
-                        Signal.BUY
-                    }
+                    val bias = Signal.WAIT // the app does not predict news outcomes
                     val forecastText = if (event.forecast.isNotBlank()) "Est: ${event.forecast} (Prev: ${event.previous.ifBlank { "N/A" }})" else "High Volatility Expected"
-                    val rangeText = "$${String.format(Locale.US, "%.1f", currentPrice - 18.0)} - $${String.format(Locale.US, "%.1f", currentPrice + 22.0)}"
+                    val rangeText = "Not predicted: price can spike both ways (now $${String.format(Locale.US, "%.1f", currentPrice)})"
 
                     val timeRemainingText = when (lang) {
                         AppLanguage.ENGLISH -> "~$diffMins Minutes"
@@ -223,9 +215,9 @@ object PreNewsAlertNotificationManager {
             country = "USD",
             timeRemainingText = "45 Minutes",
             indiaTimeText = indiaTime,
-            aiBias = Signal.BUY,
-            forecastInfo = "Est: 0.3% vs Prev: 0.2%",
-            targetRange = "$${String.format(Locale.US, "%.1f", currentPrice - 20.0)} - $${String.format(Locale.US, "%.1f", currentPrice + 25.0)}",
+            aiBias = Signal.WAIT,
+            forecastInfo = "Test notification (sample text, not real data)",
+            targetRange = "test",
             lang = lang,
             isTest = true
         )

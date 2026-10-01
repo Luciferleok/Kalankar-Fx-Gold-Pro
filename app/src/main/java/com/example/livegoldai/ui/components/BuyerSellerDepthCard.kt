@@ -101,7 +101,7 @@ fun BuyerSellerDepthCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "BUY VS SELL LIVE TAPE",
+                                text = "BUY VS SELL (ESTIMATE)",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
@@ -114,9 +114,9 @@ fun BuyerSellerDepthCard(
                             ) {
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "LIVE ORDER FLOW"
-                                        AppLanguage.HINDI -> "लाइव खरीदारी vs बिकवाली"
-                                        AppLanguage.MARATHI -> "लाईव्ह खरेदीदार विरुद्ध विक्रेते"
+                                        AppLanguage.ENGLISH -> "ESTIMATED PRESSURE"
+                                        AppLanguage.HINDI -> "अनुमानित खरीदारी vs बिकवाली"
+                                        AppLanguage.MARATHI -> "अंदाजित खरेदीदार विरुद्ध विक्रेते"
                                     },
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
@@ -127,9 +127,9 @@ fun BuyerSellerDepthCard(
                         }
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "Real-Time Order Flow: Live Buying vs Selling Volume"
-                                AppLanguage.HINDI -> "रियल-टाइम ऑर्डर फ्लो: कितना Buy हो रहा है vs कितना Sell"
-                                AppLanguage.MARATHI -> "रिअल-टाइम ऑर्डर फ्लो: किती खरेदी होत आहे विरुद्ध किती विक्री"
+                                AppLanguage.ENGLISH -> "Estimated from candle shapes. Spot gold has no public order book."
+                                AppLanguage.HINDI -> "कैंडल के आकार से अनुमान। स्पॉट गोल्ड की कोई पब्लिक ऑर्डर बुक नहीं होती।"
+                                AppLanguage.MARATHI -> "कँडलच्या आकारावरून अंदाज. स्पॉट गोल्डची सार्वजनिक ऑर्डर बुक नसते."
                             },
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             color = TextSecondary
@@ -157,7 +157,7 @@ fun BuyerSellerDepthCard(
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = "LIVE TAPE",
+                            text = "ESTIMATE",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             fontWeight = FontWeight.Black,
                             color = dominantColor
@@ -290,18 +290,18 @@ fun BuyerSellerDepthCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "${String.format(Locale.US, "%,d", sentiment.orderBookBidCount)} Active Bids",
+                            text = "Buy-side estimate",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = TextSecondary
                         )
                         Text(
-                            text = "Net Delta: ${if (sentiment.netVolumeDelta >= 0) "+" else ""}${String.format(Locale.US, "%,.1f", sentiment.netVolumeDelta)} Lots",
+                            text = "Not real order-flow data",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             fontWeight = FontWeight.Bold,
                             color = dominantColor
                         )
                         Text(
-                            text = "${String.format(Locale.US, "%,d", sentiment.orderBookAskCount)} Active Asks",
+                            text = "Sell-side estimate",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = TextSecondary
                         )

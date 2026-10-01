@@ -259,17 +259,10 @@ fun PredictionBigCard(
     val totalValidityMillis = ((prediction?.validityDurationMinutes ?: 60) * 60_000L).coerceAtLeast(1L)
     val progressFraction = (remainingMillis.toFloat() / totalValidityMillis.toFloat()).coerceIn(0f, 1f)
 
-    val bullishProb = when (verdict) {
-        Signal.BUY -> winProb
-        Signal.SELL -> (100 - winProb) / 2
-        Signal.WAIT -> 30
-    }
-    val bearishProb = when (verdict) {
-        Signal.SELL -> winProb
-        Signal.BUY -> (100 - winProb) / 2
-        Signal.WAIT -> 30
-    }
-    val sidewaysProb = (100 - bullishProb - bearishProb).coerceAtLeast(8)
+    val split = com.example.livegoldai.data.RealityEngine.outcomeSplit(analysis)
+    val bullishProb = split.bullish
+    val bearishProb = split.bearish
+    val sidewaysProb = split.sideways
 
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -351,7 +344,7 @@ fun PredictionBigCard(
                             Text(text = "🤖", fontSize = 13.sp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "MULTI-AI COUNCIL: Gemini • ChatGPT • Claude • DeepSeek",
+                                text = "RULE COUNCIL: 5 local rules (no AI call)",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = GoldLight
@@ -514,7 +507,7 @@ fun PredictionBigCard(
                                 )
                             }
                             Text(
-                                text = "${audit.winRatePercent}% WIN RATE",
+                                text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% REAL WIN RATE (N=${audit.totalSignalsTested})",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
                                 color = SignalBuy
@@ -784,8 +777,8 @@ fun PredictionBigCard(
                                 Text(
                                     text = when (currentLanguage) {
                                         AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & SEE 6 AI FIXES ⚡"
-                                        AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
-                                        AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                                        AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
+                                        AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                                     },
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                     fontWeight = FontWeight.Black,
@@ -848,7 +841,7 @@ fun PredictionBigCard(
                             fontSize = 16.sp
                         )
                         Text(
-                            text = "Possibility / Win Rate: $winProb% • Next 15M-45M",
+                            text = "Confidence: $winProb% • see Learning Center for real accuracy",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = verdictColor,
@@ -1182,7 +1175,7 @@ fun PredictionBigCard(
                                             "Stop Loss: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} (-${analysis.tradeSetup.stopLossPips.toInt()} Pips)\n" +
                                             "Target 1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)} (+${analysis.tradeSetup.takeProfit1Pips.toInt()} Pips)\n" +
                                             "Target 2: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)} (+${analysis.tradeSetup.takeProfit2Pips.toInt()} Pips)\n" +
-                                            "Win Probability: $winProb%\n" +
+                                            "Confidence: $winProb%\n" +
                                             "R:R Ratio: ${analysis.tradeSetup.riskRewardRatio}"
                                 )
                                 clipboard?.setPrimaryClip(clip)

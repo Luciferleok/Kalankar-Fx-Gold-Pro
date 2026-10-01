@@ -39,10 +39,10 @@ fun LuxurySplashScreen(
 ) {
     var progressStep by remember { mutableIntStateOf(0) }
     val progressTexts = listOf(
-        "Initializing 24K Sovereign Bullion Engine...",
-        "Connecting Real-Time LBMA Spot & ECN Spreads...",
+        "Starting Kalankar FX Gold Pro...",
+        "Connecting to price feeds (Twelve Data, PAXG/USDT)...",
         "Harmonizing 7-Pillar Institutional Confluence...",
-        "Multi-AI Committee Calibrated & Armed • Opening Terminal"
+        "Loading live gold data • Opening Terminal"
     )
 
     val infiniteTransition = rememberInfiniteTransition(label = "luxury_splash")

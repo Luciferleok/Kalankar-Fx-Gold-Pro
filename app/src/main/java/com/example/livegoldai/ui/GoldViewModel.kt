@@ -10,7 +10,11 @@ import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.model.GoldAnalysisResult
 import com.example.livegoldai.model.GroupAnalysis
 import com.example.livegoldai.theme.ThemeMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
+import com.example.livegoldai.data.FileLedgerStore
+import com.example.livegoldai.data.LearningCoordinator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,6 +112,13 @@ class GoldViewModel @JvmOverloads constructor(
 
     private var autoRefreshJob: Job? = null
 
+    // Real Prediction Ledger (append-only file in app storage). Loaded lazily on a background thread.
+    private val learning: LearningCoordinator by lazy {
+        LearningCoordinator(
+            FileLedgerStore(java.io.File(getApplication<Application>().filesDir, "prediction_ledger.jsonl"))
+        ) { start, end -> apiService.fetchPricePath(start, end) }
+    }
+
     init {
         val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
         val initialMode = try {
@@ -142,7 +153,16 @@ class GoldViewModel @JvmOverloads constructor(
             val currentInterval = _uiState.value.selectedInterval
             val result = apiService.fetchAnalysis(interval = currentInterval)
 
-            result.onSuccess { analysis ->
+            result.onSuccess { rawAnalysis ->
+                // Record / verify predictions and replace every accuracy number with real ledger values.
+                val analysis = try {
+                    withContext(Dispatchers.IO) {
+                        val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
+                        learning.process(rawAnalysis, currentInterval, mtfCandles)
+                    }
+                } catch (_: Exception) {
+                    rawAnalysis
+                }
                 val target = _uiState.value.priceAlertTarget
                 val triggered = if (target != null) {
                     val p = analysis.currentPrice
@@ -291,7 +311,13 @@ class GoldViewModel @JvmOverloads constructor(
     }
 
     fun recalibratePredictionEngine() {
-        loadData(isInitial = false)
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { learning.recalibrateNow() }
+            } catch (_: Exception) {
+            }
+            loadData(isInitial = false)
+        }
     }
 
     fun openSpotInspector() {
@@ -315,7 +341,7 @@ class GoldViewModel @JvmOverloads constructor(
             val updatedData = current.data?.let { d ->
                 val updatedPlan = d.newsTradingPlan?.copy(
                     isNewsActive = active,
-                    releaseCountdownFormatted = if (active) "🚨 LIVE NEWS SPIKE WINDOW ACTIVE (Next 45 Mins)" else "⏰ Next Release: Today 18:30 UTC (US CPI)",
+                    releaseCountdownFormatted = if (active) "🚨 News mode switched ON manually" else "News mode switched OFF manually",
                     phase = if (active) com.example.livegoldai.model.NewsPhase.LIVE_NEWS_SPIKE else com.example.livegoldai.model.NewsPhase.PRE_NEWS_COIL
                 )
                 d.copy(

@@ -550,7 +550,8 @@ data class GoldAnalysisResult(
     val productionImprovement: ProductionImprovementEngine? = null,
     val isNewsModeTriggered: Boolean = false,
     val isSimulatedFallback: Boolean = false,
-    val newsMode: NewsModeStatus? = null
+    val newsMode: NewsModeStatus? = null,
+    val learning: LearningSnapshot? = null
 )
 
 @Serializable
@@ -645,11 +646,12 @@ enum class AiModelProvider(
     val iconEmoji: String,
     val roleBadge: String
 ) {
-    GEMINI("Google Gemini 3.5", "Google DeepMind", "♊", "Multi-Timeframe & Patterns"),
-    CHAT_GPT("ChatGPT-4o", "OpenAI", "🤖", "Macro Economics & Order Flow"),
-    CLAUDE("Claude 3.7 Sonnet", "Anthropic", "🧠", "Risk Guardrails & Trap Elimination"),
-    DEEP_SEEK("DeepSeek R1", "DeepSeek AI", "⚡", "Algorithmic SMC & FVG Reasoning"),
-    PERPLEXITY("Perplexity Financial AI", "Perplexity AI", "🌐", "Live Market Sentiment & Cross-Asset")
+    // Local rule engines (no external AI is called). Constant names kept for compatibility.
+    GEMINI("Rule 1 · Pillar Vote + VWAP", "Local rule", "1️⃣", "4+/7 pillars and VWAP side"),
+    CHAT_GPT("Rule 2 · Dollar Filter", "Local rule", "2️⃣", "Main signal only if DXY agrees"),
+    CLAUDE("Rule 3 · Risk Guard", "Local rule", "3️⃣", "Stricter after a real recent loss"),
+    DEEP_SEEK("Rule 4 · RSI Zone", "Local rule", "4️⃣", "RSI >= 55 BUY, <= 45 SELL"),
+    PERPLEXITY("Rule 5 · Weighted 68% Gate", "Local rule", "5️⃣", "The app's main signal")
 }
 
 @Serializable
@@ -739,7 +741,7 @@ data class NewsModeStatus(
 
 @Serializable
 data class QuantBotTradeSignal(
-    val botName: String = "KALANKAR QUANT BOT v5.2",
+    val botName: String = "KALANKAR RULE BOT",
     val statusText: String, // "🟢 ACTIVE SCANNING & READY", "⚡ LIVE ORDER DISPATCHED", "🛡️ STANDBY (CAPITAL GUARD)"
     val isTradeActive: Boolean,
     val signal: Signal,
@@ -856,13 +858,13 @@ data class ModelWeightItem(
 
 @Serializable
 data class ProductionImprovementEngine(
-    val engineVersion: String = "v7.2 Auto-Calibrating Deep Neural Matrix",
-    val statusBadge: String = "PRODUCTION RE-CALIBRATING & ADAPTIVELY TUNED 🔄",
-    val verifiedAccuracyPercent: Double = 91.4,
-    val totalBacktestedTrades: Int = 128,
-    val profitFactor: Double = 3.65,
-    val averagePipGainPerTrade: Double = 24.8,
-    val dynamicConfidenceThreshold: Int = 74,
+    val engineVersion: String = "Base rules v1",
+    val statusBadge: String = "OBSERVING",
+    val verifiedAccuracyPercent: Double = -1.0, // -1 = not enough verified predictions
+    val totalBacktestedTrades: Int = 0, // number of real verified predictions
+    val profitFactor: Double = -1.0,
+    val averagePipGainPerTrade: Double = 0.0,
+    val dynamicConfidenceThreshold: Int = 68,
     val appliedProductionFixes: List<AppliedProductionFix>,
     val liveModelWeights: List<ModelWeightItem>,
     val isAutoTuningActive: Boolean = true

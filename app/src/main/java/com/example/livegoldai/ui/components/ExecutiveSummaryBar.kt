@@ -86,7 +86,7 @@ fun ExecutiveSummaryBar(
                     color = sigColor.copy(alpha = 0.16f)
                 ) {
                     Text(
-                        text = "${prediction?.winProbabilityPercent ?: analysis.tradeSetup.confidencePercent}% WIN CONFLUENCE",
+                        text = "${prediction?.winProbabilityPercent ?: analysis.tradeSetup.confidencePercent}% CONFIDENCE",
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,

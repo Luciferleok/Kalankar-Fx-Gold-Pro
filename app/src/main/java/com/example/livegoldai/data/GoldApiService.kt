@@ -298,70 +298,51 @@ class GoldApiService(
         Result.success(fallback.copy(isSimulatedFallback = true))
     }
 
-    private fun fetchLiveDxy(): MacroMarketIndex {
-        try {
+    /**
+     * Daily change of a Yahoo symbol, computed from the real price and previous close.
+     * Returns null when data is unavailable — never a made-up value.
+     */
+    private fun fetchYahooDailyChange(symbol: String): Pair<Double, Double>? {
+        return try {
             val req = Request.Builder()
-                .url("https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB?interval=1d&range=5d")
+                .url("https://query1.finance.yahoo.com/v8/finance/chart/$symbol?interval=1d&range=5d")
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
                 .build()
             val resp = client.newCall(req).execute()
             val body = resp.body?.string()
-            if (resp.isSuccessful && !body.isNullOrBlank()) {
-                val root = json.parseToJsonElement(body).jsonObject
-                val resArr = root["chart"]?.jsonObject?.get("result")?.jsonArray
-                val meta = resArr?.get(0)?.jsonObject?.get("meta")?.jsonObject
-                val price = meta?.get("regularMarketPrice")?.jsonPrimitive?.double ?: 100.41
-                val changePct = meta?.get("regularMarketChangePercent")?.jsonPrimitive?.double ?: -0.18
-                val impact = if (changePct < -0.05) Signal.BUY else if (changePct > 0.05) Signal.SELL else Signal.WAIT
-                val expl = if (changePct < 0) {
-                    "US Dollar weakening (${String.format(Locale.US, "%.2f", changePct)}%) provides direct upside tailwind for Gold"
-                } else {
-                    "US Dollar firming (+${String.format(Locale.US, "%.2f", changePct)}%) creates technical resistance for Gold"
-                }
-                return MacroMarketIndex(
-                    symbol = "DXY",
-                    name = "US Dollar Index",
-                    value = price,
-                    changePercent = changePct,
-                    impactOnGold = impact,
-                    explanation = expl
-                )
-            }
-        } catch (_: Exception) {}
-        return MacroMarketIndex("DXY", "US Dollar Index", 100.41, -0.18, Signal.BUY, "DXY softness sustains Bullish spot bias")
+            if (!resp.isSuccessful || body.isNullOrBlank()) return null
+            val root = json.parseToJsonElement(body).jsonObject
+            val meta = root["chart"]?.jsonObject?.get("result")?.jsonArray?.get(0)?.jsonObject?.get("meta")?.jsonObject ?: return null
+            val price = meta["regularMarketPrice"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return null
+            val prev = (meta["chartPreviousClose"] ?: meta["previousClose"])?.jsonPrimitive?.content?.toDoubleOrNull()
+            val pct = meta["regularMarketChangePercent"]?.jsonPrimitive?.content?.toDoubleOrNull()
+                ?: if (prev != null && prev != 0.0) (price - prev) / prev * 100.0 else return null
+            price to pct
+        } catch (_: Exception) {
+            null
+        }
     }
 
-    private fun fetchLiveUs10y(): MacroMarketIndex {
-        try {
-            val req = Request.Builder()
-                .url("https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX?interval=1d&range=5d")
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                .build()
-            val resp = client.newCall(req).execute()
-            val body = resp.body?.string()
-            if (resp.isSuccessful && !body.isNullOrBlank()) {
-                val root = json.parseToJsonElement(body).jsonObject
-                val resArr = root["chart"]?.jsonObject?.get("result")?.jsonArray
-                val meta = resArr?.get(0)?.jsonObject?.get("meta")?.jsonObject
-                val yieldVal = meta?.get("regularMarketPrice")?.jsonPrimitive?.double ?: 4.96
-                val changePct = meta?.get("regularMarketChangePercent")?.jsonPrimitive?.double ?: -0.70
-                val impact = if (changePct < 0) Signal.BUY else Signal.SELL
-                val expl = if (changePct < 0) {
-                    "Treasury yields easing (${String.format(Locale.US, "%.2f", changePct)}%) lowers opportunity cost for bullion"
-                } else {
-                    "Yields edging higher (+${String.format(Locale.US, "%.2f", changePct)}%) compresses metal premium"
-                }
-                return MacroMarketIndex(
-                    symbol = "^TNX",
-                    name = "US 10-Yr Yield",
-                    value = yieldVal,
-                    changePercent = changePct,
-                    impactOnGold = impact,
-                    explanation = expl
-                )
-            }
-        } catch (_: Exception) {}
-        return MacroMarketIndex("^TNX", "US 10-Yr Yield", 4.96, -0.70, Signal.BUY, "Cooling yields support Gold strength")
+    private fun fetchLiveDxy(): MacroMarketIndex? {
+        val (price, changePct) = fetchYahooDailyChange("DX-Y.NYB") ?: return null
+        val impact = if (changePct < -0.05) Signal.BUY else if (changePct > 0.05) Signal.SELL else Signal.WAIT
+        val expl = when (impact) {
+            Signal.BUY -> "US Dollar down ${String.format(Locale.US, "%.2f", changePct)}% today (usually supportive for gold)"
+            Signal.SELL -> "US Dollar up +${String.format(Locale.US, "%.2f", changePct)}% today (usually a headwind for gold)"
+            Signal.WAIT -> "US Dollar almost flat (${String.format(Locale.US, "%.2f", changePct)}%), no vote"
+        }
+        return MacroMarketIndex("DXY", "US Dollar Index", price, changePct, impact, expl)
+    }
+
+    private fun fetchLiveUs10y(): MacroMarketIndex? {
+        val (yieldVal, changePct) = fetchYahooDailyChange("%5ETNX") ?: return null
+        val impact = if (changePct < -0.3) Signal.BUY else if (changePct > 0.3) Signal.SELL else Signal.WAIT
+        val expl = when (impact) {
+            Signal.BUY -> "10Y yield down ${String.format(Locale.US, "%.2f", changePct)}% today (usually supportive for gold)"
+            Signal.SELL -> "10Y yield up +${String.format(Locale.US, "%.2f", changePct)}% today (usually a headwind for gold)"
+            Signal.WAIT -> "10Y yield almost flat (${String.format(Locale.US, "%.2f", changePct)}%), no vote"
+        }
+        return MacroMarketIndex("^TNX", "US 10-Yr Yield", yieldVal, changePct, impact, expl)
     }
 
     private fun fetchLiveEconomicEvents(): List<EconomicEvent> {
@@ -423,41 +404,96 @@ class GoldApiService(
             }
         } catch (_: Exception) {}
 
-        return listOf(
-            EconomicEvent(
-                title = "FOMC Member Speech & Policy Guidance",
-                country = "USD",
-                date = "Today",
-                time = "13:00 UTC",
-                impact = "High",
-                forecast = "",
-                previous = "",
-                goldImpact = "Dovish tone sparks Gold surge",
-                indiaTime = "06:30 PM IST"
-            ),
-            EconomicEvent(
-                title = "Flash Manufacturing & Services PMI",
-                country = "USD",
-                date = "Tomorrow",
-                time = "14:45 UTC",
-                impact = "Medium",
-                forecast = "53.6",
-                previous = "53.2",
-                goldImpact = "Growth slowdown bullish for Gold",
-                indiaTime = "08:15 PM IST"
-            ),
-            EconomicEvent(
-                title = "ADP Non-Farm Employment Change",
-                country = "USD",
-                date = "This Week",
-                time = "12:15 UTC",
-                impact = "High",
-                forecast = "145K",
-                previous = "152K",
-                goldImpact = "Labor cooling accelerates rate cuts",
-                indiaTime = "05:45 PM IST"
-            )
-        )
+        return emptyList() // calendar unavailable: show nothing rather than invented events
+    }
+
+    // ---------------- REAL VERIFICATION & MULTI-TIMEFRAME DATA ----------------
+
+    private fun fetchBinanceKlines(interval: String, limit: Int, startMs: Long? = null, endMs: Long? = null): List<PathBar>? {
+        return try {
+            val sb = StringBuilder("https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=$interval&limit=$limit")
+            if (startMs != null) sb.append("&startTime=$startMs")
+            if (endMs != null) sb.append("&endTime=$endMs")
+            val req = Request.Builder().url(sb.toString()).header("User-Agent", "KalankarFXGoldPro/1.0").build()
+            val resp = client.newCall(req).execute()
+            val body = resp.body?.string()
+            if (!resp.isSuccessful || body.isNullOrBlank()) return null
+            json.parseToJsonElement(body).jsonArray.mapNotNull { el ->
+                val a = el.jsonArray
+                val t = a[0].jsonPrimitive.content.toLongOrNull() ?: return@mapNotNull null
+                PathBar(
+                    t = t,
+                    o = a[1].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    h = a[2].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    l = a[3].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    c = a[4].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun fetchYahooGoldPath(startMs: Long, endMs: Long, yfInterval: String): List<PathBar>? {
+        return try {
+            val url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=$yfInterval&period1=${startMs / 1000}&period2=${endMs / 1000 + 60}"
+            val req = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)").build()
+            val resp = client.newCall(req).execute()
+            val body = resp.body?.string()
+            if (!resp.isSuccessful || body.isNullOrBlank()) return null
+            val res = json.parseToJsonElement(body).jsonObject["chart"]?.jsonObject?.get("result")?.jsonArray?.get(0)?.jsonObject ?: return null
+            val ts = res["timestamp"]?.jsonArray ?: return null
+            val q = res["indicators"]?.jsonObject?.get("quote")?.jsonArray?.get(0)?.jsonObject ?: return null
+            val o = q["open"]?.jsonArray; val h = q["high"]?.jsonArray; val l = q["low"]?.jsonArray; val c = q["close"]?.jsonArray
+            if (o == null || h == null || l == null || c == null) return null
+            ts.indices.mapNotNull { i ->
+                val t = ts[i].jsonPrimitive.content.toLongOrNull() ?: return@mapNotNull null
+                PathBar(
+                    t = t * 1000L,
+                    o = o[i].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    h = h[i].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    l = l[i].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null,
+                    c = c[i].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Real price path between two moments, used to check a prediction after it expires.
+     * Source 1: Binance PAXG/USDT (gold-backed token, free, minute data).
+     * Source 2: Yahoo GC=F gold futures.
+     * Only relative moves are used, so the small price difference between sources does not matter.
+     */
+    suspend fun fetchPricePath(startMs: Long, endMs: Long): PricePath? = withContext(Dispatchers.IO) {
+        val spanMin = (endMs - startMs) / 60_000L
+        val (bInterval, stepMin) = when {
+            spanMin <= 990 -> "1m" to 1L
+            spanMin <= 4900 -> "5m" to 5L
+            else -> "15m" to 15L
+        }
+        val limit = (spanMin / stepMin + 2).toInt().coerceIn(2, 1000)
+        val b = fetchBinanceKlines(bInterval, limit, startMs, endMs)
+        if (!b.isNullOrEmpty()) return@withContext PricePath("PAXG/USDT $bInterval", b)
+        val yInterval = when { spanMin <= 990 -> "1m"; spanMin <= 4900 -> "5m"; else -> "15m" }
+        val y = fetchYahooGoldPath(startMs, endMs, yInterval)
+        if (!y.isNullOrEmpty()) return@withContext PricePath("GC=F $yInterval", y)
+        null
+    }
+
+    private var mtfCache: Pair<Long, Map<String, List<PathBar>>>? = null
+
+    /** Real candles for 5m / 15m / 1h / 4h / 1d (PAXG/USDT). Cached for 60 seconds. */
+    suspend fun fetchMtfCandles(): Map<String, List<PathBar>> = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        mtfCache?.let { if (now - it.first < 60_000L) return@withContext it.second }
+        val tfs = listOf("5m", "15m", "1h", "4h", "1d")
+        val jobs = tfs.map { tf -> async { tf to fetchBinanceKlines(tf, 120) } }
+        val result = jobs.mapNotNull { j -> val (tf, bars) = j.await(); if (bars.isNullOrEmpty()) null else tf to bars }.toMap()
+        if (result.isNotEmpty()) mtfCache = now to result
+        result
     }
 
     // ---------------- NEWS MODE ----------------

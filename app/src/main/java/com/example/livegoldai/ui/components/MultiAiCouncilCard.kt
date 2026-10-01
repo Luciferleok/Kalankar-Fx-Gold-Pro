@@ -114,9 +114,9 @@ fun MultiAiCouncilCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "MULTI-AI CONSENSUS COUNCIL"
-                                    AppLanguage.HINDI -> "मल्टी-AI सहमति परिषद (5 AI कमेटी)"
-                                    AppLanguage.MARATHI -> "मल्टी-AI सहमती समिती (5 AI कौन्सिल)"
+                                    AppLanguage.ENGLISH -> "LOCAL RULE COUNCIL (NO AI CALL)"
+                                    AppLanguage.HINDI -> "नियम सहमति परिषद (5 लोकल नियम)"
+                                    AppLanguage.MARATHI -> "नियम सहमती समिती (5 लोकल नियम)"
                                 },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Black,
@@ -126,7 +126,7 @@ fun MultiAiCouncilCard(
                             )
                         }
                         Text(
-                            text = "Gemini ♊ • ChatGPT 🤖 • Claude 🧠 • DeepSeek ⚡ • Perplexity 🌐",
+                            text = "5 local rule engines • no external AI is called",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )
@@ -177,9 +177,9 @@ fun MultiAiCouncilCard(
                         Column {
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "AI CONSENSUS VERDICT:"
-                                    AppLanguage.HINDI -> "5 AI मॉडल्स का संयुक्त फैसला:"
-                                    AppLanguage.MARATHI -> "5 AI मॉडेल्सचा अंतिम निर्णय:"
+                                    AppLanguage.ENGLISH -> "RULE COUNCIL VERDICT:"
+                                    AppLanguage.HINDI -> "5 नियमों का संयुक्त फैसला:"
+                                    AppLanguage.MARATHI -> "5 नियमांचा अंतिम निर्णय:"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 fontWeight = FontWeight.Bold,
@@ -217,7 +217,7 @@ fun MultiAiCouncilCard(
                             modifier = Modifier.padding(start = 8.dp)
                         ) {
                             Text(
-                                text = "${consensus.consensusConfidence}% WIN RATE",
+                                text = "${consensus.consensusConfidence}% RULE AGREEMENT",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
@@ -356,7 +356,7 @@ fun MultiAiCouncilCard(
                             color = (if (selectedInsight.signal == Signal.BUY) SignalBuy else if (selectedInsight.signal == Signal.SELL) SignalSell else AmberWarning).copy(alpha = 0.18f)
                         ) {
                             Text(
-                                text = "${selectedInsight.signal.name} (${selectedInsight.confidencePercent}%)",
+                                text = "${selectedInsight.signal.name} (${selectedInsight.confidencePercent}% of pillars agree)",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 fontWeight = FontWeight.Black,
@@ -397,9 +397,9 @@ fun MultiAiCouncilCard(
                             Column {
                                 Text(
                                     text = when (currentLang) {
-                                        AppLanguage.ENGLISH -> "HOW ${selectedInsight.provider.displayName.uppercase()} CORRECTED THE TRADE:"
-                                        AppLanguage.HINDI -> "${selectedInsight.provider.displayName} ने प्रेडिक्शन में क्या सुधार किया:"
-                                        AppLanguage.MARATHI -> "${selectedInsight.provider.displayName} ने ट्रेडमध्ये केलेली सुधारणा:"
+                                        AppLanguage.ENGLISH -> "${selectedInsight.provider.displayName.uppercase()} • TRACK RECORD:"
+                                        AppLanguage.HINDI -> "${selectedInsight.provider.displayName} • असली रिकॉर्ड:"
+                                        AppLanguage.MARATHI -> "${selectedInsight.provider.displayName} • खरा रेकॉर्ड:"
                                     },
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                     fontWeight = FontWeight.Black,
@@ -464,9 +464,9 @@ fun MultiAiCouncilCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "MULTI-AI JOINT SAFEGUARDS (4 CORRECTIONS)"
-                                    AppLanguage.HINDI -> "5 AI मॉडल्स के 4 संयुक्त सुरक्षा नियम"
-                                    AppLanguage.MARATHI -> "5 AI मॉडेल्सचे 4 संयुक्त सुरक्षा नियम"
+                                    AppLanguage.ENGLISH -> "RULE COUNCIL NOTES"
+                                    AppLanguage.HINDI -> "नियम काउंसिल नोट्स"
+                                    AppLanguage.MARATHI -> "नियम कौन्सिल नोट्स"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
@@ -514,7 +514,7 @@ fun MultiAiCouncilCard(
                         onRefreshAiCouncil()
                         Toast.makeText(
                             context,
-                            "🤖 Multi-AI Council re-evaluated live Gold price & order flow!",
+                            "🔄 Rules re-calculated on the latest price",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
@@ -544,18 +544,18 @@ fun MultiAiCouncilCard(
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                         val reportText = buildString {
-                            appendLine("🏆 KALANKAR FX MULTI-AI CONSENSUS REPORT:")
+                            appendLine("🏆 KALANKAR FX RULE COUNCIL REPORT:")
                             appendLine("Consensus Verdict: ${consensus.consensusSignal.name} (${consensus.consensusConfidence}% Win Confidence)")
                             appendLine("Agreeing Models: ${consensus.agreeingModelsCount}/${consensus.totalModelsCount}")
-                            appendLine("• Gemini 3.5: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.GEMINI }?.signal?.name}")
-                            appendLine("• ChatGPT-4o: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.CHAT_GPT }?.signal?.name}")
-                            appendLine("• Claude 3.7: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.CLAUDE }?.signal?.name}")
-                            appendLine("• DeepSeek R1: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.DEEP_SEEK }?.signal?.name}")
+                            appendLine("• Rule 1: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.GEMINI }?.signal?.name}")
+                            appendLine("• Rule 2: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.CHAT_GPT }?.signal?.name}")
+                            appendLine("• Rule 3: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.CLAUDE }?.signal?.name}")
+                            appendLine("• Rule 4: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.DEEP_SEEK }?.signal?.name}")
                             appendLine("Summary: ${consensus.getSummary(currentLang)}")
                         }
-                        val clip = ClipData.newPlainText("Multi-AI Consensus", reportText)
+                        val clip = ClipData.newPlainText("Rule Council", reportText)
                         clipboard?.setPrimaryClip(clip)
-                        Toast.makeText(context, "✅ Multi-AI Consensus Report Copied!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "✅ Rule Council Report Copied!", Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f)),

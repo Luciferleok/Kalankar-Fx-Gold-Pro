@@ -226,7 +226,7 @@ fun IndicatorPillarDeepDiveDialog(
                                 color = TextMuted
                             )
                             Text(
-                                text = "${group.verdict.name} • 100% SIGNAL VERIFIED",
+                                text = "${group.verdict.name} • live indicator values",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
                                 color = verdictColor

@@ -135,9 +135,9 @@ fun MultiBotArsenalCard(
                         }
                         Text(
                             text = when (currentLang) {
-                                AppLanguage.ENGLISH -> "Combined Win-Rate: 91.4% • 5+ Agree = Elite Trade"
-                                AppLanguage.HINDI -> "संयुक्त जीत दर: 91.4% • 5+ सहमत = मजबूत ट्रेड"
-                                AppLanguage.MARATHI -> "एकत्रित यश दर: 91.4% • 5+ सहमत = अचूक ट्रेड"
+                                AppLanguage.ENGLISH -> "Win rates below are real (from checked predictions)"
+                                AppLanguage.HINDI -> "नीचे की जीत दर असली है (जाँची गई प्रेडिक्शन से)"
+                                AppLanguage.MARATHI -> "खालील यश दर खरे आहेत (तपासलेल्या अंदाजांवरून)"
                             },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
@@ -341,7 +341,7 @@ fun MultiBotArsenalCard(
                                             )
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
-                                                    text = "Win-Rate: ${bot.backtestedWinRate}% • PF: ${bot.profitFactor}x",
+                                                    text = if (bot.backtestedWinRate < 0) "Win-rate: untested (needs 10 checked)" else "Win-rate: ${String.format(java.util.Locale.US, "%.1f", bot.backtestedWinRate)}% • PF: ${if (bot.profitFactor < 0) "--" else String.format(java.util.Locale.US, "%.2f", bot.profitFactor)}",
                                                     fontSize = 9.5.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = GoldLight

@@ -53,25 +53,11 @@ fun KyaHogaPredictionDialog(
     val isBuy = analysis.overallSignal == Signal.BUY
     val isSell = analysis.overallSignal == Signal.SELL
 
-    val bullishProb: Int
-    val sidewaysProb: Int
-    val bearishProb: Int
-
-    if (isBuy) {
-        bullishProb = baseProb.coerceIn(65, 94)
-        val remainder = 100 - bullishProb
-        sidewaysProb = (remainder * 0.65).toInt().coerceAtLeast(4)
-        bearishProb = (remainder - sidewaysProb).coerceAtLeast(3)
-    } else if (isSell) {
-        bearishProb = baseProb.coerceIn(65, 94)
-        val remainder = 100 - bearishProb
-        sidewaysProb = (remainder * 0.65).toInt().coerceAtLeast(4)
-        bullishProb = (remainder - sidewaysProb).coerceAtLeast(3)
-    } else {
-        sidewaysProb = 62
-        bullishProb = 21
-        bearishProb = 17
-    }
+    // Real split: past outcomes from the Prediction Ledger, or live pillar votes until there is enough history
+    val split = com.example.livegoldai.data.RealityEngine.outcomeSplit(analysis)
+    val bullishProb: Int = split.bullish
+    val sidewaysProb: Int = split.sideways
+    val bearishProb: Int = split.bearish
 
     val primaryColor = when {
         isBuy -> SignalBuy
@@ -477,7 +463,7 @@ fun KyaHogaPredictionDialog(
                                         )
                                     }
                                     Text(
-                                        text = "${audit.winRatePercent}% WIN RATE",
+                                        text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% REAL WIN RATE (N=${audit.totalSignalsTested})",
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         fontWeight = FontWeight.Black,
                                         color = SignalBuy
@@ -721,8 +707,8 @@ fun KyaHogaPredictionDialog(
                                         Text(
                                             text = when (currentLanguage) {
                                                 AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & 6 AI FIXES ⚡"
-                                                AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
-                                                AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                                                AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
+                                                AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                                             },
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             fontWeight = FontWeight.Black,
@@ -760,9 +746,9 @@ fun KyaHogaPredictionDialog(
                                         Column {
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "MULTI-AI ENSEMBLE CONSENSUS"
-                                                    AppLanguage.HINDI -> "5 AI मॉडल्स की संयुक्त राय (मल्टी-AI)"
-                                                    AppLanguage.MARATHI -> "5 AI मॉडेल्सची संयुक्त सहमती"
+                                                    AppLanguage.ENGLISH -> "RULE COUNCIL CONSENSUS"
+                                                    AppLanguage.HINDI -> "5 नियमों की संयुक्त राय "
+                                                    AppLanguage.MARATHI -> "5 नियमांची संयुक्त सहमती"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Black,
@@ -770,7 +756,7 @@ fun KyaHogaPredictionDialog(
                                                 letterSpacing = 0.5.sp
                                             )
                                             Text(
-                                                text = "Gemini • ChatGPT • Claude • DeepSeek • Perplexity",
+                                                text = "5 local rules • no AI call",
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = TextSecondary
                                             )
@@ -876,6 +862,16 @@ fun KyaHogaPredictionDialog(
                                     )
                                 }
                             }
+
+                            Text(
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> if (split.fromHistory) "Based on what really happened after past BUY/SELL calls (Learning Center)" else "Not enough history yet: these are today's pillar votes, not probabilities"
+                                    AppLanguage.HINDI -> if (split.fromHistory) "पिछली BUY/SELL कॉल्स के बाद असल में क्या हुआ, उस पर आधारित" else "अभी इतिहास कम है: ये आज के पिलर वोट हैं, संभावना नहीं"
+                                    AppLanguage.MARATHI -> if (split.fromHistory) "मागील BUY/SELL कॉल्सनंतर प्रत्यक्षात काय झाले त्यावर आधारित" else "अजून इतिहास कमी: ही आजची पिलर मते आहेत, शक्यता नाही"
+                                },
+                                fontSize = 9.sp,
+                                color = TextMuted
+                            )
 
                             Spacer(modifier = Modifier.height(14.dp))
 

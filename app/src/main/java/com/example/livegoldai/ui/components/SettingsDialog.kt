@@ -375,7 +375,7 @@ fun SettingsDialog(
                                             )
                                         }
                                         Text(
-                                            text = "87% Win Rate",
+                                            text = "Win rate: see Learning Center",
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             color = GoldLight
                                         )

@@ -131,7 +131,7 @@ fun ProductionImprovementAuditCard(
                     border = BorderStroke(0.6.dp, NeonGreen)
                 ) {
                     Text(
-                        text = "91.4% ACCURACY",
+                        text = if (engine.verifiedAccuracyPercent < 0) "COLLECTING DATA" else "${String.format(java.util.Locale.US, "%.1f", engine.verifiedAccuracyPercent)}% REAL",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                         color = NeonGreen,
@@ -158,10 +158,10 @@ fun ProductionImprovementAuditCard(
                         modifier = Modifier.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "VERIFIED ACCURACY", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                        Text(text = "REAL ACCURACY", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(text = "${engine.verifiedAccuracyPercent}%", fontSize = 14.sp, fontWeight = FontWeight.Black, color = NeonGreen)
-                        Text(text = "128 Verified Trades", fontSize = 8.sp, color = TextSecondary)
+                        Text(text = if (engine.verifiedAccuracyPercent < 0) "--" else "${String.format(java.util.Locale.US, "%.1f", engine.verifiedAccuracyPercent)}%", fontSize = 14.sp, fontWeight = FontWeight.Black, color = NeonGreen)
+                        Text(text = "${engine.totalBacktestedTrades} checked predictions", fontSize = 8.sp, color = TextSecondary)
                     }
                 }
 
@@ -178,8 +178,8 @@ fun ProductionImprovementAuditCard(
                     ) {
                         Text(text = "PROFIT FACTOR", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(text = "${engine.profitFactor}x", fontSize = 14.sp, fontWeight = FontWeight.Black, color = GoldLight)
-                        Text(text = "+24.8 pips/trade", fontSize = 8.sp, color = TextSecondary)
+                        Text(text = if (engine.profitFactor < 0) "--" else "${String.format(java.util.Locale.US, "%.2f", engine.profitFactor)}x", fontSize = 14.sp, fontWeight = FontWeight.Black, color = GoldLight)
+                        Text(text = "${String.format(java.util.Locale.US, "%+.1f", engine.averagePipGainPerTrade)} pips avg move", fontSize = 8.sp, color = TextSecondary)
                     }
                 }
 
@@ -194,10 +194,10 @@ fun ProductionImprovementAuditCard(
                         modifier = Modifier.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "CHOP LOCK", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                        Text(text = "SIGNAL GATE", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(text = "${engine.dynamicConfidenceThreshold}%", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text(text = "Trap Protection", fontSize = 8.sp, color = TextSecondary)
+                        Text(text = "Weighted agreement", fontSize = 8.sp, color = TextSecondary)
                     }
                 }
             }
@@ -207,9 +207,9 @@ fun ProductionImprovementAuditCard(
             // Summary description of how the production model improves
             Text(
                 text = when (currentLang) {
-                    AppLanguage.ENGLISH -> "🔄 Self-Learning Production Engine: The app automatically audits previous candle predictions. When a whipsaw or false wick occurs, it auto-shifts indicator weights (+3.5 pip SL buffer, higher 74% chop threshold) so the same mistake is never repeated!"
-                    AppLanguage.HINDI -> "🔄 प्रोडक्शन मॉडल ऑटो-सुधार: ऐप पिछली सभी कैंडल्स के सिग्नल्स का लाइव ऑडिट करता है। यदि कभी फेक विक या चॉपी मार्केट में स्टॉप लॉस हिट होता है, तो मॉडल अपने आप वेटेज और स्टॉप लॉस बफर (+3.5 pips) को एडजस्ट कर लेता है ताकि गलती दोबारा न हो!"
-                    AppLanguage.MARATHI -> "🔄 मॉडेल ऑटो-सुधारणा: ॲप मागील सर्व कॅन्डल्सच्या सिग्नल्सचे ऑडिट करतो आणि चुका टाळण्यासाठी आपोआप वेटेज सुधारतो."
+                    AppLanguage.ENGLISH -> "🔄 Learning engine: every prediction is saved and checked against real prices when it expires. A rule changes the model only after 50+ samples and a shadow test; one loss never changes anything."
+                    AppLanguage.HINDI -> "🔄 लर्निंग इंजन: हर प्रेडिक्शन सेव होती है और समय खत्म होने पर असली भाव से जाँची जाती है। कोई नियम 50+ सैंपल और शैडो टेस्ट के बाद ही मॉडल बदलता है; एक गलती से कुछ नहीं बदलता।"
+                    AppLanguage.MARATHI -> "🔄 लर्निंग इंजिन: प्रत्येक अंदाज जतन होतो आणि वेळ संपल्यावर खऱ्या भावाशी तपासला जातो. नियम 50+ नमुने आणि शॅडो टेस्टनंतरच मॉडेल बदलतो; एका चुकीने काही बदलत नाही."
                 },
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -231,6 +231,18 @@ fun ProductionImprovementAuditCard(
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
+
+                    if (engine.appliedProductionFixes.isEmpty()) {
+                        Text(
+                            text = when (currentLang) {
+                                AppLanguage.ENGLISH -> "No learned fix is active yet. Status: ${engine.statusBadge}."
+                                AppLanguage.HINDI -> "अभी कोई सीखा हुआ सुधार चालू नहीं। स्थिति: ${engine.statusBadge}।"
+                                AppLanguage.MARATHI -> "अजून कोणतीही शिकलेली सुधारणा चालू नाही. स्थिती: ${engine.statusBadge}."
+                            },
+                            fontSize = 10.sp,
+                            color = TextSecondary
+                        )
+                    }
 
                     engine.appliedProductionFixes.forEach { fix ->
                         Surface(
@@ -354,7 +366,7 @@ fun ProductionImprovementAuditCard(
                 Button(
                     onClick = {
                         onRunAccuracyCheck()
-                        Toast.makeText(context, "🎯 Real-Time Accuracy Verified: 91.4% Win Rate on XAU/USD!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Checking expired predictions against real prices…", Toast.LENGTH_SHORT).show()
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary),

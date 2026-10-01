@@ -226,7 +226,7 @@ fun IndicatorGroupCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "INSPECT HISTORICAL ACCURACY & RAW DATA"
+                                    AppLanguage.ENGLISH -> "INSPECT REAL ACCURACY & LIVE VALUES"
                                     AppLanguage.HINDI -> "ऐतिहासिक एक्यूरेसी दर व रॉ डेटा देखें"
                                     AppLanguage.MARATHI -> "ऐतिहासिक अचूकता दर व रॉ डेटा पहा"
                                 },

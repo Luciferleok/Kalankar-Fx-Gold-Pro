@@ -195,9 +195,9 @@ fun PredictionOracleCard(
                 ) {
                     Text(
                         text = when (currentLang) {
-                            AppLanguage.ENGLISH -> "${prediction.winProbabilityPercent}% WIN RATE"
-                            AppLanguage.HINDI -> "${prediction.winProbabilityPercent}% जीत दर"
-                            AppLanguage.MARATHI -> "${prediction.winProbabilityPercent}% अचूकता दर"
+                            AppLanguage.ENGLISH -> "${prediction.winProbabilityPercent}% CONFIDENCE"
+                            AppLanguage.HINDI -> "${prediction.winProbabilityPercent}% भरोसा"
+                            AppLanguage.MARATHI -> "${prediction.winProbabilityPercent}% विश्वास"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
@@ -370,7 +370,7 @@ fun PredictionOracleCard(
                                 )
                             }
                             Text(
-                                text = "${audit.winRatePercent}% WIN RATE",
+                                text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% REAL WIN RATE (N=${audit.totalSignalsTested})",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
                                 color = SignalBuy
@@ -1465,7 +1465,7 @@ fun PredictionOracleCard(
                                 "TP 1: ${prediction.takeProfit1} (Book 50% & SL to Entry)\n" +
                                 "TP 2: ${prediction.takeProfit2} (Book 30%)\n" +
                                 "TP 3: ${prediction.takeProfit3} (Moonbag 20%)\n" +
-                                "Win Rate: ${prediction.winProbabilityPercent}%\n" +
+                                "Confidence: ${prediction.winProbabilityPercent}% (real accuracy: see Learning Center)\n" +
                                 "Curated by Rudvay Ujjwal Kalankar"
                         )
                         clipboard.setPrimaryClip(clip)

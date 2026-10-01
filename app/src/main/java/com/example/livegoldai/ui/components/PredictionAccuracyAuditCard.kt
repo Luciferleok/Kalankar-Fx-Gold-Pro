@@ -107,7 +107,7 @@ fun PredictionAccuracyAuditCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "AI ACCURACY & SELF-CORRECTION",
+                                text = "REAL ACCURACY & LEARNING",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
@@ -182,7 +182,7 @@ fun PredictionAccuracyAuditCard(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "${audit.winRatePercent}%",
+                            text = if (audit.totalSignalsTested == 0) "--" else "${audit.winRatePercent}%",
                             style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                             fontWeight = FontWeight.Black,
                             color = SignalBuy
@@ -235,7 +235,7 @@ fun PredictionAccuracyAuditCard(
                             )
                         }
                         Text(
-                            text = "${audit.totalSignalsTested} Signals Verified",
+                            text = "${audit.totalSignalsTested} checked • ${audit.activeCount} waiting",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )
@@ -295,8 +295,8 @@ fun PredictionAccuracyAuditCard(
                     Text(
                         text = when (currentLanguage) {
                             AppLanguage.ENGLISH -> "ANALYZE WRONG PREDICTIONS & SEE AI FIXES ⚡"
-                            AppLanguage.HINDI -> "गलतियां क्यों हुईं? विश्लेषक व 100% सही सुधार देखें ⚡"
-                            AppLanguage.MARATHI -> "चुका का झाल्या? विश्लेषण आणि 100% योग्य सुधारणा ⚡"
+                            AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
+                            AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         fontWeight = FontWeight.Black,
@@ -314,12 +314,12 @@ fun PredictionAccuracyAuditCard(
                         last.outcomeStatus == PredictionOutcomeStatus.ALL_TARGETS_HIT
                 val statusColor = if (isWin) SignalBuy else if (last.outcomeStatus == PredictionOutcomeStatus.IN_PROFIT_ACTIVE) GoldPrimary else SignalSell
                 val statusTitle = when (last.outcomeStatus) {
-                    PredictionOutcomeStatus.TP2_HIT -> "✅ PICHHLI PREDICTION: TP1 & TP2 HIT (+${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.TP1_HIT -> "✅ PICHHLI PREDICTION: TARGET 1 HIT (+${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.ALL_TARGETS_HIT -> "🚀 PICHHLI PREDICTION: ALL TARGETS HIT (+${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.STOP_LOSS_HIT -> "⚠️ PICHHLI PREDICTION: STOP LOSS HIT (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "🟢 PICHHLI PREDICTION: CURRENTLY IN PROFIT (+${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.PENDING_ENTRY -> "⏳ PICHHLI PREDICTION: ENTRY PENDING"
+                    PredictionOutcomeStatus.TP2_HIT -> "✅ LAST PREDICTION: CORRECT, BIG MOVE (${last.pipsResult} Pips)"
+                    PredictionOutcomeStatus.TP1_HIT -> "✅ LAST PREDICTION: CORRECT (${last.pipsResult} Pips)"
+                    PredictionOutcomeStatus.ALL_TARGETS_HIT -> "✅ LAST PREDICTION: CORRECT (${last.pipsResult} Pips)"
+                    PredictionOutcomeStatus.STOP_LOSS_HIT -> "❌ LAST PREDICTION: WRONG (${last.pipsResult} Pips)"
+                    PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "⚪ LAST PREDICTION: NO RESULT / SIDEWAYS (${last.pipsResult} Pips)"
+                    PredictionOutcomeStatus.PENDING_ENTRY -> "⏳ LAST PREDICTION: WAITING FOR EXPIRY"
                 }
 
                 Surface(
@@ -583,12 +583,12 @@ fun PredictionAccuracyAuditCard(
                                     ) {
                                         Text(
                                             text = when (item.outcomeStatus) {
-                                                PredictionOutcomeStatus.TP2_HIT -> "TP1 & TP2 HIT"
-                                                PredictionOutcomeStatus.TP1_HIT -> "TP1 HIT"
-                                                PredictionOutcomeStatus.ALL_TARGETS_HIT -> "ALL HIT"
-                                                PredictionOutcomeStatus.STOP_LOSS_HIT -> "SL HIT"
-                                                PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "RUNNING"
-                                                PredictionOutcomeStatus.PENDING_ENTRY -> "PENDING"
+                                                PredictionOutcomeStatus.TP2_HIT -> "CORRECT+"
+                                                PredictionOutcomeStatus.TP1_HIT -> "CORRECT"
+                                                PredictionOutcomeStatus.ALL_TARGETS_HIT -> "CORRECT"
+                                                PredictionOutcomeStatus.STOP_LOSS_HIT -> "WRONG"
+                                                PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "NO RESULT"
+                                                PredictionOutcomeStatus.PENDING_ENTRY -> "WAITING"
                                             },
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
@@ -629,7 +629,7 @@ fun PredictionAccuracyAuditCard(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = "Target 1: $${String.format(Locale.US, "%,.2f", item.target1Price)}",
+                                            text = "Needed move: $${String.format(Locale.US, "%,.2f", item.target1Price)}",
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             color = SignalBuy
                                         )
@@ -639,7 +639,7 @@ fun PredictionAccuracyAuditCard(
                                             color = SignalSell
                                         )
                                         Text(
-                                            text = "Max Move: $${String.format(Locale.US, "%,.2f", item.actualHighLowReached)}",
+                                            text = "Best point: $${String.format(Locale.US, "%,.2f", item.actualHighLowReached)}",
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             color = GoldLight
                                         )

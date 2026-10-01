@@ -94,7 +94,7 @@ fun AiFailedPredictionAutopsyCard(
                             )
                         }
                         Text(
-                            text = "AI Candle & Wick Inspection • ${autopsy.timeAgo}",
+                            text = "Real price path • ${autopsy.timeAgo}",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )
@@ -192,7 +192,7 @@ fun AiFailedPredictionAutopsyCard(
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = "${autopsy.volumeSurgeMultiplier}x Vol",
+                                text = "Horizon candle",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = AmberWarning
@@ -266,23 +266,23 @@ fun AiFailedPredictionAutopsyCard(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "MULTI-AI CANDLE DISSECTION (WHO FOUND WHAT):",
+                        text = "EVIDENCE FROM THE LEDGER (NO AI CALL):",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                         fontWeight = FontWeight.Black,
                         color = TextMuted
                     )
 
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "♊ ${autopsy.geminiCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(text = "⚠️ ${autopsy.geminiCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
                     }
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "🤖 ${autopsy.chatGptCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(text = "🌐 ${autopsy.chatGptCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
                     }
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "🧠 ${autopsy.claudeCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(text = "📉 ${autopsy.claudeCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
                     }
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "⚡ ${autopsy.deepSeekCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(text = "🕒 ${autopsy.deepSeekCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
                     }
                 }
             }

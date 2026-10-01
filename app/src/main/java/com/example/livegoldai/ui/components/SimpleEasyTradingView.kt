@@ -650,9 +650,9 @@ fun SimpleEasyTradingView(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "5-AI COUNCIL CONSENSUS"
-                                    AppLanguage.HINDI -> "5-AI मॉडल्स की संयुक्त सहमति"
-                                    AppLanguage.MARATHI -> "5-AI मॉडेल्सची संयुक्त सहमती"
+                                    AppLanguage.ENGLISH -> "5-RULE COUNCIL CONSENSUS"
+                                    AppLanguage.HINDI -> "5 नियमों की संयुक्त सहमति"
+                                    AppLanguage.MARATHI -> "5 नियमांची संयुक्त सहमती"
                                 },
                                 fontWeight = FontWeight.Black,
                                 fontSize = 12.sp,
@@ -666,7 +666,7 @@ fun SimpleEasyTradingView(
                             border = BorderStroke(0.6.dp, GoldPrimary.copy(alpha = 0.5f))
                         ) {
                             Text(
-                                text = "${consensus.unanimousAgreementPercent}% ACCURACY SCORE",
+                                text = "${consensus.unanimousAgreementPercent}% RULE AGREEMENT",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
@@ -933,9 +933,9 @@ fun SimpleEasyTradingView(
                         )
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "Multi-AI Council, News Radar, SMC Blocks & 32 Indicators"
-                                AppLanguage.HINDI -> "मल्टी-AI काउंसिल, न्यूज़ रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
-                                AppLanguage.MARATHI -> "मल्टी-AI कौन्सिल, न्यूज रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
+                                AppLanguage.ENGLISH -> "Rule Council, News Radar, SMC & 30+ Indicators"
+                                AppLanguage.HINDI -> "नियम काउंसिल, न्यूज़ रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
+                                AppLanguage.MARATHI -> "नियम कौन्सिल, न्यूज रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
                             },
                             fontSize = 10.sp,
                             color = TextSecondary

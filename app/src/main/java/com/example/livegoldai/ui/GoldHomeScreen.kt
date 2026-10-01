@@ -142,7 +142,8 @@ fun GoldHomeScreen(
             group = uiState.selectedPillarForDeepDive!!,
             currentPrice = uiState.data!!.currentPrice,
             onDismiss = { viewModel.closePillarDeepDive() },
-            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+            learning = uiState.data!!.learning
         )
     }
 
@@ -343,21 +344,21 @@ fun GoldHomeScreen(
                     val tabs = when (uiState.language) {
                         com.example.livegoldai.localization.AppLanguage.ENGLISH -> listOf(
                             "📊 COCKPIT",
-                            "🤖 MULTI-AI COUNCIL",
+                            "🤖 RULE COUNCIL",
                             "🚨 NEWS RADAR (AUTO)",
                             "🏦 SMART MONEY SMC",
                             "⚡ STRATEGY & TRICKS"
                         )
                         com.example.livegoldai.localization.AppLanguage.HINDI -> listOf(
                             "📊 कॉकपिट",
-                            "🤖 मल्टी-AI काउंसिल",
+                            "🤖 नियम काउंसिल",
                             "🚨 न्यूज़ रडार (ऑटो)",
                             "🏦 स्मार्ट मनी SMC",
                             "⚡ रणनीति और ट्रिक्स"
                         )
                         com.example.livegoldai.localization.AppLanguage.MARATHI -> listOf(
                             "📊 कॉकपिट",
-                            "🤖 मल्टी-AI कौन्सिल",
+                            "🤖 नियम कौन्सिल",
                             "🚨 न्यूज रडार (ऑटो)",
                             "🏦 स्मार्ट मनी SMC",
                             "⚡ रणनीती आणि ट्रिक्स"

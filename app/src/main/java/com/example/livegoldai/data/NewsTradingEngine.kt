@@ -2,71 +2,87 @@ package com.example.livegoldai.data
 
 import com.example.livegoldai.model.*
 import java.util.Locale
+import kotlin.math.abs
 
 /**
- * News Trading & Volatility Engine
- * Changes prediction methodology during high-impact economic releases (CPI, NFP, FOMC)
- * Automatically triggers the app's News Emergency Alert color theme.
+ * News plan built from the REAL economic calendar (ForexFactory feed).
+ * No event name, time or forecast is invented. If the calendar could not be loaded,
+ * the plan says so.
  */
 object NewsTradingEngine {
+
+    private fun f2(v: Double) = String.format(Locale.US, "%.2f", v)
 
     fun generateNewsPlan(
         currentPrice: Double,
         atrSafe: Double,
         macroSignal: Signal,
-        forceActiveNews: Boolean = false
+        forceActiveNews: Boolean = false,
+        events: List<EconomicEvent> = emptyList(),
+        nowMs: Long = System.currentTimeMillis()
     ): NewsTradingPlan {
-        val upperStraddle = currentPrice + (1.2 * atrSafe)
-        val lowerStraddle = currentPrice - (1.2 * atrSafe)
-        val spreadBuffer = 6.5 // pips
+        val upper = currentPrice + 1.2 * atrSafe
+        val lower = currentPrice - 1.2 * atrSafe
 
-        val eventTitle = "US Core CPI Inflation & Federal Reserve Rate Path (High Impact 🔴)"
-        val bias = if (macroSignal == Signal.BUY) Signal.BUY else Signal.SELL
+        val next = events
+            .filter { it.impact.equals("High", ignoreCase = true) }
+            .mapNotNull { ev -> EventTime.parseMs(ev.isoTime)?.let { ev to it } }
+            .filter { it.second >= nowMs - 30 * 60_000L }
+            .minByOrNull { it.second }
 
-        val tacticHeadingEng = "Pre-News Straddle & 2nd-Wave Retracement Method"
-        val tacticHeadingHin = "न्यूज़ स्ट्रैडल और सेकंड-वेव रिट्रेसमेंट रणनीति"
-        val tacticHeadingMar = "न्यूज स्ट्रॅडल आणि सेकंड-वेव्ह रिट्रेसमेंट रणनीती"
+        val ev = next?.first
+        val evMs = next?.second
+        val minutesTo = if (evMs != null) (evMs - nowMs) / 60_000L else null
+        val liveWindow = minutesTo != null && minutesTo in -30..30
+        val active = forceActiveNews || liveWindow
 
-        val tacticDetailEng = if (bias == Signal.BUY) {
-            "CPI expected lower than consensus (-0.1% deviation) → Dollar weakness will launch Gold spot upward. Strategy: Set Buy Stop at $${String.format(Locale.US, "%.2f", upperStraddle)} and wait for 2nd wave retracement."
-        } else {
-            "Sticky inflation reading expected → Dollar strength will pressure Gold down. Strategy: Set Sell Stop at $${String.format(Locale.US, "%.2f", lowerStraddle)} with strict 2.5x ATR stop buffer."
+        val countdown = when {
+            ev == null && events.isEmpty() -> "Economic calendar not available right now"
+            ev == null -> "No high-impact USD event left this week"
+            minutesTo != null && minutesTo > 0 -> "⏰ ${ev.title}: in ${formatMinutes(minutesTo)} (${PredictionLedger.utcLabel(evMs ?: nowMs, withDay = true)})"
+            minutesTo != null -> "🚨 ${ev.title}: released ${formatMinutes(abs(minutesTo))} ago"
+            else -> ""
+        }
+        val phase = when {
+            minutesTo == null -> NewsPhase.STANDBY
+            minutesTo in 1..30 -> NewsPhase.PRE_NEWS_COIL
+            minutesTo in -5..0 -> NewsPhase.LIVE_NEWS_SPIKE
+            minutesTo in -30..-6 -> NewsPhase.POST_NEWS_RETRACEMENT
+            else -> if (forceActiveNews) NewsPhase.LIVE_NEWS_SPIKE else NewsPhase.STANDBY
         }
 
-        val tacticDetailHin = if (bias == Signal.BUY) {
-            "CPI डेटा अनुमान से कम आने की संभावना है → जिससे अमेरिकी डॉलर कमजोर होगा और Gold में $20-$40 की तीव्र तेजी आएगी। रणनीति: $${String.format(Locale.US, "%.2f", upperStraddle)} पर Buy Stop लगाएं।"
-        } else {
-            "महंगाई डेटा अधिक आने की संभावना है → जिससे डॉलर मजबूत होगा और Gold में शार्प गिरावट आएगी। रणनीति: $${String.format(Locale.US, "%.2f", lowerStraddle)} पर Sell Stop लगाएं।"
-        }
-
-        val tacticDetailMar = if (bias == Signal.BUY) {
-            "CPI डेटा अपेक्षेपेक्षा कमी येण्याची शक्यता आहे → ज्यामुळे अमेरिकन डॉलर कमजोर होईल आणि Gold मध्ये $20-$40 ची मोठी तेजी येईल. रणनीती: $${String.format(Locale.US, "%.2f", upperStraddle)} वर Buy Stop लावा."
-        } else {
-            "महागाई डेटा जास्त येण्याची शक्यता आहे → ज्यामुळे डॉलर मजबूत होईल आणि Gold मध्ये मोठी घसरण येईल. रणनीती: $${String.format(Locale.US, "%.2f", lowerStraddle)} वर Sell Stop लावा."
-        }
+        val fcst = if (ev != null && (ev.forecast.isNotBlank() || ev.previous.isNotBlank()))
+            "Forecast: ${ev.forecast.ifBlank { "n/a" }} | Previous: ${ev.previous.ifBlank { "n/a" }} (actual value is not in the feed; watch the price reaction)"
+        else "No forecast data in the calendar feed"
 
         return NewsTradingPlan(
-            isNewsActive = forceActiveNews,
-            eventName = eventTitle,
-            eventImpact = "HIGH IMPACT 🔴🔴🔴 (MAJOR MARKET MOVER)",
-            releaseCountdownFormatted = if (forceActiveNews) "🚨 LIVE NEWS SPIKE WINDOW ACTIVE (Next 45 Mins)" else "⏰ Next Release: Today 18:30 UTC (US CPI)",
-            phase = if (forceActiveNews) NewsPhase.LIVE_NEWS_SPIKE else NewsPhase.PRE_NEWS_COIL,
-            primaryDirectionBias = bias,
-            straddleUpperLevel = upperStraddle,
-            straddleLowerLevel = lowerStraddle,
-            spreadWarningBufferPips = spreadBuffer,
-            freezeRuleTitle = "DO NOT MARKET ORDER IN FIRST 90 SECONDS",
-            freezeRuleDescriptionEnglish = "During high-impact news release, broker spreads widen by 8-15 pips and algorithmic slippage causes false wicks. Freeze market entry for first 90 seconds. Enter only on second-wave confirmation.",
-            freezeRuleDescriptionHindi = "न्यूज़ रिलीज़ होते ही शुरुआती 90 सेकंड में ब्रोकर्स का स्प्रेड 8-15 pips तक बढ़ जाता है और स्लिपेज से नुकसान होता है। पहले 90 सेकंड में कोई मार्केट ऑर्डर न लगाएं, सिर्फ सेकंड-वेव पुलबैक पर ट्रेड करें।",
-            freezeRuleDescriptionMarathi = "न्यूज प्रसिद्ध होताच पहिल्या 90 सेकंदांत ब्रोकर्सचा स्प्रेड 8-15 pips पर्यंत वाढतो आणि स्लिपेजमुळे नुकसान होते. पहिल्या 90 सेकंदांत कोणताही मार्केट ऑर्डर लावू नका, फक्त सेकंड-वेव्ह पुलबॅकवरच ट्रेड करा.",
-            newsTacticHeadingEnglish = tacticHeadingEng,
-            newsTacticHeadingHindi = tacticHeadingHin,
-            newsTacticHeadingMarathi = tacticHeadingMar,
-            newsTacticDetailEnglish = tacticDetailEng,
-            newsTacticDetailHindi = tacticDetailHin,
-            newsTacticDetailMarathi = tacticDetailMar,
-            secondWaveRetracementLevel = "$${String.format(Locale.US, "%.2f", currentPrice - 0.5 * atrSafe)} (50% Fibonacci Discount)",
-            actualVsForecastScenario = "Actual CPI < 0.2% = Ultra Bullish Gold (+$35) | Actual CPI > 0.4% = Bearish Gold (-$30)"
+            isNewsActive = active,
+            eventName = ev?.let { "${it.title} (${it.country}, High impact)" } ?: "No high-impact event found",
+            eventImpact = if (ev != null) "HIGH IMPACT 🔴" else "—",
+            releaseCountdownFormatted = countdown,
+            phase = phase,
+            primaryDirectionBias = Signal.WAIT, // the app does not predict news outcomes
+            straddleUpperLevel = upper,
+            straddleLowerLevel = lower,
+            spreadWarningBufferPips = 0.0,
+            freezeRuleTitle = "NO NEW ENTRY 30 MIN BEFORE / 5 MIN AFTER RELEASE",
+            freezeRuleDescriptionEnglish = "Spreads usually widen and price can spike both ways around high-impact releases. The app shows WAIT before the release and only follows the real price reaction afterwards.",
+            freezeRuleDescriptionHindi = "हाई-इम्पैक्ट न्यूज़ के आसपास स्प्रेड बढ़ता है और भाव दोनों तरफ उछल सकता है। ऐप रिलीज़ से पहले WAIT दिखाता है और बाद में सिर्फ असली रिएक्शन देखता है।",
+            freezeRuleDescriptionMarathi = "हाय-इम्पॅक्ट बातम्यांच्या वेळी स्प्रेड वाढतो आणि भाव दोन्ही बाजूंनी उसळू शकतो. ॲप रिलीजपूर्वी WAIT दाखवते आणि नंतर फक्त खरी प्रतिक्रिया पाहते.",
+            newsTacticHeadingEnglish = "Wait for the release, then follow the reaction",
+            newsTacticHeadingHindi = "रिलीज़ का इंतज़ार, फिर रिएक्शन के साथ",
+            newsTacticHeadingMarathi = "रिलीजची वाट पहा, मग प्रतिक्रियेसोबत",
+            newsTacticDetailEnglish = "Reference levels: ±1.2x ATR from now = ${f2(lower)} / ${f2(upper)}. A move beyond one of them after the first 5 minutes shows the market's direction. These are reference levels, not a forecast.",
+            newsTacticDetailHindi = "रेफरेंस लेवल: अभी से ±1.2x ATR = ${f2(lower)} / ${f2(upper)}। पहले 5 मिनट के बाद इनमें से किसी के पार जाना मार्केट की दिशा दिखाता है। ये अनुमान नहीं, सिर्फ रेफरेंस हैं।",
+            newsTacticDetailMarathi = "रेफरन्स लेव्हल: आतापासून ±1.2x ATR = ${f2(lower)} / ${f2(upper)}. पहिल्या 5 मिनिटांनंतर यापैकी एकाच्या पलीकडे जाणे बाजाराची दिशा दाखवते. हा अंदाज नाही, फक्त संदर्भ आहे.",
+            secondWaveRetracementLevel = "${f2(currentPrice)} (price now)",
+            actualVsForecastScenario = fcst
         )
+    }
+
+    private fun formatMinutes(m: Long): String = when {
+        m < 60 -> "$m min"
+        m < 1440 -> "${m / 60}h ${m % 60}m"
+        else -> "${m / 1440}d ${(m % 1440) / 60}h"
     }
 }
