@@ -101,10 +101,33 @@ fun V8HealthScreen(
                 }
                 if (p.background.isNotEmpty()) Text(text = p.background, color = if (bgRecording) V8.Text2 else V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
 
+                // ---- how results were verified + ledger integrity
+                if (p.verification.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    V8Label(tr(lang, "Verification source", "जाँच का स्रोत", "तपासणीचा स्रोत"))
+                    Text(text = p.verification, color = V8.Text1, fontSize = 10.sp)
+                    Text(
+                        text = tr(lang, "A prediction is checked on the same instrument it was made on. If only another gold instrument is available and the move is too close to call, it is marked \"?\" and counted neither right nor wrong.",
+                            "भविष्यवाणी उसी इंस्ट्रूमेंट पर जाँची जाती है जिस पर बनी थी। अगर सिर्फ दूसरा गोल्ड इंस्ट्रूमेंट मिले और चाल बहुत करीब हो, तो \"?\" लगता है और न सही गिना जाता है न गलत।",
+                            "अंदाज ज्या इन्स्ट्रुमेंटवर बनला त्याच इन्स्ट्रुमेंटवर तपासला जातो. फक्त दुसरे गोल्ड इन्स्ट्रुमेंट मिळाले आणि हालचाल फार जवळ असेल, तर \"?\" लागते आणि बरोबर किंवा चूक मोजले जात नाही."),
+                        color = V8.Text3, fontSize = 9.sp
+                    )
+                }
+                if (p.integrity.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        V8Label(tr(lang, "Ledger integrity", "लेजर की शुद्धता", "लेजरची शुद्धता"))
+                        Spacer(modifier = Modifier.weight(1f))
+                        V8Badge(p.integrity, when (p.integrity) { "HEALTHY" -> V8.Green; "WARNING" -> V8.Amber; else -> V8.Red })
+                    }
+                    p.integrityFindings.forEach { Text(text = "⚠ $it", color = if (p.integrity == "CRITICAL") V8.Red else V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp)) }
+                    p.integrityPassed.forEach { Text(text = "✓ $it", color = V8.Text3, fontSize = 9.sp) }
+                }
+
                 // ---- per timeframe
                 if (p.byInterval.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    V8Label(tr(lang, "By timeframe  (✓ right  ✗ wrong  ↔ no move)", "टाइमफ्रेम के हिसाब से  (✓ सही  ✗ गलत  ↔ चाल नहीं)", "टाइमफ्रेमनुसार  (✓ बरोबर  ✗ चूक  ↔ हालचाल नाही)"))
+                    V8Label(tr(lang, "By timeframe  (✓ right  ✗ wrong  ↔ no move  ? too close to call)", "टाइमफ्रेम के हिसाब से  (✓ सही  ✗ गलत  ↔ चाल नहीं  ? तय नहीं)", "टाइमफ्रेमनुसार  (✓ बरोबर  ✗ चूक  ↔ हालचाल नाही  ? ठरले नाही)"))
                     p.byInterval.forEach { V8KeyValue(it.label, it.value) }
                 }
                 if (p.recent.isNotEmpty()) {

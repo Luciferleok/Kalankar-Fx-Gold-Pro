@@ -23,7 +23,7 @@ object LedgerPulseBuilder {
 
     fun build(
         a: GoldAnalysisResult, state: LedgerState, stats: LearningCoordinator.Stats, now: Long = System.currentTimeMillis(),
-        bgEnabled: Boolean = false, bg: BackgroundRecorder.TickReport? = null
+        bgEnabled: Boolean = false, bg: BackgroundRecorder.TickReport? = null, integrity: LedgerIntegrity.Report? = null
     ): LedgerPulse {
         val last = state.records.lastOrNull()
         val first = state.records.firstOrNull()
@@ -48,11 +48,21 @@ object LedgerPulseBuilder {
         val order = listOf("5m", "15m", "30m", "1h", "4h", "1d")
         val ivs = (order + state.records.map { it.interval }).distinct().filter { iv -> state.records.any { it.interval == iv } }
         val byInterval = ivs.map { iv ->
-            var ok = 0; var bad = 0; var flat = 0; var active = 0
+            var ok = 0; var bad = 0; var flat = 0; var active = 0; var unsure = 0
+            // candle coverage: how many of the last 24h of open-market candles were actually recorded
+            val ivMs = RealityEngine.intervalMinutes(iv) * 60_000L
+            val firstAt = state.records.firstOrNull { it.interval == iv }?.createdAt ?: now
+            val winStart = maxOf(now - 86_400_000L, firstAt)
+            var expected = 0
+            var t = (winStart / ivMs) * ivMs
+            while (t <= now - ivMs) { if (t >= winStart && !PredictionLedger.isMarketClosed(t)) expected++; t += ivMs }
+            val got = state.records.count { it.interval == iv && it.createdAt >= winStart }
+            val coverage = if (expected < 3) "" else " • 24h coverage ${(100.0 * minOf(got, expected) / expected).toInt()}%"
             for (r in state.records) {
                 if (r.interval != iv) continue
                 when (state.resultOf(r.id)?.outcome) {
                     null -> active++
+                    LedgerOutcome.VERIFICATION_UNCERTAIN -> unsure++
                     LedgerOutcome.CORRECT -> ok++
                     LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> bad++
                     LedgerOutcome.SIDEWAYS, LedgerOutcome.WAIT_FLAT, LedgerOutcome.WAIT_MISSED -> flat++
@@ -60,7 +70,7 @@ object LedgerPulseBuilder {
                 }
             }
             val acc = if (ok + bad >= 20) " • ${(100.0 * ok / (ok + bad)).toInt()}%" else ""
-            com.example.livegoldai.model.LabelStat(iv.uppercase(Locale.US), "✓$ok  ✗$bad  ↔$flat  • $active active$acc")
+            com.example.livegoldai.model.LabelStat(iv.uppercase(Locale.US), "✓$ok  ✗$bad  ↔$flat" + (if (unsure > 0) "  ?$unsure" else "") + "  • $active active$acc$coverage")
         }
         val recById = state.records.associateBy { it.id }
         val recent = state.results.values.sortedByDescending { it.checkedAt }.take(12).mapNotNull { res ->
@@ -73,10 +83,22 @@ object LedgerPulseBuilder {
         val background = when {
             !bgEnabled -> "OFF: predictions are recorded only while the app is open"
             bg == null -> "ON: waiting for the first background run"
-            else -> "ON • last run ${PredictionLedger.utcLabel(bg.at)} (${ago(now - bg.at)})" +
+            else -> "ON • last run ${PredictionLedger.utcLabel(bg.at)} (${ago(now - bg.at)}) • took ${bg.durationMs} ms (avg ${bg.avgDurationMs}) • ${bg.runsToday} runs today" +
+                " • waiting to be checked ${bg.waitingToCheck} • price failures today ${bg.providerFailuresToday}" +
                 (if (bg.recordedNow.isNotEmpty()) " • recorded ${bg.recordedNow.joinToString(", ")}" else "") +
                 (if (bg.problems.isNotEmpty()) " • ⚠ ${bg.problems.joinToString(", ") { it.title }}" else "")
         }
+        // ---- how results were verified
+        var same = 0; var proxy = 0; var unsureAll = 0; var legacyV = 0
+        for (res in state.results.values) {
+            when {
+                res.outcome == LedgerOutcome.VERIFICATION_UNCERTAIN -> unsureAll++
+                res.sourceMatch == "SAME" -> same++
+                res.sourceMatch == "PROXY" -> proxy++
+                PredictionLedger.reliable(res.outcome) -> legacyV++
+            }
+        }
+        val verification = "same instrument $same • proxy (decisive) $proxy • too close to call $unsureAll" + if (legacyV > 0) " • older, source not stored $legacyV" else ""
         return LedgerPulse(
             status = status,
             statusDetail = detail,
@@ -93,7 +115,11 @@ object LedgerPulseBuilder {
             fileSize = if (stats.fileBytes >= 0) String.format(Locale.US, "%.1f KB", stats.fileBytes / 1024.0) else "unknown",
             byInterval = byInterval,
             recent = recent,
-            background = background
+            background = background,
+            verification = verification,
+            integrity = integrity?.status ?: "",
+            integrityFindings = integrity?.findings ?: emptyList(),
+            integrityPassed = integrity?.passed ?: emptyList()
         )
     }
 }

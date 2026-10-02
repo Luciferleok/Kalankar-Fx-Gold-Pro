@@ -934,8 +934,8 @@ fun SimpleEasyTradingView(
                         Text(
                             text = when (currentLanguage) {
                                 AppLanguage.ENGLISH -> "Rule Council, News Radar, SMC & 30+ Indicators"
-                                AppLanguage.HINDI -> "नियम काउंसिल, न्यूज़ रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
-                                AppLanguage.MARATHI -> "नियम कौन्सिल, न्यूज रडार, स्मार्ट मनी व 32 इंडिकेटर्स"
+                                AppLanguage.HINDI -> "नियम काउंसिल, न्यूज़ रडार, स्मार्ट मनी व सभी इंडिकेटर्स"
+                                AppLanguage.MARATHI -> "नियम कौन्सिल, न्यूज रडार, स्मार्ट मनी व सभी इंडिकेटर्स"
                             },
                             fontSize = 10.sp,
                             color = TextSecondary

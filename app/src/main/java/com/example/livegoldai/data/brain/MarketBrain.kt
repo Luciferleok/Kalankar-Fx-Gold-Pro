@@ -52,7 +52,7 @@ object ResearchStats {
         var edge = 0; var total = 0
         for (r in state.records) {
             val o = state.resultOf(r.id)?.outcome ?: continue
-            if (o == LedgerOutcome.DATA_FAILURE || o == LedgerOutcome.MARKET_CLOSED || o == LedgerOutcome.PENDING) continue
+            if (!PredictionLedger.reliable(o)) continue
             total++
             if (r.finalSignal != Signal.WAIT) edge++
         }
@@ -258,7 +258,19 @@ object MarketBrain {
         val indicators = a.groups.sumOf { it.indicators.size }
         val usable = a.health?.indicators?.count { it.status == "OK" }
         val xmOk = xm.assets.count { it.health != "UNAVAILABLE" }
+        val rec = state.records.lastOrNull { it.interval == a.interval && now < it.expiresAt }
+        val instrument = PredictionLedger.instrumentOf(a.feed?.source ?: "")
         val lineage = listOf(
+            LabelStat("Prediction ID", rec?.id ?: "not recorded (no live data / market closed)"),
+            LabelStat("Snapshot", rec?.snapshotId?.ifEmpty { "--" } ?: "--"),
+            LabelStat("Engine / features / model", "${PredictionLedger.ENGINE_VERSION} • ${FeatureCatalog.VERSION} • ${a.learning?.modelVersion ?: "--"}"),
+            LabelStat("Prediction instrument", a.feed?.source ?: "--"),
+            LabelStat("Will be checked on", when (instrument) {
+                "XAU" -> "Twelve Data XAU/USD 1-minute history (same instrument); proxy only if an hour overdue"
+                "PAXG" -> "Binance PAXG/USDT (same instrument)"
+                "GC" -> "Yahoo GC=F (same instrument)"
+                else -> "--"
+            }),
             LabelStat("Final signal", "${sig.name} ← quant engine (7 pillars, 68% gate" + (if (a.quantBotSignal?.statusText?.contains("LEARNED FILTER") == true) ", learned filter applied)" else ")")),
             LabelStat("Candles", "${a.recentCandles.size} × ${a.interval} • ${a.feed?.source ?: "--"} • last ${a.lastUpdated}"),
             LabelStat("Indicators", if (usable != null) "$usable/$indicators usable" else "$indicators"),

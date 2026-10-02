@@ -1300,7 +1300,7 @@ fun IndicatorsOverallBigCard(
                     border = BorderStroke(1.dp, ObsidianBorder)
                 ) {
                     Text(
-                        text = "32 INDICATORS",
+                        text = "ALL INDICATORS",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
@@ -1554,7 +1554,7 @@ fun IndicatorsOverallBigCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = if (isDetailExpanded) "Hide Full 32 Indicators ▲" else "View All 32 Individual Indicators Details ▼",
+                    text = if (isDetailExpanded) "Hide All Indicators ▲" else "View All Individual Indicators ▼",
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp
                 )

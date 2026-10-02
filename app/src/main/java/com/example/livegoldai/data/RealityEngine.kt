@@ -266,7 +266,7 @@ object RealityEngine {
         for (r in state.records) {
             if (interval != null && r.interval != interval) continue
             val res = state.resultOf(r.id) ?: continue
-            if (res.outcome == LedgerOutcome.PENDING || res.outcome == LedgerOutcome.DATA_FAILURE || res.outcome == LedgerOutcome.MARKET_CLOSED) continue
+            if (!PredictionLedger.reliable(res.outcome)) continue
             val sig = if (key == "main") r.finalSignal else r.sources[key] ?: continue
             if (sig == Signal.WAIT) continue
             val pnl = if (sig == Signal.BUY) res.move else -res.move

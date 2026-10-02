@@ -193,7 +193,7 @@ object AnalogEngine {
             val rec = recs[row.recordId] ?: return@mapNotNull null
             if (rec.expiresAt >= now) return@mapNotNull null
             val res = state.resultOf(row.recordId) ?: return@mapNotNull null
-            if (res.outcome == LedgerOutcome.DATA_FAILURE || res.outcome == LedgerOutcome.MARKET_CLOSED || res.outcome == LedgerOutcome.PENDING) return@mapNotNull null
+            if (!PredictionLedger.reliable(res.outcome)) return@mapNotNull null
             Past(row, res.move, res.threshold)
         }
     }

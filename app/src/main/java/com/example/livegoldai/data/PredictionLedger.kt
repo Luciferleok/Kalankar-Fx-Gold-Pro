@@ -21,7 +21,11 @@ import kotlin.math.min
  * Old lines are never edited.
  */
 
-enum class LedgerOutcome { PENDING, CORRECT, INCORRECT, INVALIDATED, SIDEWAYS, WAIT_FLAT, WAIT_MISSED, DATA_FAILURE, MARKET_CLOSED }
+enum class LedgerOutcome {
+    PENDING, CORRECT, INCORRECT, INVALIDATED, SIDEWAYS, WAIT_FLAT, WAIT_MISSED, DATA_FAILURE, MARKET_CLOSED,
+    /** Checked only against a different instrument and the result was too close to call: never counted right or wrong. */
+    VERIFICATION_UNCERTAIN
+}
 
 data class LedgerRecord(
     val id: String,
@@ -41,12 +45,18 @@ data class LedgerRecord(
     val newsActive: Boolean,
     val modelVersion: String,
     val appliedFilter: String,    // candidate id that turned raw signal into WAIT, "" if none
-    val sources: Map<String, Signal>
+    val sources: Map<String, Signal>,
+    // ---- provenance (V11): how this prediction was made. Empty on records written by older versions.
+    val dataSource: String = "",      // "Twelve Data XAU/USD", "Binance PAXG/USDT", "Yahoo GC=F"
+    val snapshotId: String = "",      // same id the AI council and the feature row refer to
+    val engineVersion: String = "",
+    val featureVersion: String = ""
 )
 
 data class PathBar(val t: Long, val o: Double, val h: Double, val l: Double, val c: Double)
 
-data class PricePath(val source: String, val bars: List<PathBar>)
+/** waiting = the same-source price history is not available yet: try again later, this is not a failure. */
+data class PricePath(val source: String, val bars: List<PathBar>, val waiting: Boolean = false)
 
 data class LedgerResult(
     val id: String,
@@ -65,7 +75,12 @@ data class LedgerResult(
     val attribution: Map<String, Int>,
     val warnings: List<String>,
     val counterfactual: String,
-    val timeline: List<Pair<Long, String>>
+    val timeline: List<Pair<Long, String>>,
+    // ---- source-consistent verification (V11)
+    val sourceMatch: String = "",        // SAME / PROXY / LEGACY ("" on results written by older versions)
+    val basis: Double = 0.0,             // proxy start price − prediction price (0 when SAME)
+    val basisNoise: Double = 0.0,        // band used to decide "too close to call"
+    val verifyConfidence: String = ""    // HIGH (same instrument) / MEDIUM (proxy, decisive) / LOW (proxy, too close)
 )
 
 data class LedgerEvent(
@@ -153,7 +168,8 @@ object PredictionLedger {
             "h" to r.horizonMin, "bar" to r.barId, "px" to r.price, "raw" to r.rawSignal.name,
             "fin" to r.finalSignal.name, "conf" to r.confidence, "atr" to r.atr, "sl" to r.slDistance,
             "reg" to r.regime, "ses" to r.session, "news" to r.newsActive, "mv" to r.modelVersion,
-            "flt" to r.appliedFilter, "src" to r.sources.mapValues { it.value.name }
+            "flt" to r.appliedFilter, "src" to r.sources.mapValues { it.value.name },
+            "ds" to r.dataSource, "sid" to r.snapshotId, "ev" to r.engineVersion, "fv" to r.featureVersion
         )
     )
 
@@ -168,7 +184,8 @@ object PredictionLedger {
             sources = m.obj("src").mapNotNull { (k, v) ->
                 val sig = (v as? String)?.let { runCatching { Signal.valueOf(it) }.getOrNull() }
                 if (sig == null) null else k to sig
-            }.toMap()
+            }.toMap(),
+            dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv")
         )
     } catch (_: Exception) {
         null
@@ -180,7 +197,8 @@ object PredictionLedger {
             "s" to r.startPx, "x" to r.endPx, "mv" to r.move, "thr" to r.threshold, "mfe" to r.mfe,
             "mae" to r.mae, "slh" to r.slHitAt, "rng" to r.realizedRange, "tags" to r.tags,
             "att" to r.attribution, "warn" to r.warnings, "cf" to r.counterfactual,
-            "tl" to r.timeline.map { listOf(it.first, it.second) }
+            "tl" to r.timeline.map { listOf(it.first, it.second) },
+            "sm" to r.sourceMatch, "bs" to r.basis, "bn" to r.basisNoise, "vc" to r.verifyConfidence
         )
     )
 
@@ -199,7 +217,8 @@ object PredictionLedger {
                 val t = (l.getOrNull(0) as? Number)?.toLong() ?: return@mapNotNull null
                 val txt = l.getOrNull(1) as? String ?: return@mapNotNull null
                 t to txt
-            }
+            },
+            sourceMatch = m.str("sm"), basis = m.num("bs"), basisNoise = m.num("bn"), verifyConfidence = m.str("vc")
         )
     } catch (_: Exception) {
         null
@@ -208,6 +227,69 @@ object PredictionLedger {
     fun encodeEvent(e: LedgerEvent): String = MiniJson.write(
         linkedMapOf("t" to "evt", "at" to e.at, "kind" to e.kind, "cid" to e.candidateId, "stage" to e.stage, "detail" to e.detail)
     )
+
+    // ------------------------------------------------------------------ source-consistent verification
+
+    const val ENGINE_VERSION = "E11.1"
+
+    /** True when the result is based on a trustworthy real price path. */
+    fun reliable(o: LedgerOutcome): Boolean =
+        o != LedgerOutcome.PENDING && o != LedgerOutcome.DATA_FAILURE && o != LedgerOutcome.MARKET_CLOSED && o != LedgerOutcome.VERIFICATION_UNCERTAIN
+
+    /** Which instrument a source name refers to: XAU (spot), PAXG (token), GC (futures), "" unknown. */
+    fun instrumentOf(source: String): String = when {
+        source.contains("XAU", true) -> "XAU"
+        source.contains("PAXG", true) -> "PAXG"
+        source.contains("GC=F", true) -> "GC"
+        else -> ""
+    }
+
+    /**
+     * A prediction made on one instrument must not be blindly judged on another.
+     *  SAME   -> the result stands (confidence HIGH).
+     *  PROXY  -> the result stands only if the move is clearly past the deciding line by more than the basis noise
+     *            band; otherwise the outcome becomes VERIFICATION_UNCERTAIN and is not counted right or wrong.
+     *  LEGACY -> record from an older version without a stored source: result kept, marked as such.
+     * @param noise measured short-term basis noise for this instrument pair, or null when fewer than 10 samples exist
+     *              (then a default band of 0.05% of price is used and recorded).
+     */
+    fun sourceCheck(record: LedgerRecord, res: LedgerResult, noise: Double?): LedgerResult {
+        if (!reliable(res.outcome) || res.startPx <= 0.0) return res
+        val a = instrumentOf(record.dataSource)
+        val b = instrumentOf(res.verifySource)
+        if (a.isEmpty() || b.isEmpty()) return res.copy(sourceMatch = "LEGACY", verifyConfidence = "LEGACY")
+        if (a == b) return res.copy(sourceMatch = "SAME", verifyConfidence = "HIGH")
+        val band = noise ?: (0.0005 * record.price)
+        val margin = when (res.outcome) {
+            LedgerOutcome.INVALIDATED -> res.mae - record.slDistance
+            LedgerOutcome.WAIT_FLAT, LedgerOutcome.WAIT_MISSED -> abs(abs(res.move) - 2 * res.threshold)
+            else -> abs(abs(res.move) - res.threshold)
+        }
+        val basis = res.startPx - record.price
+        return if (margin < band) {
+            res.copy(
+                outcome = LedgerOutcome.VERIFICATION_UNCERTAIN, sourceMatch = "PROXY", basis = basis, basisNoise = band,
+                verifyConfidence = "LOW", tags = emptyList(), attribution = emptyMap(), warnings = emptyList(), counterfactual = "",
+                timeline = res.timeline + (res.checkedAt to "Checked on ${res.verifySource}, not on ${record.dataSource}: move ${signed(res.move)} is within the ${fmt(band)} noise band of the deciding line -> not counted")
+            )
+        } else res.copy(sourceMatch = "PROXY", basis = basis, basisNoise = band, verifyConfidence = "MEDIUM")
+    }
+
+    /** Short-term basis noise between two instruments: spread of the change in (proxy − source) between consecutive checks. */
+    fun basisNoise(state: LedgerState, recordInstrument: String, proxyInstrument: String, now: Long): Double? {
+        val recs = state.records.associateBy { it.id }
+        val pts = state.results.values.mapNotNull { r ->
+            val rec = recs[r.id] ?: return@mapNotNull null
+            if (r.sourceMatch != "PROXY" || now - rec.createdAt > 72 * 3_600_000L) return@mapNotNull null
+            if (instrumentOf(rec.dataSource) != recordInstrument || instrumentOf(r.verifySource) != proxyInstrument) return@mapNotNull null
+            rec.createdAt to r.basis
+        }.sortedBy { it.first }
+        if (pts.size < 11) return null
+        val d = pts.zipWithNext { x, y -> y.second - x.second }
+        val m = d.average()
+        val sd = kotlin.math.sqrt(d.sumOf { (it - m) * (it - m) } / d.size)
+        return max(sd, 0.10)
+    }
 
     // ------------------------------------------------------------------ helpers
 

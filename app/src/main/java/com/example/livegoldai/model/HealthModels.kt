@@ -104,5 +104,9 @@ data class LedgerPulse(
     val fileSize: String,
     val byInterval: List<LabelStat> = emptyList(),   // per timeframe: right / wrong / no edge / active
     val recent: List<LabelStat> = emptyList(),       // newest checked predictions
-    val background: String = ""                      // last run of the background recorder
+    val background: String = "",                     // last run of the background recorder
+    val verification: String = "",                   // how results were verified: same instrument / proxy / uncertain
+    val integrity: String = "",                      // HEALTHY / WARNING / CRITICAL ("" = not checked yet)
+    val integrityFindings: List<String> = emptyList(),
+    val integrityPassed: List<String> = emptyList()
 )

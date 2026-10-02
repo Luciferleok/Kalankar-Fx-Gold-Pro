@@ -221,7 +221,8 @@ class GoldViewModel @JvmOverloads constructor(
                         val pulse = try {
                             com.example.livegoldai.data.LedgerPulseBuilder.build(
                                 full, learning.currentState(), learning.stats(),
-                                bgEnabled = _uiState.value.bgRecording, bg = com.example.livegoldai.data.AppEngine.recorder.lastReport
+                                bgEnabled = _uiState.value.bgRecording, bg = com.example.livegoldai.data.AppEngine.recorder.lastReport,
+                                integrity = com.example.livegoldai.data.AppEngine.integrity()
                             )
                         } catch (_: Exception) { null }
                         full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)

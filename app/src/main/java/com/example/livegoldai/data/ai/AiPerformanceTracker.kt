@@ -147,7 +147,7 @@ class AiPerformanceTracker(private val store: LedgerStore?) {
         for ((l, r) in linkedVotes(state)) {
             if (l.provider != provider) continue
             val res = state.resultOf(r.id) ?: continue
-            if (res.outcome == LedgerOutcome.DATA_FAILURE || res.outcome == LedgerOutcome.MARKET_CLOSED || res.outcome == LedgerOutcome.PENDING) continue
+            if (!PredictionLedger.reliable(res.outcome)) continue
             val move = res.endPx - (if (l.price > 0) l.price else res.startPx)
             when (PredictionLedger.directionScore(l.direction!!, move, res.threshold)) {
                 1 -> { hits++; decided++ }
@@ -165,7 +165,7 @@ class AiPerformanceTracker(private val store: LedgerStore?) {
             val r = votes.first().second
             val res = state.resultOf(rid) ?: continue
             if (r.rawSignal == Signal.WAIT) continue
-            if (res.outcome == LedgerOutcome.DATA_FAILURE || res.outcome == LedgerOutcome.MARKET_CLOSED) continue
+            if (!PredictionLedger.reliable(res.outcome)) continue
             val dirs = votes.map { it.first.direction!! }
             val top = dirs.groupingBy { it }.eachCount().maxByOrNull { it.value } ?: continue
             if (top.value * 2 <= dirs.size) continue          // no majority

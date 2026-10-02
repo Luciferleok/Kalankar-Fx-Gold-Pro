@@ -20,6 +20,9 @@ class LearningCoordinator(
     private val store: LedgerStore,
     private val fetchPath: suspend (Long, Long) -> PricePath?
 ) {
+    /** Source-aware path fetch (record, now). When set it is used instead of [fetchPath]. */
+    @Volatile var fetchPathFor: (suspend (LedgerRecord, Long) -> PricePath?)? = null
+
     @Volatile
     private var state: LedgerState = PredictionLedger.load(store)
     @Volatile
@@ -183,10 +186,23 @@ class LearningCoordinator(
                 PredictionLedger.windowTouchesClosure(r.createdAt, r.expiresAt) ->
                     PredictionLedger.emptyResult(r, now, LedgerOutcome.MARKET_CLOSED, "weekend")
                 else -> {
-                    val path = try { fetchPath(r.createdAt, r.expiresAt) } catch (_: Exception) { null }
+                    val path = try {
+                        val sourceAware = fetchPathFor
+                        if (sourceAware != null) sourceAware(r, now) else fetchPath(r.createdAt, r.expiresAt)
+                    } catch (_: Exception) { null }
+                    // "waiting" = same-source history not published yet: not a failure, simply try again later
+                    if (path?.waiting == true && now <= r.expiresAt + GIVE_UP_AFTER_MS) continue
                     if (path == null || path.bars.isEmpty()) consecutiveFetchFailures++ else consecutiveFetchFailures = 0
                     when {
-                        path != null && path.bars.isNotEmpty() -> PredictionLedger.evaluate(r, path, now)
+                        path != null && path.bars.isNotEmpty() -> {
+                            val raw = PredictionLedger.evaluate(r, path, now)
+                            // never judge blindly across instruments
+                            val noise = PredictionLedger.basisNoise(
+                                LedgerState(state.records, state.results + newResults, state.events),
+                                PredictionLedger.instrumentOf(r.dataSource), PredictionLedger.instrumentOf(path.source), now
+                            )
+                            PredictionLedger.sourceCheck(r, raw, noise)
+                        }
                         now > r.expiresAt + GIVE_UP_AFTER_MS -> PredictionLedger.emptyResult(r, now, LedgerOutcome.DATA_FAILURE, "no data")
                         else -> null // try again on the next refresh
                     }
@@ -246,7 +262,11 @@ class LearningCoordinator(
             newsActive = newsActive,
             modelVersion = LearningEngine.modelVersion(state),
             appliedFilter = filter,
-            sources = sources
+            sources = sources,
+            dataSource = raw.feed?.source ?: "",
+            snapshotId = "S-$interval-${raw.lastUpdated.replace(" ", "T")}",
+            engineVersion = PredictionLedger.ENGINE_VERSION,
+            featureVersion = com.example.livegoldai.data.brain.FeatureCatalog.VERSION
         )
     }
 }

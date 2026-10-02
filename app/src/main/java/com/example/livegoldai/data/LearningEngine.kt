@@ -78,7 +78,7 @@ object LearningEngine {
     private fun isFinalDecided(o: LedgerOutcome) =
         o == LedgerOutcome.CORRECT || o == LedgerOutcome.INCORRECT || o == LedgerOutcome.INVALIDATED
 
-    private fun hasPriceData(o: LedgerOutcome) = o != LedgerOutcome.PENDING && o != LedgerOutcome.DATA_FAILURE && o != LedgerOutcome.MARKET_CLOSED
+    private fun hasPriceData(o: LedgerOutcome) = PredictionLedger.reliable(o)
 
     private fun pct(c: Int, n: Int): Double = if (n == 0) -1.0 else c * 100.0 / n
 

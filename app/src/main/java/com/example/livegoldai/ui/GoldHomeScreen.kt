@@ -640,9 +640,9 @@ fun GoldHomeScreen(
                                                 )
                                                 Text(
                                                     text = when (uiState.language) {
-                                                        AppLanguage.ENGLISH -> "All 32 Ind."
-                                                        AppLanguage.HINDI -> "32 इंडिकेटर्स"
-                                                        AppLanguage.MARATHI -> "32 इंडिकेटर्स"
+                                                        AppLanguage.ENGLISH -> "All Indicators"
+                                                        AppLanguage.HINDI -> "सभी इंडिकेटर्स"
+                                                        AppLanguage.MARATHI -> "सभी इंडिकेटर्स"
                                                     },
                                                     fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,

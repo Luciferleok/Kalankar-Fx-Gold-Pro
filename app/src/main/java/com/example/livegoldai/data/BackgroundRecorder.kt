@@ -22,8 +22,20 @@ object AppEngine {
 
     // first use reads the ledger file: background threads only
     val ledgerStore: FileLedgerStore by lazy { FileLedgerStore(File(dir ?: File("."), "prediction_ledger.jsonl")) }
-    val learning: LearningCoordinator by lazy { LearningCoordinator(ledgerStore) { s, e -> api.fetchPricePath(s, e) } }
+    val learning: LearningCoordinator by lazy {
+        LearningCoordinator(ledgerStore) { s, e -> api.fetchPricePath(s, e) }.also { lc ->
+            lc.fetchPathFor = { r, now -> api.fetchPathFor(r.dataSource, r.createdAt, r.expiresAt, now) }
+        }
+    }
     val featureStore: FeatureStore by lazy { FeatureStore(ledgerStore) }
+    // ---- ledger integrity (reads the raw file: background thread only, at most every 10 minutes)
+    @Volatile private var integrityCache: LedgerIntegrity.Report? = null
+    fun integrity(now: Long = System.currentTimeMillis(), force: Boolean = false): LedgerIntegrity.Report? {
+        val c = integrityCache
+        if (!force && c != null && now - c.checkedAt < 10 * 60_000L) return c
+        return try { LedgerIntegrity.check(ledgerStore.readAll(), now).also { integrityCache = it } } catch (_: Exception) { c }
+    }
+
     val recorder: BackgroundRecorder by lazy {
         BackgroundRecorder(
             learning = learning,
@@ -66,14 +78,24 @@ class BackgroundRecorder(
         val todayWrong: Int,
         val lastRecorded: String,
         val nextDue: String,
-        val problems: List<Problem>
+        val problems: List<Problem>,
+        val durationMs: Long = 0,           // how long this run took
+        val avgDurationMs: Long = 0,        // average of the last runs
+        val waitingToCheck: Int = 0,        // predictions whose time is over but are not checked yet
+        val providerFailuresToday: Int = 0, // price requests that returned no live data today
+        val runsToday: Int = 0
     )
 
     @Volatile var lastReport: TickReport? = null; private set
     private var dataFailures = 0
+    private val durations = ArrayDeque<Long>()
+    private var statDay = 0L
+    private var failuresToday = 0
+    private var runsToday = 0
     private val nextAttemptAt = HashMap<String, Long>()   // back-off per timeframe when the provider has no new candle yet
 
     suspend fun tick(now: Long = System.currentTimeMillis()): TickReport {
+        val startedAt = System.currentTimeMillis()
         val closed = PredictionLedger.isMarketClosed(now)
         val before = learning.currentState()
         val recordedNow = ArrayList<String>()
@@ -83,8 +105,10 @@ class BackgroundRecorder(
         if (!closed) {
             val due = INTERVALS.filter { iv ->
                 val last = before.records.lastOrNull { it.interval == iv }
+                val ivMs = RealityEngine.intervalMinutes(iv) * 60_000L
+                // ask the provider only when a new candle has started (20s after the boundary, so the data exists)
                 now >= (nextAttemptAt[iv] ?: 0L) &&
-                    (last == null || now - last.createdAt >= RealityEngine.intervalMinutes(iv) * 60_000L * 9 / 10)
+                    (last == null || (now / ivMs > last.createdAt / ivMs && now % ivMs >= 20_000L && now - last.createdAt >= ivMs * 9 / 10))
             }.take(MAX_PER_TICK)
             var mtf: Map<String, List<PathBar>>? = null
             for (iv in due) {
@@ -136,13 +160,23 @@ class BackgroundRecorder(
 
         val last = st.records.lastOrNull()
         val next = st.records.filter { st.resultOf(it.id) == null }.minByOrNull { it.expiresAt }
+        if (dayStart != statDay) { statDay = dayStart; failuresToday = 0; runsToday = 0 }
+        failuresToday += failed
+        runsToday++
+        val took = System.currentTimeMillis() - startedAt
+        durations.addLast(took); while (durations.size > 30) durations.removeFirst()
         val report = TickReport(
             at = now, marketClosed = closed, recordedNow = recordedNow, checkedNow = checkedNow,
             recorded = stats.records, checked = stats.results, active = stats.pending,
             todayCorrect = ok, todayWrong = bad,
             lastRecorded = if (last == null) "--" else "${PredictionLedger.utcLabel(last.createdAt)} • ${last.interval} ${last.finalSignal.name}",
             nextDue = if (next == null) "--" else "${PredictionLedger.utcLabel(next.expiresAt)} • ${next.interval}",
-            problems = problems
+            problems = problems,
+            durationMs = took,
+            avgDurationMs = durations.average().toLong(),
+            waitingToCheck = st.records.count { st.resultOf(it.id) == null && now >= it.expiresAt + LearningCoordinator.SETTLE_MS },
+            providerFailuresToday = failuresToday,
+            runsToday = runsToday
         )
         lastReport = report
         return report
@@ -160,6 +194,7 @@ class BackgroundRecorder(
             LedgerOutcome.MARKET_CLOSED -> "closed"
             LedgerOutcome.DATA_FAILURE -> "no data"
             LedgerOutcome.PENDING -> "…"
+            LedgerOutcome.VERIFICATION_UNCERTAIN -> "? uncertain"
         }
     }
 }

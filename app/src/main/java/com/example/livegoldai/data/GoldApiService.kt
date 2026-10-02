@@ -31,6 +31,11 @@ class GoldApiService(
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, GoldAnalysisResult>>()
     private val cacheTtlMs = 15_000L // 15 seconds cache to avoid API burnout
 
+    companion object {
+        const val SPOT_MIN_GAP_MS = 15 * 60_000L     // Twelve Data quota: verification history at most 4x per hour
+        const val PROXY_AFTER_MS = 60 * 60_000L      // fall back to a proxy instrument only when an hour overdue
+    }
+
     fun setApiKey(newKey: String) {
         apiKey = newKey.trim()
         memoryCache.clear()
@@ -487,6 +492,81 @@ class GoldApiService(
         val y = fetchYahooGoldPath(startMs, endMs, yInterval)
         if (!y.isNullOrEmpty()) return@withContext PricePath("GC=F $yInterval", y)
         null
+    }
+
+    // ---------------- SOURCE-CONSISTENT VERIFICATION ----------------
+    // A prediction is checked on the SAME instrument it was made on whenever that history can be had.
+    private val spotBars = java.util.TreeMap<Long, PathBar>()     // Twelve Data XAU/USD 1-minute bars (UTC)
+    @Volatile private var lastSpotFetchAt = 0L
+
+    /** One Twelve Data call covers every prediction that expired since the last one; at most one call per [SPOT_MIN_GAP_MS]. */
+    private fun spotPath(startMs: Long, endMs: Long, now: Long): PricePath? {
+        synchronized(spotBars) {
+            fun covered() = spotBars.isNotEmpty() && spotBars.firstKey() <= startMs + 120_000L && spotBars.lastKey() >= endMs - 120_000L
+            if (covered()) return PricePath("Twelve Data XAU/USD 1min", ArrayList(spotBars.subMap(startMs - 60_000L, true, endMs, false).values))
+            if (now - lastSpotFetchAt < SPOT_MIN_GAP_MS) return PricePath("WAIT", emptyList(), waiting = true)
+            lastSpotFetchAt = now
+        }
+        val minutes = ((now - startMs) / 60_000L + 5).coerceIn(10, 5000)
+        val fetched = try {
+            val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&outputsize=$minutes&timezone=UTC&order=ASC&apikey=$apiKey"
+            val resp = client.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
+            val body = resp.body?.string()
+            if (!resp.isSuccessful || body.isNullOrBlank()) null else parseSpotBars(body)
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        synchronized(spotBars) {
+            fetched.forEach { spotBars[it.t] = it }
+            while (spotBars.size > 6000) spotBars.pollFirstEntry()
+            val ok = spotBars.isNotEmpty() && spotBars.firstKey() <= startMs + 120_000L && spotBars.lastKey() >= endMs - 120_000L
+            return if (ok) PricePath("Twelve Data XAU/USD 1min", ArrayList(spotBars.subMap(startMs - 60_000L, true, endMs, false).values)) else null
+        }
+    }
+
+    private fun parseSpotBars(body: String): List<PathBar>? {
+        val root = json.parseToJsonElement(body).jsonObject
+        if (root["status"]?.jsonPrimitive?.content == "error") return null
+        val values = root["values"]?.jsonArray ?: return null
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+        return values.mapNotNull { v ->
+            val o = v.jsonObject
+            val t = try { sdf.parse(o["datetime"]?.jsonPrimitive?.content ?: "")?.time } catch (_: Exception) { null } ?: return@mapNotNull null
+            PathBar(
+                t = t,
+                o = o["open"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null,
+                h = o["high"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null,
+                l = o["low"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null,
+                c = o["close"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: return@mapNotNull null
+            )
+        }
+    }
+
+    /**
+     * Price path for checking a prediction, in this order:
+     *  1. the same instrument the prediction was made on
+     *  2. only if that is impossible (or the prediction is long overdue): another gold instrument as a proxy;
+     *     the ledger then records the mismatch and refuses to count results that are too close to call.
+     */
+    suspend fun fetchPathFor(dataSource: String, startMs: Long, endMs: Long, now: Long): PricePath? = withContext(Dispatchers.IO) {
+        when (PredictionLedger.instrumentOf(dataSource)) {
+            "XAU" -> {
+                val same = if (now - startMs <= 4900 * 60_000L) spotPath(startMs, endMs, now) else null
+                when {
+                    same != null && !same.waiting && same.bars.isNotEmpty() -> same
+                    same?.waiting == true && now - endMs < PROXY_AFTER_MS -> same
+                    now - endMs < PROXY_AFTER_MS -> PricePath("WAIT", emptyList(), waiting = true)   // spot history failed: retry before using a proxy
+                    else -> fetchPricePath(startMs, endMs)
+                }
+            }
+            "GC" -> {
+                val spanMin = (endMs - startMs) / 60_000L
+                val yi = when { spanMin <= 990 -> "1m"; spanMin <= 4900 -> "5m"; else -> "15m" }
+                val y = fetchYahooGoldPath(startMs, endMs, yi)
+                if (!y.isNullOrEmpty()) PricePath("GC=F $yi", y) else fetchPricePath(startMs, endMs)
+            }
+            else -> fetchPricePath(startMs, endMs)   // PAXG (same instrument first) and old records without a stored source
+        }
     }
 
     private var mtfCache: Pair<Long, Map<String, List<PathBar>>>? = null
