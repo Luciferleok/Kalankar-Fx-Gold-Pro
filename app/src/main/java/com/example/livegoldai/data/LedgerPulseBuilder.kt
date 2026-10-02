@@ -77,7 +77,11 @@ object LedgerPulseBuilder {
             val r = recById[res.id] ?: return@mapNotNull null
             com.example.livegoldai.model.LabelStat(
                 "${PredictionLedger.utcLabel(r.createdAt, true)} • ${r.interval}",
-                "${r.finalSignal.name} ${BackgroundRecorder.mark(res.outcome)}  " + String.format(Locale.US, "%+.2f", res.move)
+                "${r.finalSignal.name} ${BackgroundRecorder.mark(res.outcome)}  " + String.format(Locale.US, "%+.2f", res.move) + when {
+                    res.tpHitAt != 0L -> " • target"
+                    res.outcome == LedgerOutcome.INVALIDATED -> " • stop"
+                    else -> ""
+                }
             )
         }
         val background = when {
@@ -88,6 +92,45 @@ object LedgerPulseBuilder {
                 (if (bg.recordedNow.isNotEmpty()) " • recorded ${bg.recordedNow.joinToString(", ")}" else "") +
                 (if (bg.problems.isNotEmpty()) " • ⚠ ${bg.problems.joinToString(", ") { it.title }}" else "")
         }
+        // ---- diagnosis: what kind of right / wrong (all counted from real results)
+        val diagnosis = ArrayList<com.example.livegoldai.model.LabelStat>()
+        run {
+            var dirWrong = 0; var stopped = 0; var stoppedButRight = 0; var target = 0; var endRight = 0
+            var buyOk = 0; var buyBad = 0; var sellOk = 0; var sellBad = 0
+            var slSum = 0.0; var maeSum = 0.0; var nSl = 0
+            val perIv = LinkedHashMap<String, IntArray>()
+            for (r in state.records) {
+                val res = state.resultOf(r.id) ?: continue
+                val ok = res.outcome == LedgerOutcome.CORRECT
+                val bad = res.outcome == LedgerOutcome.INCORRECT || res.outcome == LedgerOutcome.INVALIDATED
+                if (!ok && !bad) continue
+                if (r.finalSignal == com.example.livegoldai.model.Signal.BUY) { if (ok) buyOk++ else buyBad++ } else { if (ok) sellOk++ else sellBad++ }
+                when {
+                    ok && res.tpHitAt != 0L -> target++
+                    ok -> endRight++
+                    res.outcome == LedgerOutcome.INCORRECT -> dirWrong++
+                    else -> { stopped++; if (PredictionLedger.directionScore(r.finalSignal, res.move, res.threshold) == 1) stoppedButRight++ }
+                }
+                if (r.slDistance > 0) { slSum += r.slDistance; maeSum += res.mae; nSl++ }
+            }
+            val decided = target + endRight + dirWrong + stopped
+            if (decided > 0) {
+                diagnosis.add(com.example.livegoldai.model.LabelStat("Right", "$target reached target first • $endRight right at the end"))
+                diagnosis.add(com.example.livegoldai.model.LabelStat("Wrong", "$dirWrong wrong direction at the end • $stopped stop-loss touched" + if (stoppedButRight > 0) " ($stoppedButRight of them ended the right way)" else ""))
+                diagnosis.add(com.example.livegoldai.model.LabelStat("BUY calls", "✓$buyOk  ✗$buyBad"))
+                diagnosis.add(com.example.livegoldai.model.LabelStat("SELL calls", "✓$sellOk  ✗$sellBad"))
+                if (nSl > 0) diagnosis.add(com.example.livegoldai.model.LabelStat("Stop distance vs move against", String.format(Locale.US, "stop %.2f avg • price went %.2f against on avg", slSum / nSl, maeSum / nSl)))
+                // what the market did while these predictions were running
+                val timed = state.results.values.filter { it.startPx > 0 && recById[it.id] != null }.sortedBy { recById[it.id]!!.createdAt }
+                if (timed.size >= 2) {
+                    val first = timed.first(); val last = timed.last()
+                    val hrs = (recById[last.id]!!.expiresAt - recById[first.id]!!.createdAt) / 3_600_000.0
+                    diagnosis.add(com.example.livegoldai.model.LabelStat("Market in this period", String.format(Locale.US, "%+.2f in %.1f h (%.2f → %.2f)", last.endPx - first.startPx, hrs, first.startPx, last.endPx)))
+                }
+                if (decided < 50) diagnosis.add(com.example.livegoldai.model.LabelStat("Sample", "$decided decided calls: too few to judge the engine (many come from the same market move)"))
+            }
+        }
+
         // ---- how results were verified
         var same = 0; var proxy = 0; var unsureAll = 0; var legacyV = 0
         for (res in state.results.values) {
@@ -99,7 +142,11 @@ object LedgerPulseBuilder {
             }
         }
         val verification = "same instrument $same • proxy (decisive) $proxy • too close to call $unsureAll" + if (legacyV > 0) " • older, source not stored $legacyV" else ""
+        val audit = PredictionAudit.build(state, integrity?.status ?: "")
         return LedgerPulse(
+            modelHealth = audit.health,
+            modelHealthLine = audit.headline,
+            audit = audit.lines,
             status = status,
             statusDetail = detail,
             recorded = stats.records,
@@ -119,7 +166,8 @@ object LedgerPulseBuilder {
             verification = verification,
             integrity = integrity?.status ?: "",
             integrityFindings = integrity?.findings ?: emptyList(),
-            integrityPassed = integrity?.passed ?: emptyList()
+            integrityPassed = integrity?.passed ?: emptyList(),
+            diagnosis = diagnosis
         )
     }
 }

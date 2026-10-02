@@ -108,5 +108,10 @@ data class LedgerPulse(
     val verification: String = "",                   // how results were verified: same instrument / proxy / uncertain
     val integrity: String = "",                      // HEALTHY / WARNING / CRITICAL ("" = not checked yet)
     val integrityFindings: List<String> = emptyList(),
-    val integrityPassed: List<String> = emptyList()
+    val integrityPassed: List<String> = emptyList(),
+    val diagnosis: List<LabelStat> = emptyList(),    // why predictions were right / wrong, measured from the ledger
+    // ---- root-cause audit (V11.3)
+    val modelHealth: String = "",                    // COLLECTING / VALIDATING / HEALTHY / WEAK / CRITICAL / POLARITY_SUSPECT
+    val modelHealthLine: String = "",
+    val audit: List<LabelStat> = emptyList()
 )

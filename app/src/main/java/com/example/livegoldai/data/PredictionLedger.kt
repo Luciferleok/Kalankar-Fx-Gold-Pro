@@ -50,7 +50,9 @@ data class LedgerRecord(
     val dataSource: String = "",      // "Twelve Data XAU/USD", "Binance PAXG/USDT", "Yahoo GC=F"
     val snapshotId: String = "",      // same id the AI council and the feature row refer to
     val engineVersion: String = "",
-    val featureVersion: String = ""
+    val featureVersion: String = "",
+    /** Distance from the prediction price to target 1. 0 on older records (then only the end-of-window rule is used). */
+    val tpDistance: Double = 0.0
 )
 
 data class PathBar(val t: Long, val o: Double, val h: Double, val l: Double, val c: Double)
@@ -80,7 +82,10 @@ data class LedgerResult(
     val sourceMatch: String = "",        // SAME / PROXY / LEGACY ("" on results written by older versions)
     val basis: Double = 0.0,             // proxy start price − prediction price (0 when SAME)
     val basisNoise: Double = 0.0,        // band used to decide "too close to call"
-    val verifyConfidence: String = ""    // HIGH (same instrument) / MEDIUM (proxy, decisive) / LOW (proxy, too close)
+    val verifyConfidence: String = "",   // HIGH (same instrument) / MEDIUM (proxy, decisive) / LOW (proxy, too close)
+    val tpHitAt: Long = 0L,              // when target 1 was reached before the stop (0 = not reached first)
+    /** Symmetric path result: which side was touched first at 1 x ATR. +1 with the call, -1 against, 0 neither / same bar / WAIT. */
+    val pathHit: Int = 0
 )
 
 data class LedgerEvent(
@@ -169,7 +174,8 @@ object PredictionLedger {
             "fin" to r.finalSignal.name, "conf" to r.confidence, "atr" to r.atr, "sl" to r.slDistance,
             "reg" to r.regime, "ses" to r.session, "news" to r.newsActive, "mv" to r.modelVersion,
             "flt" to r.appliedFilter, "src" to r.sources.mapValues { it.value.name },
-            "ds" to r.dataSource, "sid" to r.snapshotId, "ev" to r.engineVersion, "fv" to r.featureVersion
+            "ds" to r.dataSource, "sid" to r.snapshotId, "ev" to r.engineVersion, "fv" to r.featureVersion,
+            "tp" to r.tpDistance
         )
     )
 
@@ -185,7 +191,8 @@ object PredictionLedger {
                 val sig = (v as? String)?.let { runCatching { Signal.valueOf(it) }.getOrNull() }
                 if (sig == null) null else k to sig
             }.toMap(),
-            dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv")
+            dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv"),
+            tpDistance = m.num("tp")
         )
     } catch (_: Exception) {
         null
@@ -198,7 +205,7 @@ object PredictionLedger {
             "mae" to r.mae, "slh" to r.slHitAt, "rng" to r.realizedRange, "tags" to r.tags,
             "att" to r.attribution, "warn" to r.warnings, "cf" to r.counterfactual,
             "tl" to r.timeline.map { listOf(it.first, it.second) },
-            "sm" to r.sourceMatch, "bs" to r.basis, "bn" to r.basisNoise, "vc" to r.verifyConfidence
+            "sm" to r.sourceMatch, "bs" to r.basis, "bn" to r.basisNoise, "vc" to r.verifyConfidence, "tph" to r.tpHitAt, "ph" to r.pathHit
         )
     )
 
@@ -218,7 +225,8 @@ object PredictionLedger {
                 val txt = l.getOrNull(1) as? String ?: return@mapNotNull null
                 t to txt
             },
-            sourceMatch = m.str("sm"), basis = m.num("bs"), basisNoise = m.num("bn"), verifyConfidence = m.str("vc")
+            sourceMatch = m.str("sm"), basis = m.num("bs"), basisNoise = m.num("bn"), verifyConfidence = m.str("vc"),
+            tpHitAt = m.long("tph"), pathHit = m.int("ph")
         )
     } catch (_: Exception) {
         null
@@ -230,7 +238,7 @@ object PredictionLedger {
 
     // ------------------------------------------------------------------ source-consistent verification
 
-    const val ENGINE_VERSION = "E11.1"
+    const val ENGINE_VERSION = "E11.3"
 
     /** True when the result is based on a trustworthy real price path. */
     fun reliable(o: LedgerOutcome): Boolean =
@@ -262,6 +270,7 @@ object PredictionLedger {
         val band = noise ?: (0.0005 * record.price)
         val margin = when (res.outcome) {
             LedgerOutcome.INVALIDATED -> res.mae - record.slDistance
+            LedgerOutcome.CORRECT -> if (res.tpHitAt != 0L) res.mfe - record.tpDistance else abs(abs(res.move) - res.threshold)
             LedgerOutcome.WAIT_FLAT, LedgerOutcome.WAIT_MISSED -> abs(abs(res.move) - 2 * res.threshold)
             else -> abs(abs(res.move) - res.threshold)
         }
@@ -411,6 +420,12 @@ object PredictionLedger {
         var mfeAt = bars.first().t
         var slHitAt = 0L
         var firstFavorAt = 0L
+        var tpHitAt = 0L
+        var sameBar = false
+        var decided = false          // first touch of target or stop already happened
+        val useTarget = sig != Signal.WAIT && record.tpDistance > 0
+        var pathHit = 0
+        var pathDone = sig == Signal.WAIT || record.atr <= 0
         var hi = Double.NEGATIVE_INFINITY
         var lo = Double.POSITIVE_INFINITY
         for (b in bars) {
@@ -421,13 +436,29 @@ object PredictionLedger {
             if (fav > mfe) { mfe = fav; mfeAt = b.t }
             if (adv > mae) mae = adv
             if (firstFavorAt == 0L && fav >= threshold) firstFavorAt = b.t
-            if (sig != Signal.WAIT && slHitAt == 0L && record.slDistance > 0 && adv >= record.slDistance) slHitAt = b.t
+            if (!pathDone) {
+                val f1 = fav >= record.atr
+                val a1 = adv >= record.atr
+                if (f1 || a1) { pathDone = true; pathHit = if (f1 && a1) 0 else if (f1) 1 else -1 }
+            }
+            if (useTarget) {
+                // FIRST TOUCH decides, like a real trade: target first = win (you are already out with profit),
+                // stop first = loss. Both inside the same bar: order unknown -> counted as a loss (cautious).
+                if (!decided) {
+                    val hitTp = fav >= record.tpDistance
+                    val hitSl = record.slDistance > 0 && adv >= record.slDistance
+                    if (hitTp && hitSl) { slHitAt = b.t; sameBar = true; decided = true }
+                    else if (hitTp) { tpHitAt = b.t; decided = true }
+                    else if (hitSl) { slHitAt = b.t; decided = true }
+                }
+            } else if (sig != Signal.WAIT && slHitAt == 0L && record.slDistance > 0 && adv >= record.slDistance) slHitAt = b.t
         }
         val realizedRange = hi - lo
         val dirScore = directionScore(sig, move, threshold)
 
         val outcome = when {
             sig == Signal.WAIT -> if (abs(move) < 2 * threshold) LedgerOutcome.WAIT_FLAT else LedgerOutcome.WAIT_MISSED
+            tpHitAt != 0L -> LedgerOutcome.CORRECT
             slHitAt != 0L -> LedgerOutcome.INVALIDATED
             dirScore == 1 -> LedgerOutcome.CORRECT
             dirScore == 0 -> LedgerOutcome.INCORRECT
@@ -473,7 +504,8 @@ object PredictionLedger {
         if (sig != Signal.WAIT) {
             if (firstFavorAt != 0L) tl.add(firstFavorAt to "Moved ${fmt(threshold)} in predicted direction")
             if (mfe > 0) tl.add(mfeAt to "Best point: +${fmt(mfe)} in favour")
-            if (slHitAt != 0L) tl.add(slHitAt to "Stop-loss distance (${fmt(record.slDistance)}) hit")
+            if (tpHitAt != 0L) tl.add(tpHitAt to "Target 1 (${fmt(record.tpDistance)}) reached before the stop -> win")
+            if (slHitAt != 0L) tl.add(slHitAt to "Stop-loss distance (${fmt(record.slDistance)}) hit" + if (sameBar) " (target and stop inside the same bar: counted as stop)" else "")
         }
         tl.add(record.expiresAt to "Expiry: ${fmt(end)} (move ${signed(move)}) -> ${outcome.name}")
         tl.sortBy { it.first }
@@ -482,7 +514,7 @@ object PredictionLedger {
             id = record.id, checkedAt = now, outcome = outcome, verifySource = path.source,
             startPx = start, endPx = end, move = move, threshold = threshold, mfe = mfe, mae = mae,
             slHitAt = slHitAt, realizedRange = realizedRange, tags = tags, attribution = attribution,
-            warnings = warnings, counterfactual = counterfactual, timeline = tl
+            warnings = warnings, counterfactual = counterfactual, timeline = tl, tpHitAt = tpHitAt, pathHit = pathHit
         )
     }
 

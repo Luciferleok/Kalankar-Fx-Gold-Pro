@@ -124,6 +124,22 @@ fun V8HealthScreen(
                     p.integrityPassed.forEach { Text(text = "✓ $it", color = V8.Text3, fontSize = 9.sp) }
                 }
 
+                // ---- root-cause audit
+                if (p.modelHealth.isNotEmpty() && p.modelHealth != "COLLECTING") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val bad = p.modelHealth == "CRITICAL" || p.modelHealth == "POLARITY_SUSPECT"
+                    V8Label(tr(lang, "Engine audit", "इंजन की जाँच", "इंजिन तपासणी"), if (bad) V8.Red else V8.Learn)
+                    Text(text = p.modelHealthLine, color = if (bad) V8.Red else V8.Text2, fontSize = 10.sp)
+                    p.audit.forEach { V8KeyValue(it.label, it.value) }
+                }
+
+                // ---- diagnosis
+                if (p.diagnosis.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    V8Label(tr(lang, "Why right / wrong", "सही / गलत क्यों", "बरोबर / चूक का"), V8.Learn)
+                    p.diagnosis.forEach { V8KeyValue(it.label, it.value) }
+                }
+
                 // ---- per timeframe
                 if (p.byInterval.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))

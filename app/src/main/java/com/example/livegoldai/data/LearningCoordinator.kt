@@ -164,14 +164,15 @@ class LearningCoordinator(
     }
 
     private fun runCycle(now: Long, newResults: Int) {
-        val out = LearningEngine.runCycle(state, now, newResults)
+        val audit = PredictionAudit.build(state)
+        val out = LearningEngine.runCycle(state, now, newResults, audit.promotionLocked, audit.lockReason)
         if (out.newEvents.isNotEmpty()) {
             if (safeAppend(out.newEvents.map { PredictionLedger.encodeEvent(it) })) {
                 state = LedgerState(state.records, state.results, state.events + out.newEvents, state.skippedLines)
             }
         }
         lastCycleAt = now
-        lastReport = listOf("Cycle at ${PredictionLedger.utcLabel(now, true)}") + out.report
+        lastReport = listOf("Cycle at ${PredictionLedger.utcLabel(now, true)}", audit.headline) + out.report
     }
 
     private suspend fun verifyDue(now: Long, limit: Int = MAX_CHECKS_PER_REFRESH): Int {
@@ -231,7 +232,14 @@ class LearningCoordinator(
         val atr = PredictionLedger.atrOf(candles).let { if (it > 0) it else max(raw.tradeSetup.atrPips / 10.0, 0.5) }
         val rawSig = raw.overallSignal
         val ts = raw.tradeSetup
-        val sl = if (ts.signal == rawSig && rawSig != Signal.WAIT && ts.stopLoss > 0) abs(ts.entryPrice - ts.stopLoss) else 1.5 * atr
+        // Distances are measured from the price the prediction was made at (that is where the check starts),
+        // to the trade plan's real stop and first target. A level on the wrong side of the price is ignored.
+        val px = raw.currentPrice
+        val planOk = ts.signal == rawSig && rawSig != Signal.WAIT
+        val slSide = if (rawSig == Signal.BUY) px - ts.stopLoss else ts.stopLoss - px
+        val tpSide = if (rawSig == Signal.BUY) ts.takeProfit1 - px else px - ts.takeProfit1
+        val sl = if (planOk && ts.stopLoss > 0 && slSide >= 0.5 * atr) slSide else 1.5 * atr
+        val tp = if (rawSig == Signal.WAIT) 0.0 else if (planOk && ts.takeProfit1 > 0 && tpSide >= 0.5 * atr) tpSide else 1.5 * atr
         val horizon = com.example.livegoldai.data.TechnicalEngine.calculateValidityMinutes(interval)
 
         val sources = LinkedHashMap<String, Signal>()
@@ -266,7 +274,8 @@ class LearningCoordinator(
             dataSource = raw.feed?.source ?: "",
             snapshotId = "S-$interval-${raw.lastUpdated.replace(" ", "T")}",
             engineVersion = PredictionLedger.ENGINE_VERSION,
-            featureVersion = com.example.livegoldai.data.brain.FeatureCatalog.VERSION
+            featureVersion = com.example.livegoldai.data.brain.FeatureCatalog.VERSION,
+            tpDistance = tp
         )
     }
 }

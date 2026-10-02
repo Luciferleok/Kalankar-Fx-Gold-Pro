@@ -172,7 +172,7 @@ object LearningEngine {
     data class CycleOutput(val newEvents: List<LedgerEvent>, val report: List<String>)
 
     /** One learning cycle. Only appends events; never edits past data. */
-    fun runCycle(state: LedgerState, now: Long, newResults: Int): CycleOutput {
+    fun runCycle(state: LedgerState, now: Long, newResults: Int, promotionLocked: Boolean = false, lockReason: String = ""): CycleOutput {
         val events = ArrayList<LedgerEvent>()
         val report = ArrayList<String>()
         report.add("Checked results: $newResults new, ${finalDecided(state).size} decided in total.")
@@ -189,7 +189,10 @@ object LearningEngine {
                     val passes = e.blockedAcc <= 45.0 && e.keptAcc - e.blockedAcc >= 10.0 && e.improvement >= 2.0
                     val clearlyFails = e.blockedAcc >= e.keptAcc - 2.0
                     if (e.blockedN >= SHADOW_SAMPLES && (passes || clearlyFails || e.blockedN >= 2 * SHADOW_SAMPLES)) {
-                        if (passes) {
+                        if (passes && promotionLocked) {
+                            // model health gate: nothing may change live signals while the engine itself is under review
+                            report.add("PROMOTION LOCKED for ${h.id}: $lockReason.")
+                        } else if (passes) {
                             events.add(LedgerEvent(now, "cand", h.id, "PROMOTED",
                                 "Shadow test passed: blocked ${e.blockedN} predictions that were only ${fmt1(e.blockedAcc)}% correct; accuracy ${fmt1(e.baseline)}% -> ${fmt1(e.keptAcc)}%"))
                             report.add("PROMOTED ${h.id}: ${h.en}.")
@@ -264,6 +267,8 @@ object LearningEngine {
             today,
             window("7 Days", decidedMine.filter { it.createdAt >= now - 7 * day }),
             window("30 Days", decidedMine.filter { it.createdAt >= now - 30 * day }),
+            // same scope as the CHECKED / CORRECT / WRONG tiles: every timeframe
+            window("30 Days All", all.filter { isFinalDecided(outcomeOf(it)) && it.createdAt >= now - 30 * day }),
             window("All Time", decidedMine)
         )
 

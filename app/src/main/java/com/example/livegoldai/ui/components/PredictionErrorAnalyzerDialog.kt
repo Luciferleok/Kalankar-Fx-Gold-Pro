@@ -204,7 +204,7 @@ fun LearningCenterContent(
 
 @Composable
 private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.example.livegoldai.model.LedgerPulse? = null) {
-    val d30 = s.windows.firstOrNull { it.label == "30 Days" }
+    val d30 = s.windows.firstOrNull { it.label == "30 Days All" } ?: s.windows.firstOrNull { it.label == "30 Days" }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Tile(t(lang, "CHECKED", "जाँची गईं", "तपासले"), "${s.correct + s.wrong}", GoldLight, Modifier.weight(1f))
         Tile(t(lang, "CORRECT", "सही", "बरोबर"), "${s.correct}", SignalBuy, Modifier.weight(1f))
@@ -225,6 +225,7 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
     InfoRow(t(lang, "Next check", "अगली जाँच", "पुढील तपासणी"), s.pendingNote)
     pulse?.let { p ->
         InfoRow(t(lang, "Recorder", "रिकॉर्डर", "रेकॉर्डर"), p.status.replace('_', ' '))
+        if (p.modelHealthLine.isNotEmpty()) InfoRow(t(lang, "Engine audit", "इंजन की जाँच", "इंजिन तपासणी"), p.modelHealthLine)
         InfoRow(t(lang, "Last recorded", "आखिरी रिकॉर्ड", "शेवटची नोंद"), p.lastRecorded)
         InfoRow(t(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
         InfoRow(t(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)
@@ -244,15 +245,15 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
 
     Section(t(lang, "HOW A PREDICTION IS JUDGED", "प्रेडिक्शन कैसे जाँची जाती है", "अंदाज कसा तपासला जातो"))
     Note(t(lang,
-        "Each new candle, the main BUY/SELL/WAIT is saved once. When its validity time ends, real minute prices (PAXG/USDT, backup: gold futures) are fetched. CORRECT = price moved at least 0.25×ATR in the predicted direction. WRONG = it moved that much the other way, or the stop-loss distance was hit first. Smaller moves = NO EDGE (not counted). WAIT calls are tracked separately. Weekend gaps are excluded.",
-        "हर नई कैंडल पर मुख्य BUY/SELL/WAIT एक बार सेव होता है। उसका समय खत्म होने पर असली मिनट-भाव (PAXG/USDT, बैकअप: गोल्ड फ्यूचर्स) लिए जाते हैं। सही = भाव अनुमानित दिशा में कम से कम 0.25×ATR चला। गलत = उतना ही उल्टा चला, या पहले स्टॉप-लॉस दूरी छू गई। इससे छोटा मूव = कोई नतीजा नहीं (गिना नहीं)। WAIT अलग गिने जाते हैं। वीकेंड हटाया जाता है।",
-        "प्रत्येक नवीन कँडलवर मुख्य BUY/SELL/WAIT एकदा जतन होतो. त्याची वेळ संपल्यावर खरे मिनिट-भाव (PAXG/USDT, बॅकअप: गोल्ड फ्युचर्स) घेतले जातात. बरोबर = भाव अंदाजित दिशेने किमान 0.25×ATR गेला. चूक = तितकाच उलट गेला किंवा आधी स्टॉप-लॉस अंतर लागले. लहान हालचाल = निकाल नाही (मोजले नाही). WAIT वेगळे मोजले जातात. वीकेंड वगळला जातो."))
+        "Each new candle, the main BUY/SELL/WAIT is saved once with its stop and first target. It is then checked on real minute prices of the same instrument it was made on. Like a real trade, the FIRST touch decides: target reached first = CORRECT; stop reached first = WRONG. If neither is touched before the time ends: CORRECT if price moved at least 0.25×ATR the predicted way, WRONG if that much the other way, smaller = NO EDGE (not counted). WAIT calls are tracked separately. Weekend gaps are excluded.",
+        "हर नई कैंडल पर मुख्य BUY/SELL/WAIT अपने स्टॉप और पहले टारगेट के साथ एक बार सेव होता है। फिर उसी इंस्ट्रूमेंट के असली मिनट-भाव पर जाँच होती है जिस पर वह बना था। असली ट्रेड की तरह जो पहले छुआ वही फैसला: पहले टारगेट = सही; पहले स्टॉप-लॉस = गलत। समय खत्म होने तक दोनों न छुएँ तो: भाव अनुमानित दिशा में कम से कम 0.25×ATR चला = सही, उतना उल्टा = गलत, इससे छोटा = कोई नतीजा नहीं (गिना नहीं)। WAIT अलग गिने जाते हैं। वीकेंड हटाया जाता है।",
+        "प्रत्येक नवीन कँडलवर मुख्य BUY/SELL/WAIT त्याच्या स्टॉप आणि पहिल्या टार्गेटसह एकदा जतन होतो. मग ज्या इन्स्ट्रुमेंटवर तो बनला त्याच्याच खऱ्या मिनिट-भावांवर तपासणी होते. खऱ्या ट्रेडप्रमाणे जे आधी लागले तेच ठरवते: आधी टार्गेट = बरोबर; आधी स्टॉप-लॉस = चूक. वेळ संपेपर्यंत दोन्ही न लागल्यास: भाव अंदाजित दिशेने किमान 0.25×ATR गेला = बरोबर, तितकाच उलट = चूक, त्याहून लहान = निकाल नाही (मोजले नाही). WAIT वेगळे मोजले जातात. वीकेंड वगळला जातो."))
 }
 
 @Composable
 private fun AccuracyTab(s: LearningSnapshot, lang: AppLanguage) {
     Section(t(lang, "THIS TIMEFRAME", "यह टाइमफ्रेम", "हा टाइमफ्रेम"))
-    s.windows.forEach { WindowRow(it, lang) }
+    s.windows.filter { it.label != "30 Days All" }.forEach { WindowRow(it, lang) }
 
     Section(t(lang, "PROBABILITY QUALITY", "प्रॉबेबिलिटी गुणवत्ता", "प्रॉबॅबिलिटी गुणवत्ता"))
     InfoRow("Brier (all / 7D / 30D)", "${brier(s.brierAll)} / ${brier(s.brier7d)} / ${brier(s.brier30d)}")
