@@ -107,7 +107,7 @@ fun V8AiScreen(
                 Text(
                     text = if (connected == 0) tr(lang, "No AI connected", "कोई AI कनेक्ट नहीं", "कोणतेही AI कनेक्ट नाही")
                     else tr(lang, "Waiting for the first answer", "पहले जवाब का इंतज़ार", "पहिल्या उत्तराची वाट"),
-                    color = V8.Text1, fontSize = 22.sp, fontWeight = FontWeight.Black
+                    color = V8.Text1, fontSize = 22.sp, fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = if (connected == 0) tr(lang,
@@ -119,7 +119,7 @@ fun V8AiScreen(
                 )
             } else {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(text = "${r.eligible}", color = V8.Text1, fontSize = 40.sp, fontWeight = FontWeight.Black)
+                    Text(text = "${r.eligible}", color = V8.Text1, fontSize = 40.sp, fontWeight = FontWeight.SemiBold)
                     Text(text = " / ${r.supported} " + tr(lang, "voting", "वोट दे रहे", "मत देत"), color = V8.Text3, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
                 }
                 Text(
@@ -150,14 +150,14 @@ fun V8AiScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(Triple("SELL", r.sellVotes, V8.Red), Triple("WAIT", r.waitVotes, V8.Amber), Triple("BUY", r.buyVotes, V8.Green)).forEach { (lbl, n, c) ->
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = lbl, color = c, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Text(text = lbl, color = c, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             Box(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(8.dp)
                                     .clip(RoundedCornerShape(4.dp)).background(V8.Line)
                             ) {
                                 if (n > 0) Box(modifier = Modifier.fillMaxWidth(n.toFloat() / r.eligible).height(8.dp).clip(RoundedCornerShape(4.dp)).background(c)) {}
                             }
-                            Text(text = "$n", color = V8.Text1, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            Text(text = "$n", color = V8.Text1, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -184,7 +184,7 @@ fun V8AiScreen(
                 Text(
                     text = when (r?.conflictLevel) { "HIGH" -> "⚠ HIGH CONFLICT"; "MINOR" -> "≈ MINOR"; "ALIGNED" -> "✓ ALIGNED"; else -> "— NO AI" },
                     color = when (r?.conflictLevel) { "HIGH" -> V8.Red; "MINOR" -> V8.Amber; "ALIGNED" -> V8.Green; else -> V8.Text3 },
-                    fontSize = 12.sp, fontWeight = FontWeight.Black
+                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold
                 )
                 Node("AI", r?.let { sigOf(it.consensus) }, r?.let { if (it.eligible == 0) "0" else "${maxOf(it.buyVotes, it.sellVotes, it.waitVotes)}/${it.eligible}" } ?: "--")
             }
@@ -208,7 +208,7 @@ fun V8AiScreen(
                 r.dissent.forEach { d ->
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
                         Text(text = d.provider, color = V8.Text1, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.38f))
-                        Text(text = arrowOf(d.direction) + " " + d.direction.name + " ${d.probability}%", color = signalColor(d.direction), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.3f))
+                        Text(text = arrowOf(d.direction) + " " + d.direction.name + " ${d.probability}%", color = signalColor(d.direction), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.3f))
                     }
                     Text(text = d.reason, color = V8.Text3, fontSize = 10.sp)
                 }
@@ -320,7 +320,7 @@ private fun short(id: String) = when (id) {
 private fun HeroStat(label: String, value: String, color: Color, modifier: Modifier) {
     Column(modifier = modifier) {
         Text(text = label.uppercase(), color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        Text(text = value, color = color, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        Text(text = value, color = color, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -335,7 +335,7 @@ private fun Node(title: String, sig: Signal?, sub: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = title, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        Text(text = if (sig == null) "—" else arrowOf(sig) + " " + sig.name, color = c, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        Text(text = if (sig == null) "—" else arrowOf(sig) + " " + sig.name, color = c, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Text(text = sub, color = V8.Text2, fontSize = 9.sp)
     }
 }
@@ -356,7 +356,7 @@ private fun ProviderCard(p: AiProviderUi, v: AiProviderView?, now: Long, lang: A
             Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 val pr = when (vote.direction) { Signal.BUY -> vote.bullish; Signal.SELL -> vote.bearish; Signal.WAIT -> vote.sideways }
                 Text(text = arrowOf(vote.direction) + " " + vote.direction.name + " $pr%", color = if (v.eligible) signalColor(vote.direction) else V8.Text3,
-                    fontSize = 16.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "${v.latencyMs} ms" + if (v.cached) " • cached" else "", color = V8.Text2, fontSize = 10.sp)
                     Text(text = tr(lang, "age ", "उम्र ", "वय ") + fmtAge(now - v.receivedAtMs), color = V8.Text3, fontSize = 9.sp)

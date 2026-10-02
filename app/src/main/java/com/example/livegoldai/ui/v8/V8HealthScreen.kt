@@ -61,7 +61,7 @@ fun V8HealthScreen(
         V8Card(level = 1, accent = statusColor(health.overallStatus).copy(alpha = 0.5f)) {
             V8Label(tr(lang, "System health", "सिस्टम हेल्थ", "सिस्टम हेल्थ"))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "${health.overallScore}", color = statusColor(health.overallStatus), fontSize = 40.sp, fontWeight = FontWeight.Black)
+                Text(text = "${health.overallScore}", color = statusColor(health.overallStatus), fontSize = 40.sp, fontWeight = FontWeight.SemiBold)
                 Text(text = " / 100", color = V8.Text3, fontSize = 14.sp)
                 Spacer(modifier = Modifier.weight(1f))
                 V8Badge(health.overallStatus.replace('_', ' '), statusColor(health.overallStatus))
@@ -171,7 +171,7 @@ fun V8HealthScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 V8Label(tr(lang, "Indicator self-test", "इंडिकेटर सेल्फ-टेस्ट", "इंडिकेटर सेल्फ-टेस्ट"))
                 Spacer(modifier = Modifier.weight(1f))
-                Text(text = "$ok / ${health.indicators.size} " + tr(lang, "healthy", "ठीक", "ठीक"), color = if (ok == health.indicators.size) V8.Green else V8.Amber, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(text = "$ok / ${health.indicators.size} " + tr(lang, "healthy", "ठीक", "ठीक"), color = if (ok == health.indicators.size) V8.Green else V8.Amber, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             val list = if (showAllIndicators) health.indicators else health.indicators.sortedBy { if (it.status == "OK") 1 else 0 }.take(8)
             list.chunked(2).forEach { pair ->
@@ -207,7 +207,7 @@ fun V8HealthScreen(
                             Text(text = b.name, color = V8.Text1, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             Text(text = tr(lang, "Ran ", "चला ", "चालला ") + b.lastEvaluationLabel + " • " + b.verifiedLabel, color = V8.Text3, fontSize = 9.sp)
                         }
-                        Text(text = arrowOf(b.signal) + " " + b.signal.name, color = signalColor(b.signal), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text(text = arrowOf(b.signal) + " " + b.signal.name, color = signalColor(b.signal), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -221,7 +221,7 @@ fun V8HealthScreen(
             }
             health.events.take(30).forEach { e ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    Text(text = e.level, color = statusColor(e.level), fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(64.dp))
+                    Text(text = e.level, color = statusColor(e.level), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(64.dp))
                     Text(text = e.timeLabel, color = V8.Text3, fontSize = 9.sp, modifier = Modifier.width(66.dp))
                     Text(text = e.text, color = V8.Text1, fontSize = 10.sp, modifier = Modifier.weight(1f))
                 }
@@ -238,7 +238,7 @@ private fun CategoryCard(c: HealthCategory, open: Boolean, lang: AppLanguage, on
     V8Card(level = 2, onClick = onToggle) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = c.title, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text(text = if (c.score < 0) "OFF" else "${c.score}", color = color, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(text = if (c.score < 0) "OFF" else "${c.score}", color = color, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         if (c.score >= 0) {
             LinearProgressIndicator(
@@ -258,7 +258,7 @@ private fun CategoryCard(c: HealthCategory, open: Boolean, lang: AppLanguage, on
         if (open) {
             c.checks.forEach { chk ->
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                    Text(text = statusMark(chk.status), color = statusColor(chk.status), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(18.dp))
+                    Text(text = statusMark(chk.status), color = statusColor(chk.status), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(18.dp))
                     Text(text = chk.name, color = V8.Text1, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.4f))
                     Text(text = chk.detail, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.6f))
                 }

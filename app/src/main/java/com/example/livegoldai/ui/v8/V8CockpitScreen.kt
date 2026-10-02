@@ -71,66 +71,92 @@ fun V8CockpitScreen(
             .fillMaxSize()
             .background(V8.Bg)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // ---------------- LEVEL 1: price + live feed
         V8Card(level = 1) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "XAU/USD", color = V8.Text2, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(liveColor)) {}
+                Text(text = "XAU / USD", color = V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                V8Dot(liveColor)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = liveState, color = liveColor, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(text = liveState, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = String.format(Locale.US, "$%,.2f", analysis.currentPrice), color = V8.Text1, fontSize = 32.sp, fontWeight = FontWeight.Black)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = String.format(Locale.US, "%+.2f (%+.2f%%)", analysis.changeAmount, analysis.changePercent),
-                    color = if (analysis.changeAmount >= 0) V8.Green else V8.Red, fontSize = 12.sp, fontWeight = FontWeight.Bold
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = String.format(Locale.US, "$%,.2f", analysis.currentPrice), color = V8.Text1, fontSize = 42.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.5).sp)
             Text(
-                text = (feed?.source ?: "--") + "  •  " + tr(lang, "age ", "उम्र ", "वय ") + fmtAge(ageMs) +
-                    "  •  " + tr(lang, "fetch ", "लोड ", "लोड ") + (feed?.latencyMs?.let { "$it ms" } ?: "--"),
-                color = V8.Text3, fontSize = 10.sp
+                text = String.format(Locale.US, "%+.2f   %+.2f%%", analysis.changeAmount, analysis.changePercent),
+                color = if (analysis.changeAmount >= 0) V8.Green else V8.Red, fontSize = 13.sp, fontWeight = FontWeight.Medium
             )
+            V8Hairline()
+            Row(modifier = Modifier.fillMaxWidth()) {
+                listOf(
+                    tr(lang, "FEED", "फ़ीड", "फीड") to (feed?.source?.substringBefore(" XAU")?.substringBefore(" PAXG") ?: "--"),
+                    tr(lang, "AGE", "उम्र", "वय") to fmtAge(ageMs),
+                    tr(lang, "FETCH", "लोड", "लोड") to (feed?.latencyMs?.let { "$it ms" } ?: "--")
+                ).forEach { (k, v) ->
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
+                        Text(text = v, color = V8.Text2, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    }
+                }
+            }
         }
 
         // ---------------- LEVEL 1: next move
-        V8Card(level = 1, accent = signalColor(sig).copy(alpha = 0.45f), onClick = onOpenForecast) {
+        V8Card(level = 1, accent = signalColor(sig).copy(alpha = 0.28f), onClick = onOpenForecast) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("5m", "15m", "30m", "1h", "4h", "1d").forEach { iv ->
                     V8Chip(text = iv.uppercase(), selected = iv.equals(selectedInterval, ignoreCase = true)) { onIntervalChange(iv) }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            V8Label(tr(lang, "Next move", "अगली चाल", "पुढील हालचाल"))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = arrowOf(sig) + " " + when (sig) {
-                    Signal.BUY -> tr(lang, "UP", "ऊपर", "वर")
-                    Signal.SELL -> tr(lang, "DOWN", "नीचे", "खाली")
-                    Signal.WAIT -> tr(lang, "NO TRADE", "कोई ट्रेड नहीं", "ट्रेड नाही")
-                }, color = signalColor(sig), fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "${calibrated ?: rawConf}%", color = V8.Text1, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        text = if (calibrated != null) tr(lang, "calibrated confidence", "कैलिब्रेटेड भरोसा", "कॅलिब्रेटेड विश्वास")
-                        else tr(lang, "pillar agreement (uncalibrated)", "पिलर सहमति (अनकैलिब्रेटेड)", "पिलर सहमती (अनकॅलिब्रेटेड)"),
-                        color = V8.Text3, fontSize = 9.sp
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(18.dp))
             val until = analysis.nextPrediction?.validUntilTimestamp ?: 0L
-            if (until > now) {
-                Text(text = tr(lang, "Valid for ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text2, fontSize = 11.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    V8Label(tr(lang, "Next move", "अगली चाल", "पुढील हालचाल") + "  •  " + selectedInterval.uppercase())
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(text = arrowOf(sig), color = signalColor(sig), fontSize = 30.sp, fontWeight = FontWeight.Light)
+                    Text(text = when (sig) {
+                        Signal.BUY -> tr(lang, "BULLISH", "ऊपर", "वर")
+                        Signal.SELL -> tr(lang, "BEARISH", "नीचे", "खाली")
+                        Signal.WAIT -> tr(lang, "NO TRADE", "कोई ट्रेड नहीं", "ट्रेड नाही")
+                    }, color = signalColor(sig), fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                    if (until > now) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                    }
+                }
+                // the ring shows exactly one real number: calibrated confidence if measured, else raw pillar agreement
+                V8Ring(
+                    percent = calibrated ?: rawConf,
+                    color = signalColor(sig),
+                    label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
+                )
+            }
+            if (calibrated == null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = tr(lang, "Pillar agreement, not a win probability (not calibrated yet)", "पिलर सहमति है, जीत की संभावना नहीं (अभी कैलिब्रेट नहीं)", "पिलर सहमती आहे, जिंकण्याची शक्यता नाही (अजून कॅलिब्रेट नाही)"), color = V8.Text3, fontSize = 9.sp)
+            }
+            // honest engine state from the real ledger audit
+            analysis.pulse?.let { p ->
+                if (p.modelHealth == "CRITICAL" || p.modelHealth == "POLARITY_SUSPECT" || p.modelHealth == "VALIDATING" || p.modelHealth == "WEAK") {
+                    val c = if (p.modelHealth == "VALIDATING") V8.Amber else if (p.modelHealth == "WEAK") V8.Amber else V8.Red
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        V8Dot(c)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = p.modelHealthLine, color = c, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
             if (analysis.quantBotSignal?.statusText?.contains("LEARNED FILTER") == true) {
                 Spacer(modifier = Modifier.height(4.dp))
                 V8Badge(analysis.quantBotSignal?.statusText ?: "", V8.Learn)
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(text = tr(lang, "Tap for the full forecast →", "पूरा अनुमान देखने के लिए टैप करें →", "पूर्ण अंदाजासाठी टॅप करा →"), color = V8.Gold, fontSize = 10.sp)
+            V8Hairline(V8.Line)
+            Text(text = tr(lang, "FULL FORECAST  ›", "पूरा अनुमान  ›", "पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
         }
 
         // ---------------- intelligence: quant vs bots vs AI (real answers only)
@@ -149,7 +175,7 @@ fun V8CockpitScreen(
                         else -> tr(lang, "AI not connected", "AI कनेक्ट नहीं", "AI कनेक्ट नाही")
                     },
                     color = when (council?.conflictLevel) { "HIGH" -> V8.Red; "MINOR" -> V8.Amber; "ALIGNED" -> V8.Green; else -> V8.Text3 },
-                    fontSize = 11.sp, fontWeight = FontWeight.Black
+                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                 )
                 Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
             }
@@ -163,7 +189,7 @@ fun V8CockpitScreen(
                 ).forEach { (t, s2, sub) ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = t, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Text(text = if (s2 == null) "—" else arrowOf(s2) + " " + s2.name, color = s2?.let { signalColor(it) } ?: V8.Text3, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        Text(text = if (s2 == null) "—" else arrowOf(s2) + " " + s2.name, color = s2?.let { signalColor(it) } ?: V8.Text3, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         if (sub.isNotEmpty()) Text(text = sub, color = V8.Text3, fontSize = 9.sp)
                     }
                 }
@@ -179,7 +205,7 @@ fun V8CockpitScreen(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     V8Label(tr(lang, "System", "सिस्टम", "सिस्टम"))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "${health.overallScore}/100", color = statusColor(health.overallStatus), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Text(text = "${health.overallScore}/100", color = statusColor(health.overallStatus), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.weight(1f))
                     Text(text = "›", color = V8.Text3, fontSize = 16.sp)
                 }
@@ -188,10 +214,14 @@ fun V8CockpitScreen(
                     listOf("DATA" to "DATA", "INDICATORS" to "IND", "BOTS" to "BOTS", "AI" to "AI", "LEARNING" to "LEARN").forEach { (key, label) ->
                         val c = health.category(key)
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = label, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                V8Dot(if (c == null || c.score < 0) V8.Text3 else statusColor(c.status), 5.dp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = label, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                            }
                             Text(
-                                text = if (c == null) "--" else if (c.score < 0) "OFF" else "${statusMark(c.status)} ${c.summary.substringBefore(" ")}",
-                                color = if (c == null || c.score < 0) V8.Text3 else statusColor(c.status), fontSize = 11.sp, fontWeight = FontWeight.Black
+                                text = if (c == null) "--" else if (c.score < 0) "OFF" else c.summary.substringBefore(" "),
+                                color = if (c == null || c.score < 0) V8.Text3 else V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -213,7 +243,7 @@ fun V8CockpitScreen(
         if (ins != null) {
             V8Card(level = 2) {
                 V8Label(tr(lang, "Market regime", "मार्केट की स्थिति", "मार्केटची स्थिती"))
-                Text(text = ins.regime.replace('_', ' '), color = V8.Text1, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(text = ins.regime.replace('_', ' '), color = V8.Text1, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp)
                 Text(
                     text = String.format(Locale.US, "Trend efficiency %d%%  •  ATR %.2f  •  last candle %.1f× ATR", ins.trendEfficiencyPercent, ins.atr, ins.lastRangeVsAtr),
                     color = V8.Text3, fontSize = 10.sp
@@ -241,7 +271,7 @@ fun V8CockpitScreen(
                 rows.forEach { r ->
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(text = r.timeframe, color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.18f))
-                        Text(text = arrowOf(r.signal) + " " + r.signal.name, color = signalColor(r.signal), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.17f))
+                        Text(text = arrowOf(r.signal) + " " + r.signal.name, color = signalColor(r.signal), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.17f))
                         Text(text = "${r.momentumPercent}", color = V8.Text2, fontSize = 11.sp, modifier = Modifier.weight(0.17f))
                         Text(text = r.keyLevel, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
                     }

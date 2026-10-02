@@ -66,10 +66,10 @@ fun V8ForecastScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     V8Label("${analysis.interval.uppercase()} " + tr(lang, "forecast", "अनुमान", "अंदाज"))
-                    Text(text = arrowOf(sig) + " " + sig.name, color = signalColor(sig), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(text = arrowOf(sig) + " " + sig.name, color = signalColor(sig), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "${calibrated ?: rawConf}%", color = V8.Text1, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text(text = "${calibrated ?: rawConf}%", color = V8.Text1, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                     Text(text = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "uncalibrated", "अनकैलिब्रेटेड", "अनकॅलिब्रेटेड"),
                         color = if (calibrated != null) V8.Green else V8.Amber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
@@ -122,7 +122,7 @@ fun V8ForecastScreen(
                         }
                         Text(
                             text = if (c.verdict == Signal.WAIT) "0" else String.format(Locale.US, "%+.1f", c.points),
-                            color = signalColor(c.verdict), fontSize = 11.sp, fontWeight = FontWeight.Black,
+                            color = signalColor(c.verdict), fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(0.2f)
                         )
                     }
@@ -136,7 +136,7 @@ fun V8ForecastScreen(
             analysis.groups.forEach { g ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(text = g.title, color = V8.Text1, fontSize = 11.sp, modifier = Modifier.weight(0.44f))
-                    Text(text = arrowOf(g.verdict) + " " + g.verdict.name, color = signalColor(g.verdict), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.2f))
+                    Text(text = arrowOf(g.verdict) + " " + g.verdict.name, color = signalColor(g.verdict), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.2f))
                     Text(text = LearningEngine.accuracyLabel(analysis.learning, "grp:${g.key}"), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.36f))
                 }
             }

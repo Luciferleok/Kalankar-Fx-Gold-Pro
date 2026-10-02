@@ -41,7 +41,7 @@ fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             V8Label(tr(lang, "Market brain", "मार्केट ब्रेन", "मार्केट ब्रेन"))
             Spacer(modifier = Modifier.weight(1f))
-            Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
@@ -58,7 +58,7 @@ fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit) {
 private fun MiniStat(label: String, value: String, color: Color, modifier: Modifier) {
     Column(modifier = modifier) {
         Text(text = label, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(text = value.replace('_', ' '), color = color, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(text = value.replace('_', ' '), color = color, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -87,7 +87,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
         Spacer(modifier = Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = tr(lang, "QUANT SIGNAL  ", "क्वांट सिग्नल  ", "क्वांट सिग्नल  "), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(text = arrowOf(b.quantSignal) + " " + b.quantSignal.name + " ${b.baseConfidence}%", color = signalColor(b.quantSignal), fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(text = arrowOf(b.quantSignal) + " " + b.quantSignal.name + " ${b.baseConfidence}%", color = signalColor(b.quantSignal), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(text = b.baseLabel + tr(lang, " • the brain describes the market, it does not change the signal", " • ब्रेन मार्केट बताता है, सिग्नल नहीं बदलता", " • ब्रेन मार्केट सांगतो, सिग्नल बदलत नाही"), color = V8.Text3, fontSize = 9.sp)
     }
@@ -98,13 +98,13 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
             Column(modifier = Modifier.weight(1f)) {
                 V8Label(tr(lang, "Prediction quality index", "प्रेडिक्शन क्वालिटी इंडेक्स", "प्रेडिक्शन क्वालिटी इंडेक्स"))
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(text = "${b.qualityIndex}", color = qualityColor(b.qualityIndex), fontSize = 34.sp, fontWeight = FontWeight.Black)
+                    Text(text = "${b.qualityIndex}", color = qualityColor(b.qualityIndex), fontSize = 34.sp, fontWeight = FontWeight.SemiBold)
                     Text(text = " / 100", color = V8.Text3, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
                 V8Label("EDGE")
-                Text(text = b.edge, color = levelColor(b.edge), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(text = b.edge, color = levelColor(b.edge), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         LinearProgressIndicator(
@@ -112,7 +112,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(5.dp),
             color = qualityColor(b.qualityIndex), trackColor = V8.Line
         )
-        Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         b.qualityParts.forEach { V8KeyValue(it.label, it.value) }
         Text(text = b.edgeNote, color = V8.Text3, fontSize = 10.sp)
         Text(
@@ -133,7 +133,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
         b.uncertainty.forEach { u ->
             Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                 Text(text = u.name, color = V8.Text1, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.34f))
-                Text(text = u.level, color = levelColor(u.level), fontSize = 11.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.22f))
+                Text(text = u.level, color = levelColor(u.level), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.22f))
                 Text(text = u.detail, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.44f))
             }
         }
@@ -181,7 +181,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
                         Text(
                             text = if (x.divergence) "⚠ " + tr(lang, "BREAK", "टूटा", "तुटला") else if (imp == null) "—" else if (imp == Signal.BUY) tr(lang, "gold ↑", "सोना ↑", "सोने ↑") else tr(lang, "gold ↓", "सोना ↓", "सोने ↓"),
                             color = if (x.divergence) V8.Amber else if (imp == null) V8.Text3 else signalColor(imp),
-                            fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(0.29f)
+                            fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.29f)
                         )
                     }
                     if (x.trend == "FLIPPED" || x.trend == "WEAKENING" || x.trend == "STRENGTHENING") {
@@ -222,7 +222,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
         V8Label(tr(lang, "Historical analogs", "पुराने मिलते-जुलते हालात", "जुन्या समान स्थिती"), V8.Learn)
         if (b.analogs.status == "OK") {
             V8ThreeWayBar(b.analogs.upPct, b.analogs.sidePct, b.analogs.downPct)
-            Text(text = "↑ ${b.analogs.upPct}%   ↔ ${b.analogs.sidePct}%   ↓ ${b.analogs.downPct}%", color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            Text(text = "↑ ${b.analogs.upPct}%   ↔ ${b.analogs.sidePct}%   ↓ ${b.analogs.downPct}%", color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             V8KeyValue(tr(lang, "Average real move", "औसत असली चाल", "सरासरी खरी हालचाल"), String.format(Locale.US, "%+.2f", b.analogs.avgMove))
             V8KeyValue(tr(lang, "Similarity score", "समानता स्कोर", "समानता स्कोर"), "${b.analogs.similarity}/100")
         }

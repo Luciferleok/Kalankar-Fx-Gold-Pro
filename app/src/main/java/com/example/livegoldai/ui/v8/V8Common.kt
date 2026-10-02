@@ -1,5 +1,6 @@
 package com.example.livegoldai.ui.v8
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,13 +11,21 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,20 +34,25 @@ import com.example.livegoldai.model.Signal
 import com.example.livegoldai.theme.*
 
 /** V8 design tokens: graphite surfaces, subtle borders, gold only for structure. */
+/* V12 "private terminal" palette: obsidian + graphite, champagne gold only for structure,
+   calm emerald / deep red for direction. No neon. */
 internal object V8 {
-    val Bg = Color(0xFF0B0D11)
-    val Card = Color(0xFF14171D)
-    val Card2 = Color(0xFF1B1F27)
-    val Line = Color(0xFF262B35)
-    val Info = Color(0xFF4FC3F7)
-    val Learn = Color(0xFFB39DDB)
-    val Green = SignalBuy
-    val Red = SignalSell
-    val Amber = Color(0xFFFFB300)
-    val Gold = GoldPrimary
-    val Text1 = TextPrimary
-    val Text2 = TextSecondary
-    val Text3 = TextMuted
+    val Bg = Color(0xFF070808)
+    val Card = Color(0xFF101215)        // level 2 surface
+    val CardTop = Color(0xFF15181C)     // top of the card gradient (soft inner highlight)
+    val Card2 = Color(0xFF181B20)       // level 1 flat / inset surface
+    val Hero = Color(0xFF1A1C20)        // level 3 hero, top of gradient
+    val Line = Color(0xFF22262C)        // hairline border
+    val Info = Color(0xFF6FB6D9)
+    val Learn = Color(0xFFA99BD6)
+    val Green = Color(0xFF2FBF8A)       // emerald
+    val Red = Color(0xFFD9475A)         // refined red
+    val Amber = Color(0xFFE0A94A)
+    val Gold = Color(0xFFD4B56A)        // champagne
+    val GoldDeep = Color(0xFFC9A65B)
+    val Text1 = Color(0xFFF2F0EA)
+    val Text2 = Color(0xFFB9B4A8)
+    val Text3 = Color(0xFF7C786F)
 }
 
 internal fun tr(lang: AppLanguage, en: String, hi: String, mr: String): String = when (lang) {
@@ -83,39 +97,46 @@ internal fun V8Card(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val pad = when (level) { 1 -> 16.dp; 2 -> 14.dp; else -> 10.dp }
+    val pad = when (level) { 1 -> 20.dp; 2 -> 16.dp; else -> 12.dp }
+    val shape = RoundedCornerShape(when (level) { 1 -> 24.dp; 2 -> 20.dp; else -> 16.dp })
+    // machined-surface look: a very soft top-to-bottom gradient and a hairline border, never a thick outline
+    val surface = when (level) {
+        1 -> Brush.verticalGradient(listOf(V8.Hero, V8.Card))
+        2 -> Brush.verticalGradient(listOf(V8.CardTop, V8.Card))
+        else -> Brush.verticalGradient(listOf(V8.Card2, V8.Card2))
+    }
     var m = modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(if (level == 1) 20.dp else 14.dp))
-        .background(if (level == 3) V8.Card2 else V8.Card)
-        .border(1.dp, accent, RoundedCornerShape(if (level == 1) 20.dp else 14.dp))
+        .clip(shape)
+        .background(surface, shape)
+        .border(0.75.dp, accent, shape)
     if (onClick != null) m = m.clickable { onClick() }
     Column(modifier = m.padding(pad), content = content)
 }
 
 @Composable
 internal fun V8Label(text: String, color: Color = V8.Text3) {
-    Text(text = text.uppercase(), color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    Text(text = text.uppercase(), color = color, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.4.sp)
 }
 
 @Composable
 internal fun V8Badge(text: String, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.14f))
-            .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.10f))
+            .border(0.75.dp, color.copy(alpha = 0.32f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
-        Text(text = text, color = color, fontSize = 9.sp, fontWeight = FontWeight.Black)
+        Text(text = text, color = color, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp)
     }
 }
 
 @Composable
 internal fun V8KeyValue(label: String, value: String, valueColor: Color = V8.Text1) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text = label, color = V8.Text3, fontSize = 11.sp, modifier = Modifier.weight(0.45f))
-        Text(text = value, color = valueColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.55f))
+        Text(text = value, color = valueColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(0.55f))
     }
 }
 
@@ -123,27 +144,27 @@ internal fun V8KeyValue(label: String, value: String, valueColor: Color = V8.Tex
 internal fun V8Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) V8.Gold else V8.Card2)
-            .border(1.dp, if (selected) V8.Gold else V8.Line, RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) V8.Gold.copy(alpha = 0.12f) else V8.Card2)
+            .border(0.75.dp, if (selected) V8.Gold.copy(alpha = 0.7f) else V8.Line, RoundedCornerShape(12.dp))
             .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Text(text = text, color = if (selected) Color.Black else V8.Text2, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text = text, color = if (selected) V8.Gold else V8.Text3, fontSize = 11.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, letterSpacing = 0.8.sp)
     }
 }
 
 /** One horizontal bar split into BUY / SIDEWAYS / SELL shares. */
 @Composable
 internal fun V8ThreeWayBar(bull: Int, side: Int, bear: Int) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        listOf(bull to V8.Green, side to V8.Text3, bear to V8.Red).forEach { (v, c) ->
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        listOf(bull to V8.Green, side to V8.Line, bear to V8.Red).forEach { (v, c) ->
             Box(
                 modifier = Modifier
                     .weight(v.coerceAtLeast(1).toFloat())
                     .clip(RoundedCornerShape(3.dp))
                     .background(c)
-                    .padding(vertical = 3.dp)
+                    .padding(vertical = 2.dp)
             ) {}
         }
     }
@@ -154,4 +175,45 @@ internal fun fmtAge(ms: Long): String = when {
     ms < 60_000 -> "${ms / 1000}s"
     ms < 3_600_000 -> "${ms / 60_000}m ${(ms % 60_000) / 1000}s"
     else -> "${ms / 3_600_000}h ${(ms % 3_600_000) / 60_000}m"
+}
+
+/** Tiny steady status light. Never blinks. */
+@Composable
+internal fun V8Dot(color: Color, size: Dp = 6.dp) {
+    Box(modifier = Modifier.size(size).clip(CircleShape).background(color)) {}
+}
+
+/** Thin gold-to-nothing separator used under hero headings. */
+@Composable
+internal fun V8Hairline(color: Color = V8.Gold) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.0f))))
+            .padding(vertical = 0.4.dp)
+    ) {}
+}
+
+/**
+ * Instrument ring: one thin arc for one real number (0..100). The centre shows that same number.
+ * percent < 0 = no value yet: only the empty track is drawn.
+ */
+@Composable
+internal fun V8Ring(percent: Int, color: Color, label: String, diameter: Dp = 104.dp) {
+    Box(modifier = Modifier.size(diameter), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.size(diameter)) {
+            val stroke = 5.dp.toPx()
+            val d = size.minDimension - stroke
+            val tl = Offset((size.width - d) / 2f, (size.height - d) / 2f)
+            drawArc(color = V8.Line, startAngle = 135f, sweepAngle = 270f, useCenter = false, topLeft = tl, size = Size(d, d), style = Stroke(width = stroke, cap = StrokeCap.Round))
+            if (percent > 0) {
+                drawArc(color = color, startAngle = 135f, sweepAngle = 270f * percent.coerceIn(0, 100) / 100f, useCenter = false, topLeft = tl, size = Size(d, d), style = Stroke(width = stroke, cap = StrokeCap.Round))
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = if (percent < 0) "--" else "$percent%", color = V8.Text1, fontSize = 24.sp, fontWeight = FontWeight.Light)
+            Text(text = label.uppercase(), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+        }
+    }
 }
