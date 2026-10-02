@@ -87,3 +87,19 @@ data class PillarContribution(
     val weight: Double,
     val points: Double                  // +BUY / -SELL share of total weight, in %
 )
+
+/** Proof that the prediction recorder / checker is really running. All values come from the ledger file. */
+@Serializable
+data class LedgerPulse(
+    val status: String,           // RECORDING / MARKET_CLOSED / NOT_RECORDING / WRITE_ERROR
+    val statusDetail: String,
+    val recorded: Int,
+    val checked: Int,
+    val active: Int,
+    val overdue: Int,
+    val lastRecorded: String,     // "02 Oct 05:33 UTC • 1h • SELL (6m ago)"
+    val nextDue: String,
+    val lastCheck: String,
+    val ledgerStarted: String,    // first prediction in the file: shows if data was wiped by a reinstall
+    val fileSize: String
+)

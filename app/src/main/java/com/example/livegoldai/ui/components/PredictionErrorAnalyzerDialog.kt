@@ -158,7 +158,7 @@ fun LearningCenterContent(
                     "लर्निंग इंजिन सुरू होत आहे. पुढील रिफ्रेशपासून अंदाज नोंदवले जातील आणि त्यांची वेळ संपल्यावर तपासले जातील."))
             } else {
                 when (tab) {
-                    0 -> OverviewTab(s, lang)
+                    0 -> OverviewTab(s, lang, analysis.pulse)
                     1 -> AccuracyTab(s, lang)
                     2 -> FailuresTab(s, lang)
                     3 -> CorrectionsTab(s, lang)
@@ -203,7 +203,7 @@ fun LearningCenterContent(
 // ------------------------------------------------------------------ tabs
 
 @Composable
-private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage) {
+private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.example.livegoldai.model.LedgerPulse? = null) {
     val d30 = s.windows.firstOrNull { it.label == "30 Days" }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Tile(t(lang, "CHECKED", "जाँची गईं", "तपासले"), "${s.correct + s.wrong}", GoldLight, Modifier.weight(1f))
@@ -223,6 +223,12 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage) {
     InfoRow(t(lang, "WAIT calls", "WAIT सिग्नल", "WAIT सिग्नल"), "${s.waitCalls} (${s.waitAvoidedMove} " + t(lang, "flat", "सपाट", "सपाट") + ", ${s.waitMissedMove} " + t(lang, "missed a move", "मूव छूटा", "मूव्ह चुकला") + ")")
     InfoRow(t(lang, "Not counted", "गिनती में नहीं", "मोजले नाही"), "${s.marketClosed} " + t(lang, "weekend", "वीकेंड", "वीकेंड") + ", ${s.dataFailures} " + t(lang, "no data", "डेटा नहीं", "डेटा नाही"))
     InfoRow(t(lang, "Next check", "अगली जाँच", "पुढील तपासणी"), s.pendingNote)
+    pulse?.let { p ->
+        InfoRow(t(lang, "Recorder", "रिकॉर्डर", "रेकॉर्डर"), p.status.replace('_', ' '))
+        InfoRow(t(lang, "Last recorded", "आखिरी रिकॉर्ड", "शेवटची नोंद"), p.lastRecorded)
+        InfoRow(t(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
+        InfoRow(t(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)
+    }
 
     Section(t(lang, "TODAY", "आज", "आज"))
     WindowRow(s.today, lang)

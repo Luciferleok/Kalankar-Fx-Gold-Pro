@@ -215,7 +215,8 @@ class GoldViewModel @JvmOverloads constructor(
                         // keep showing the last AI council for this timeframe until the next run finishes
                         val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval) else null } catch (_: Exception) { null }
                         val full = learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
-                        full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null })
+                        val pulse = try { com.example.livegoldai.data.LedgerPulseBuilder.build(full, learning.currentState(), learning.stats()) } catch (_: Exception) { null }
+                        full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)
                     }
                 } catch (_: Exception) {
                     rawAnalysis

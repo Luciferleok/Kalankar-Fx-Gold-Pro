@@ -33,7 +33,7 @@ import com.example.livegoldai.model.SystemHealth
  * on the last refresh. Problems are never hidden.
  */
 @Composable
-fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage) {
+fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage, pulse: com.example.livegoldai.model.LedgerPulse? = null) {
     var openKey by remember { mutableStateOf<String?>(null) }
     var showAllIndicators by remember { mutableStateOf(false) }
 
@@ -65,6 +65,32 @@ fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage) {
                     if ((health.category("AI")?.score ?: -1) < 0) tr(lang, " (AI not counted: not connected)", " (AI गिना नहीं: कनेक्ट नहीं)", " (AI मोजले नाही: कनेक्ट नाही)") else "",
                 color = V8.Text3, fontSize = 9.sp
             )
+        }
+
+        // ---------------- prediction recorder pulse
+        pulse?.let { p ->
+            val pc = when (p.status) { "RECORDING" -> V8.Green; "MARKET_CLOSED" -> V8.Amber; else -> V8.Red }
+            V8Card(level = 2, accent = pc.copy(alpha = 0.5f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    V8Label(tr(lang, "Prediction recorder", "प्रेडिक्शन रिकॉर्डर", "प्रेडिक्शन रेकॉर्डर"))
+                    Spacer(modifier = Modifier.weight(1f))
+                    V8Badge(p.status.replace('_', ' '), pc)
+                }
+                Text(text = p.statusDetail, color = V8.Text2, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                V8KeyValue(tr(lang, "Recorded / checked / active", "रिकॉर्ड / जाँचे / चालू", "नोंद / तपासले / चालू"), "${p.recorded} / ${p.checked} / ${p.active}" + if (p.overdue > 0) " • ${p.overdue} overdue" else "")
+                V8KeyValue(tr(lang, "Last recorded", "आखिरी रिकॉर्ड", "शेवटची नोंद"), p.lastRecorded)
+                V8KeyValue(tr(lang, "Next result due", "अगला नतीजा", "पुढील निकाल"), p.nextDue)
+                V8KeyValue(tr(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
+                V8KeyValue(tr(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)
+                V8KeyValue(tr(lang, "File", "फ़ाइल", "फाइल"), p.fileSize)
+                Text(
+                    text = tr(lang, "Works only while the app is open. A prediction that expired while the app was closed is checked the next time you open it. Uninstalling the app deletes this history.",
+                        "सिर्फ ऐप खुला रहने पर चलता है। ऐप बंद रहते जो भविष्यवाणी पूरी हुई, वह अगली बार खोलने पर जाँची जाएगी। ऐप अनइंस्टॉल करने से यह इतिहास मिट जाता है।",
+                        "फक्त अॅप उघडे असताना चालते. अॅप बंद असताना संपलेला अंदाज पुढच्या वेळी उघडल्यावर तपासला जाईल. अॅप अनइन्स्टॉल केल्यास हा इतिहास पुसला जातो."),
+                    color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
 
         // ---------------- categories
