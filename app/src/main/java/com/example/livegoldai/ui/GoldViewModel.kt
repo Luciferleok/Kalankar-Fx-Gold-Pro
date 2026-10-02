@@ -103,7 +103,8 @@ data class GoldUiState(
     val aiDebate: Boolean = false,
     val aiFreshnessSec: Int = 0,
     val aiTests: Map<String, com.example.livegoldai.model.AiTestUi> = emptyMap(),
-    val aiRunning: Boolean = false
+    val aiRunning: Boolean = false,
+    val bgRecording: Boolean = true   // 24/7 background prediction recorder (foreground service)
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -115,7 +116,7 @@ data class GoldUiState(
 
 class GoldViewModel @JvmOverloads constructor(
     application: Application,
-    private val apiService: GoldApiService = GoldApiService()
+    private val apiService: GoldApiService = com.example.livegoldai.data.AppEngine.api
 ) : AndroidViewModel(application) {
 
     private val prefs = application.getSharedPreferences("kalankar_gold_prefs", Context.MODE_PRIVATE)
@@ -133,12 +134,9 @@ class GoldViewModel @JvmOverloads constructor(
 
     // Real Prediction Ledger (append-only file in app storage). Loaded lazily on a background thread.
     // One store instance is shared by the learning engine and the AI provider ledger (same file, same lock).
-    private val ledgerStore: FileLedgerStore by lazy {
-        FileLedgerStore(java.io.File(getApplication<Application>().filesDir, "prediction_ledger.jsonl"))
-    }
-    private val learning: LearningCoordinator by lazy {
-        LearningCoordinator(ledgerStore) { start, end -> apiService.fetchPricePath(start, end) }
-    }
+    // The engine is shared with the background recorder service (same file, same lock, no double records).
+    private val ledgerStore: FileLedgerStore get() = com.example.livegoldai.data.AppEngine.ledgerStore
+    private val learning: LearningCoordinator get() = com.example.livegoldai.data.AppEngine.learning
 
     // ---- External AI council: real API calls only to providers the user connected with their own key.
     private val aiVault by lazy { AiKeyVault(prefs) }
@@ -148,8 +146,8 @@ class GoldViewModel @JvmOverloads constructor(
     @Volatile private var aiConfigCache: List<AiProviderConfig>? = null
 
     // ---- V10 Market Brain: real cross-market series + feature store (same ledger file)
-    private val crossMarket = com.example.livegoldai.data.brain.CrossMarketService()
-    private val featureStore by lazy { com.example.livegoldai.data.brain.FeatureStore(ledgerStore) }   // background thread only
+    private val crossMarket get() = com.example.livegoldai.data.AppEngine.crossMarket
+    private val featureStore get() = com.example.livegoldai.data.AppEngine.featureStore   // background thread only
 
     /** Background thread only. Returns null for offline demo data: the brain is never built on fake prices. */
     private fun buildBrain(a: GoldAnalysisResult, council: com.example.livegoldai.model.AiCouncilReport?): com.example.livegoldai.model.BrainReport? {
@@ -167,6 +165,7 @@ class GoldViewModel @JvmOverloads constructor(
     private var aiJob: Job? = null
 
     init {
+        com.example.livegoldai.data.AppEngine.init(application.filesDir)
         val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
         val initialMode = try {
             DashboardViewMode.valueOf(savedModeStr ?: DashboardViewMode.UNIFIED.name)
@@ -180,8 +179,12 @@ class GoldViewModel @JvmOverloads constructor(
                 isCompactEasyView = (initialMode == DashboardViewMode.SIMPLE) || savedEasyView,
                 aiMode = prefs.getString("ai_mode", "AUTO") ?: "AUTO",
                 aiDebate = prefs.getBoolean("ai_debate", false),
-                aiFreshnessSec = prefs.getInt("ai_freshness_sec", 0)
+                aiFreshnessSec = prefs.getInt("ai_freshness_sec", 0),
+                bgRecording = prefs.getBoolean("bg_recorder_on", true)
             ) 
+        }
+        if (_uiState.value.bgRecording) {
+            try { com.example.livegoldai.service.RecorderService.start(application) } catch (_: Exception) { }
         }
         refreshAiProviders()
         loadData(isInitial = true)
@@ -215,7 +218,12 @@ class GoldViewModel @JvmOverloads constructor(
                         // keep showing the last AI council for this timeframe until the next run finishes
                         val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval) else null } catch (_: Exception) { null }
                         val full = learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
-                        val pulse = try { com.example.livegoldai.data.LedgerPulseBuilder.build(full, learning.currentState(), learning.stats()) } catch (_: Exception) { null }
+                        val pulse = try {
+                            com.example.livegoldai.data.LedgerPulseBuilder.build(
+                                full, learning.currentState(), learning.stats(),
+                                bgEnabled = _uiState.value.bgRecording, bg = com.example.livegoldai.data.AppEngine.recorder.lastReport
+                            )
+                        } catch (_: Exception) { null }
                         full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)
                     }
                 } catch (_: Exception) {
@@ -269,6 +277,17 @@ class GoldViewModel @JvmOverloads constructor(
 
     fun setBottomTab(index: Int) {
         _uiState.update { it.copy(bottomTab = index) }
+    }
+
+    /** Turns the 24/7 background recorder (foreground service with a permanent notification) on or off. */
+    fun setBackgroundRecording(on: Boolean) {
+        prefs.edit().putBoolean("bg_recorder_on", on).apply()
+        _uiState.update { it.copy(bgRecording = on) }
+        try {
+            if (on) com.example.livegoldai.service.RecorderService.start(getApplication())
+            else com.example.livegoldai.service.RecorderService.stop(getApplication())
+        } catch (_: Exception) {
+        }
     }
 
     // ------------------------------------------------------------------ external AI council

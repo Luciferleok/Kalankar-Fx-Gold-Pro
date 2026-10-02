@@ -33,7 +33,13 @@ import com.example.livegoldai.model.SystemHealth
  * on the last refresh. Problems are never hidden.
  */
 @Composable
-fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage, pulse: com.example.livegoldai.model.LedgerPulse? = null) {
+fun V8HealthScreen(
+    health: SystemHealth?,
+    lang: AppLanguage,
+    pulse: com.example.livegoldai.model.LedgerPulse? = null,
+    bgRecording: Boolean = false,
+    onToggleBackground: (Boolean) -> Unit = {}
+) {
     var openKey by remember { mutableStateOf<String?>(null) }
     var showAllIndicators by remember { mutableStateOf(false) }
 
@@ -84,10 +90,34 @@ fun V8HealthScreen(health: SystemHealth?, lang: AppLanguage, pulse: com.example.
                 V8KeyValue(tr(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
                 V8KeyValue(tr(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)
                 V8KeyValue(tr(lang, "File", "फ़ाइल", "फाइल"), p.fileSize)
+
+                // ---- 24/7 background recorder
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    V8Chip(
+                        text = tr(lang, "24/7 background ", "24/7 बैकग्राउंड ", "24/7 बॅकग्राउंड ") + if (bgRecording) "ON" else "OFF",
+                        selected = bgRecording
+                    ) { onToggleBackground(!bgRecording) }
+                }
+                if (p.background.isNotEmpty()) Text(text = p.background, color = if (bgRecording) V8.Text2 else V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+
+                // ---- per timeframe
+                if (p.byInterval.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    V8Label(tr(lang, "By timeframe  (✓ right  ✗ wrong  ↔ no move)", "टाइमफ्रेम के हिसाब से  (✓ सही  ✗ गलत  ↔ चाल नहीं)", "टाइमफ्रेमनुसार  (✓ बरोबर  ✗ चूक  ↔ हालचाल नाही)"))
+                    p.byInterval.forEach { V8KeyValue(it.label, it.value) }
+                }
+                if (p.recent.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    V8Label(tr(lang, "Latest checked predictions", "ताज़ा जाँची गई भविष्यवाणियाँ", "नुकतेच तपासलेले अंदाज"))
+                    p.recent.forEach { r ->
+                        V8KeyValue(r.label, r.value, if (r.value.contains("✓")) V8.Green else if (r.value.contains("✗")) V8.Red else V8.Text2)
+                    }
+                }
                 Text(
-                    text = tr(lang, "Works only while the app is open. A prediction that expired while the app was closed is checked the next time you open it. Uninstalling the app deletes this history.",
-                        "सिर्फ ऐप खुला रहने पर चलता है। ऐप बंद रहते जो भविष्यवाणी पूरी हुई, वह अगली बार खोलने पर जाँची जाएगी। ऐप अनइंस्टॉल करने से यह इतिहास मिट जाता है।",
-                        "फक्त अॅप उघडे असताना चालते. अॅप बंद असताना संपलेला अंदाज पुढच्या वेळी उघडल्यावर तपासला जाईल. अॅप अनइन्स्टॉल केल्यास हा इतिहास पुसला जातो."),
+                    text = tr(lang, "With 24/7 ON a permanent notification keeps the recorder alive. For real 24/7 set this app's battery mode to Unrestricted, otherwise the phone may pause it. External AI is not called in the background. Uninstalling the app deletes this history.",
+                        "24/7 चालू होने पर एक स्थायी नोटिफिकेशन रिकॉर्डर को चालू रखता है। असली 24/7 के लिए इस ऐप की बैटरी सेटिंग Unrestricted करें, वरना फ़ोन इसे रोक सकता है। बैकग्राउंड में बाहरी AI नहीं बुलाया जाता। ऐप अनइंस्टॉल करने से यह इतिहास मिट जाता है।",
+                        "24/7 चालू असताना एक कायम नोटिफिकेशन रेकॉर्डर चालू ठेवते. खऱ्या 24/7 साठी या अॅपची बॅटरी सेटिंग Unrestricted करा, नाहीतर फोन ते थांबवू शकतो. बॅकग्राउंडमध्ये बाहेरील AI बोलावले जात नाही. अॅप अनइन्स्टॉल केल्यास हा इतिहास पुसला जातो."),
                     color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
                 )
             }

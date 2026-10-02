@@ -409,7 +409,13 @@ fun GoldHomeScreen(
                         onFreshness = { viewModel.setAiFreshness(it) },
                         onRunNow = { viewModel.runAiCouncil() }
                     )
-                    3 -> V8HealthScreen(health = analysis.health, lang = uiState.language, pulse = analysis.pulse)
+                    3 -> V8HealthScreen(
+                        health = analysis.health,
+                        lang = uiState.language,
+                        pulse = analysis.pulse,
+                        bgRecording = uiState.bgRecording,
+                        onToggleBackground = { viewModel.setBackgroundRecording(it) }
+                    )
                     4 -> LearningCenterContent(
                         analysis = analysis,
                         onRecalibrate = { viewModel.recalibratePredictionEngine() }

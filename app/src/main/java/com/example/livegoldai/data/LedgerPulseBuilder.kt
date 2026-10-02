@@ -21,7 +21,10 @@ object LedgerPulseBuilder {
         else -> "in ${ms / 3_600_000}h ${(ms % 3_600_000) / 60_000}m"
     }
 
-    fun build(a: GoldAnalysisResult, state: LedgerState, stats: LearningCoordinator.Stats, now: Long = System.currentTimeMillis()): LedgerPulse {
+    fun build(
+        a: GoldAnalysisResult, state: LedgerState, stats: LearningCoordinator.Stats, now: Long = System.currentTimeMillis(),
+        bgEnabled: Boolean = false, bg: BackgroundRecorder.TickReport? = null
+    ): LedgerPulse {
         val last = state.records.lastOrNull()
         val first = state.records.firstOrNull()
         val pending = state.records.filter { state.resultOf(it.id) == null }
@@ -33,13 +36,46 @@ object LedgerPulseBuilder {
             !stats.lastWriteOk -> { status = "WRITE_ERROR"; detail = "Could not write the ledger file: ${stats.lastWriteError}" }
             a.isSimulatedFallback -> { status = "NOT_RECORDING"; detail = "No live price: offline demo data is never recorded" }
             closed -> { status = "MARKET_CLOSED"; detail = "Gold market is closed (weekend): nothing is recorded until it opens" }
-            else -> { status = "RECORDING"; detail = "One prediction per candle for each timeframe you open, while the app is open" }
+            else -> { status = "RECORDING"; detail = if (bgEnabled) "One prediction per candle on every timeframe (5M to 1D), also in the background" else "One prediction per candle for each timeframe you open, while the app is open" }
         }
         val lastCheck = when {
             stats.lastVerifyAttemptAt == 0L && pending.isEmpty() -> "Nothing to check"
             stats.lastVerifyAttemptAt == 0L -> "Not yet: no prediction has expired since the app was opened"
             stats.consecutiveFetchFailures > 0 -> "${PredictionLedger.utcLabel(stats.lastVerifyAttemptAt)} • price history not available, ${stats.consecutiveFetchFailures} failed attempt(s), will retry"
             else -> "${PredictionLedger.utcLabel(stats.lastVerifyAttemptAt)} • ${stats.lastVerifiedCount} checked then, ${stats.totalVerifiedThisSession} since app start"
+        }
+        // ---- per timeframe
+        val order = listOf("5m", "15m", "30m", "1h", "4h", "1d")
+        val ivs = (order + state.records.map { it.interval }).distinct().filter { iv -> state.records.any { it.interval == iv } }
+        val byInterval = ivs.map { iv ->
+            var ok = 0; var bad = 0; var flat = 0; var active = 0
+            for (r in state.records) {
+                if (r.interval != iv) continue
+                when (state.resultOf(r.id)?.outcome) {
+                    null -> active++
+                    LedgerOutcome.CORRECT -> ok++
+                    LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> bad++
+                    LedgerOutcome.SIDEWAYS, LedgerOutcome.WAIT_FLAT, LedgerOutcome.WAIT_MISSED -> flat++
+                    else -> {}
+                }
+            }
+            val acc = if (ok + bad >= 20) " • ${(100.0 * ok / (ok + bad)).toInt()}%" else ""
+            com.example.livegoldai.model.LabelStat(iv.uppercase(Locale.US), "✓$ok  ✗$bad  ↔$flat  • $active active$acc")
+        }
+        val recById = state.records.associateBy { it.id }
+        val recent = state.results.values.sortedByDescending { it.checkedAt }.take(12).mapNotNull { res ->
+            val r = recById[res.id] ?: return@mapNotNull null
+            com.example.livegoldai.model.LabelStat(
+                "${PredictionLedger.utcLabel(r.createdAt, true)} • ${r.interval}",
+                "${r.finalSignal.name} ${BackgroundRecorder.mark(res.outcome)}  " + String.format(Locale.US, "%+.2f", res.move)
+            )
+        }
+        val background = when {
+            !bgEnabled -> "OFF: predictions are recorded only while the app is open"
+            bg == null -> "ON: waiting for the first background run"
+            else -> "ON • last run ${PredictionLedger.utcLabel(bg.at)} (${ago(now - bg.at)})" +
+                (if (bg.recordedNow.isNotEmpty()) " • recorded ${bg.recordedNow.joinToString(", ")}" else "") +
+                (if (bg.problems.isNotEmpty()) " • ⚠ ${bg.problems.joinToString(", ") { it.title }}" else "")
         }
         return LedgerPulse(
             status = status,
@@ -54,7 +90,10 @@ object LedgerPulseBuilder {
                 "${PredictionLedger.utcLabel(next.expiresAt, true)} (${inTime(next.expiresAt + LearningCoordinator.SETTLE_MS - now)}) • ${next.interval}",
             lastCheck = lastCheck,
             ledgerStarted = if (first == null) "--" else "${PredictionLedger.utcLabel(first.createdAt, true)} (${ago(now - first.createdAt)})",
-            fileSize = if (stats.fileBytes >= 0) String.format(Locale.US, "%.1f KB", stats.fileBytes / 1024.0) else "unknown"
+            fileSize = if (stats.fileBytes >= 0) String.format(Locale.US, "%.1f KB", stats.fileBytes / 1024.0) else "unknown",
+            byInterval = byInterval,
+            recent = recent,
+            background = background
         )
     }
 }

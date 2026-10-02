@@ -27,7 +27,8 @@ class GoldApiService(
         .build()
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val memoryCache = mutableMapOf<String, Pair<Long, GoldAnalysisResult>>()
+    // shared by the screen and the background recorder (two threads)
+    private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, GoldAnalysisResult>>()
     private val cacheTtlMs = 15_000L // 15 seconds cache to avoid API burnout
 
     fun setApiKey(newKey: String) {

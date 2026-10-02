@@ -136,6 +136,18 @@ class LearningCoordinator(
         }
     }
 
+    /** Background tick when no new prediction is due: only checks expired predictions. Returns how many were checked. */
+    suspend fun verifyOnly(now: Long = System.currentTimeMillis()): Int {
+        if (!busy.compareAndSet(false, true)) return 0
+        try {
+            val n = verifyDue(now)
+            if (n > 0) runCycle(now, n)
+            return n
+        } finally {
+            busy.set(false)
+        }
+    }
+
     /** "Run recalibration" button: checks everything that is due and runs one cycle. Returns what happened. */
     suspend fun recalibrateNow(now: Long = System.currentTimeMillis()): List<String> {
         if (!busy.compareAndSet(false, true)) return listOf("A learning cycle is already running. Try again in a few seconds.")

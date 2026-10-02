@@ -101,5 +101,8 @@ data class LedgerPulse(
     val nextDue: String,
     val lastCheck: String,
     val ledgerStarted: String,    // first prediction in the file: shows if data was wiped by a reinstall
-    val fileSize: String
+    val fileSize: String,
+    val byInterval: List<LabelStat> = emptyList(),   // per timeframe: right / wrong / no edge / active
+    val recent: List<LabelStat> = emptyList(),       // newest checked predictions
+    val background: String = ""                      // last run of the background recorder
 )
