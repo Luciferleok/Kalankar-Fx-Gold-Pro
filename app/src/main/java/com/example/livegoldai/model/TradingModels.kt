@@ -555,7 +555,8 @@ data class GoldAnalysisResult(
     val feed: FeedStatus? = null,
     val health: SystemHealth? = null,
     val insights: CockpitInsights? = null,
-    val aiCouncil: AiCouncilReport? = null
+    val aiCouncil: AiCouncilReport? = null,
+    val brain: BrainReport? = null
 )
 
 @Serializable

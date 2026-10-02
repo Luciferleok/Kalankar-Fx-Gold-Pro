@@ -138,7 +138,7 @@ class AIOrchestrator(
             val dirs = eligible1.mapNotNull { views[it.id]?.vote?.direction }.distinct()
             if (disp >= 15 || dirs.size > 1) {
                 debateRan = true
-                val letters = "ABCDEFG"
+                val letters = "ABCDEFGHIJKL"
                 val r2 = callAll(eligible1, snapshot, a.interval, window, hardTimeout, recordId, now, providerFactory) { c ->
                     val own = views[c.id]!!.vote!!
                     val others = eligible1.filter { it.id != c.id }.mapIndexed { i, o ->

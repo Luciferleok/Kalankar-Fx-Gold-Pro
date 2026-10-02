@@ -88,6 +88,9 @@ fun V8ForecastScreen(
             )
         }
 
+        // ---------------- V10 market brain (measured state, quality, uncertainty, cross-market, analogs)
+        analysis.brain?.let { V10BrainSection(it, lang) }
+
         // ---------------- why this forecast (real weighted vote)
         if (ins != null) {
             V8Card(level = 2) {

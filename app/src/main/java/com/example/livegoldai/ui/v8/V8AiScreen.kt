@@ -313,7 +313,7 @@ fun V8AiScreen(
 
 private fun short(id: String) = when (id) {
     "OPENAI" -> "OpenAI"; "GEMINI" -> "Gemini"; "CLAUDE" -> "Claude"; "DEEPSEEK" -> "DeepSeek"
-    "PERPLEXITY" -> "Perplexity"; "XAI" -> "Grok"; "MISTRAL" -> "Mistral"; else -> id
+    "PERPLEXITY" -> "Perplexity"; "XAI" -> "Grok"; "MISTRAL" -> "Mistral"; "GROQ" -> "Groq"; else -> id
 }
 
 @Composable

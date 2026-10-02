@@ -146,6 +146,24 @@ class GoldViewModel @JvmOverloads constructor(
         AIOrchestrator(OkHttpAiTransport(), AiPerformanceTracker(ledgerStore))
     }
     @Volatile private var aiConfigCache: List<AiProviderConfig>? = null
+
+    // ---- V10 Market Brain: real cross-market series + feature store (same ledger file)
+    private val crossMarket = com.example.livegoldai.data.brain.CrossMarketService()
+    private val featureStore by lazy { com.example.livegoldai.data.brain.FeatureStore(ledgerStore) }   // background thread only
+
+    /** Background thread only. Returns null for offline demo data: the brain is never built on fake prices. */
+    private fun buildBrain(a: GoldAnalysisResult, council: com.example.livegoldai.model.AiCouncilReport?): com.example.livegoldai.model.BrainReport? {
+        if (a.isSimulatedFallback) return null
+        val now = System.currentTimeMillis()
+        val xm = com.example.livegoldai.data.brain.CrossMarketEngine.build(crossMarket.series(), now)
+        val anomaly = com.example.livegoldai.data.brain.AnomalyEngine.build(a, xm, now)
+        val feats = com.example.livegoldai.data.brain.FeatureCatalog.compute(a, xm, anomaly, now)
+        val st = learning.currentState()
+        // store the features once, for the prediction that was recorded on this refresh
+        st.records.lastOrNull { it.interval == a.interval && now - it.createdAt < 120_000L }
+            ?.let { r -> featureStore.recordIfAbsent(r.id, r.createdAt, r.interval, feats) }
+        return com.example.livegoldai.data.brain.MarketBrain.build(a, xm, feats, featureStore, st, council, now)
+    }
     private var aiJob: Job? = null
 
     init {
@@ -196,7 +214,8 @@ class GoldViewModel @JvmOverloads constructor(
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
                         // keep showing the last AI council for this timeframe until the next run finishes
                         val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval) else null } catch (_: Exception) { null }
-                        learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
+                        val full = learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
+                        full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null })
                     }
                 } catch (_: Exception) {
                     rawAnalysis
@@ -297,7 +316,9 @@ class GoldViewModel @JvmOverloads constructor(
                         val st = learning.currentState()
                         val now = System.currentTimeMillis()
                         val rid = st.records.lastOrNull { it.interval == s0.selectedInterval && now < it.expiresAt }?.id ?: ""
-                        orch.run(data, cfgs, rid, st)
+                        val rep = orch.run(data, cfgs, rid, st)
+                        // refresh the brain so its AI line and budget use this council
+                        rep to (try { buildBrain(data.copy(aiCouncil = rep), rep) } catch (_: Exception) { null })
                     }
                 } catch (_: Exception) {
                     null
@@ -305,8 +326,9 @@ class GoldViewModel @JvmOverloads constructor(
             }
             _uiState.update { s ->
                 val d = s.data
-                if (report != null && d != null && d.interval == report.interval) {
-                    s.copy(aiRunning = false, data = d.copy(aiCouncil = report, health = HealthMonitor.withAi(d.health, report)))
+                val rep = report?.first
+                if (rep != null && d != null && d.interval == rep.interval) {
+                    s.copy(aiRunning = false, data = d.copy(aiCouncil = rep, health = HealthMonitor.withAi(d.health, rep), brain = report.second ?: d.brain))
                 } else s.copy(aiRunning = false)
             }
         }

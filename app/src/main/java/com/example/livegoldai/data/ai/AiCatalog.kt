@@ -66,7 +66,10 @@ enum class AiProviderId(
     XAI("xAI Grok", AiStyle.OPENAI_COMPAT, "https://api.x.ai/v1", "grok-4.6", AiRole.ALTERNATIVE,
         "console.x.ai", false, true, "GRK"),
     MISTRAL("Mistral", AiStyle.OPENAI_COMPAT, "https://api.mistral.ai/v1", "mistral-small-latest", AiRole.FAST,
-        "console.mistral.ai/api-keys", true, true, "MIS");
+        "console.mistral.ai/api-keys", true, true, "MIS"),
+    // Groq (console.groq.com) is a different company from xAI's Grok: fast hosting of open models, OpenAI-compatible API.
+    GROQ("Groq (Llama)", AiStyle.OPENAI_COMPAT, "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", AiRole.QUANT,
+        "console.groq.com/keys", true, true, "GRQ");
 
     companion object {
         fun fromName(n: String): AiProviderId? = values().firstOrNull { it.name == n }
@@ -82,6 +85,22 @@ data class AiProviderConfig(
     val enabled: Boolean = true
 ) {
     val isConfigured: Boolean get() = apiKey.isNotBlank()
+
+    companion object {
+        /** True when a value typed into the Model box is really an API key (pasted into the wrong box). */
+        fun looksLikeKey(s: String): Boolean {
+            val t = s.trim()
+            if (t.isEmpty()) return false
+            val prefixes = listOf("AQ.", "AIza", "sk-", "gsk_", "xai-", "pplx-")
+            return t.length > 48 || prefixes.any { t.startsWith(it) }
+        }
+
+        /** A model name that is safe to use: never a key, never blank. */
+        fun cleanModel(id: AiProviderId, model: String?): String {
+            val t = model?.trim().orEmpty()
+            return if (t.isEmpty() || looksLikeKey(t)) id.defaultModel else t
+        }
+    }
 }
 
 object AiStatus {

@@ -70,14 +70,14 @@ class AiKeyVault(private val prefs: SharedPreferences) {
     fun loadConfig(id: AiProviderId): AiProviderConfig = AiProviderConfig(
         id = id,
         apiKey = getKey(id),
-        model = prefs.getString("ai_model_" + id.name, null)?.takeIf { it.isNotBlank() } ?: id.defaultModel,
+        model = AiProviderConfig.cleanModel(id, prefs.getString("ai_model_" + id.name, null)),
         role = AiRole.fromName(prefs.getString("ai_role_" + id.name, null), id.defaultRole),
         enabled = prefs.getBoolean("ai_on_" + id.name, true)
     )
 
     fun saveSettings(id: AiProviderId, model: String, role: AiRole, enabled: Boolean) {
         prefs.edit()
-            .putString("ai_model_" + id.name, model.trim())
+            .putString("ai_model_" + id.name, AiProviderConfig.cleanModel(id, model))
             .putString("ai_role_" + id.name, role.name)
             .putBoolean("ai_on_" + id.name, enabled)
             .apply()

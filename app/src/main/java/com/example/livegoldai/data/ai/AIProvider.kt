@@ -131,7 +131,7 @@ class HttpAIProvider(
                 if (methods.isNotEmpty() && "generateContent" !in methods) null else (mm["name"] as? String)?.removePrefix("models/")
             }
             else -> (m["data"] as? List<*>)?.mapNotNull { x -> (x as? Map<String, Any?>)?.get("id") as? String }
-        }?.sorted() ?: emptyList()
+        }?.sortedWith(compareBy({ id.style == AiStyle.GEMINI && !it.startsWith("gemini") }, { it })) ?: emptyList()
     } catch (_: Exception) {
         emptyList()
     }

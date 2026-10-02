@@ -170,6 +170,9 @@ fun V8CockpitScreen(
             }
         }
 
+        // ---------------- V10 market brain summary
+        analysis.brain?.let { V10BrainStrip(it, lang, onOpenForecast) }
+
         // ---------------- health strip
         if (health != null) {
             V8Card(level = 2, onClick = onOpenHealth) {
