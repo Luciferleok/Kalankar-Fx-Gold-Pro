@@ -148,6 +148,19 @@ object PredictionAudit {
             split("News window") { if (it.newsActive) "news" else "quiet" }
             lines.add(LabelStat("Learning promotions", if (locked) "LOCKED: $lockReason" else "allowed (rules still need 50+ samples and a shadow test)"))
         }
+        // ---- range filter proof: what the blocked BUY/SELL calls would have done (raw signal vs the real move)
+        run {
+            var blocked = 0; var rawOk = 0; var rawBad = 0
+            for (r in state.records) {
+                if (r.appliedFilter != "C-RANGE") continue
+                val res = state.resultOf(r.id) ?: continue
+                if (!PredictionLedger.reliable(res.outcome)) continue
+                blocked++
+                when (PredictionLedger.directionScore(r.rawSignal, res.move, res.threshold)) { 1 -> rawOk++; 0 -> rawBad++ }
+            }
+            if (blocked > 0) lines.add(LabelStat("Range filter", "blocked $blocked • their BUY/SELL would have been right ${p(rawOk, rawOk + rawBad)}" +
+                if (rawOk + rawBad >= 20) (if (rawOk * 2 < rawOk + rawBad) " • filter is helping" else " • filter is NOT helping") else " • too few to judge"))
+        }
         return Report(health, headline, locked, lockReason, n, dirPct, flipPct, moves, noEdge, lines)
     }
 }

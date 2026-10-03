@@ -238,7 +238,7 @@ object PredictionLedger {
 
     // ------------------------------------------------------------------ source-consistent verification
 
-    const val ENGINE_VERSION = "E11.3"
+    const val ENGINE_VERSION = "E15.2"
 
     /** True when the result is based on a trustworthy real price path. */
     fun reliable(o: LedgerOutcome): Boolean =

@@ -155,9 +155,19 @@ object LearningEngine {
     fun activeFilterIds(state: LedgerState): List<String> =
         hypotheses.filter { lastEvent(state, it.id)?.stage == "PROMOTED" }.map { it.id }
 
-    /** Returns the id of the first promoted filter that blocks this draft record, or "". */
+    /**
+     * Filters the owner switched on directly (V15.2). They do not wait for 50 samples + a shadow test,
+     * because the owner asked for them; the ledger still stores the raw BUY/SELL next to the shown WAIT,
+     * so the audit can prove later whether the blocked calls really would have been wrong.
+     */
+    val OWNER_FILTERS = listOf("C-RANGE")
+    @Volatile var ownerFiltersOn: Boolean = true
+    fun isOwnerFilter(id: String): Boolean = id in OWNER_FILTERS
+
+    /** Returns the id of the first owner / promoted filter that blocks this draft record, or "". */
     fun firingFilter(state: LedgerState, draft: LedgerRecord): String {
-        for (id in activeFilterIds(state)) {
+        val owner = if (ownerFiltersOn) OWNER_FILTERS else emptyList()
+        for (id in (owner + activeFilterIds(state)).distinct()) {
             val h = hypotheses.firstOrNull { it.id == id } ?: continue
             if (h.fires(draft)) return id
         }
@@ -166,7 +176,7 @@ object LearningEngine {
 
     fun modelVersion(state: LedgerState): String {
         val n = activeFilterIds(state).size
-        return "Base rules v1 + $n learned filter${if (n == 1) "" else "s"}"
+        return "Base rules v1 + $n learned filter${if (n == 1) "" else "s"}" + if (ownerFiltersOn) " + range filter" else ""
     }
 
     data class CycleOutput(val newEvents: List<LedgerEvent>, val report: List<String>)

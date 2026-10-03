@@ -165,18 +165,22 @@ object RealityEngine {
         // learned filter turned the signal into WAIT
         if (appliedFilter.isNotEmpty()) {
             val cand = snapshot.candidates.firstOrNull { it.id == appliedFilter }
+            val owner = LearningEngine.isOwnerFilter(appliedFilter)
             a = a.copy(
                 overallSignal = Signal.WAIT,
                 quantBotSignal = a.quantBotSignal?.copy(
                     signal = Signal.WAIT, isTradeActive = false, orderType = "STANDBY",
-                    statusText = "🧠 LEARNED FILTER $appliedFilter: WAIT",
-                    botReasoningEnglish = "Learned filter ${cand?.titleEnglish ?: appliedFilter} blocked this ${analysis.overallSignal.name}. ${cand?.note ?: ""}",
-                    botReasoningHindi = "सीखे गए फ़िल्टर ${cand?.titleHindi ?: appliedFilter} ने यह ${analysis.overallSignal.name} रोका।",
-                    botReasoningMarathi = "शिकलेल्या फिल्टर ${cand?.titleMarathi ?: appliedFilter} ने हा ${analysis.overallSignal.name} थांबवला."
+                    statusText = if (owner) "RANGE FILTER $appliedFilter: WAIT" else "🧠 LEARNED FILTER $appliedFilter: WAIT",
+                    botReasoningEnglish = if (owner) "Sideways market (trend efficiency below 20%): the trend rules are unreliable here, so this ${analysis.overallSignal.name} is shown as WAIT."
+                        else "Learned filter ${cand?.titleEnglish ?: appliedFilter} blocked this ${analysis.overallSignal.name}. ${cand?.note ?: ""}",
+                    botReasoningHindi = if (owner) "मार्केट साइडवेज़ है (ट्रेंड एफिशिएंसी 20% से कम): यहाँ ट्रेंड के नियम भरोसेमंद नहीं, इसलिए यह ${analysis.overallSignal.name} WAIT दिखाया गया।"
+                        else "सीखे गए फ़िल्टर ${cand?.titleHindi ?: appliedFilter} ने यह ${analysis.overallSignal.name} रोका।",
+                    botReasoningMarathi = if (owner) "मार्केट साइडवेज आहे (ट्रेंड एफिशियन्सी 20% पेक्षा कमी): इथे ट्रेंडचे नियम विश्वासार्ह नाहीत, म्हणून हा ${analysis.overallSignal.name} WAIT दाखवला आहे."
+                        else "शिकलेल्या फिल्टर ${cand?.titleMarathi ?: appliedFilter} ने हा ${analysis.overallSignal.name} थांबवला."
                 ),
                 nextPrediction = a.nextPrediction?.copy(
                     verdict = Signal.WAIT,
-                    urgencyTag = "WAIT • LEARNED FILTER $appliedFilter"
+                    urgencyTag = if (owner) "WAIT • RANGE MARKET" else "WAIT • LEARNED FILTER $appliedFilter"
                 )
             )
         }

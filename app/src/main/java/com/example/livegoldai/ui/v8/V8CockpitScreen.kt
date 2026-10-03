@@ -177,7 +177,7 @@ fun V8CockpitScreen(
                     }
                 }
             }
-            if (analysis.quantBotSignal?.statusText?.contains("LEARNED FILTER") == true) {
+            if (analysis.quantBotSignal?.statusText?.contains("FILTER") == true) {
                 Spacer(modifier = Modifier.height(4.dp))
                 V8Badge(analysis.quantBotSignal?.statusText ?: "", V8.Learn)
             }

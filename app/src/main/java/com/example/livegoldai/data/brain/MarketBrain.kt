@@ -271,7 +271,7 @@ object MarketBrain {
                 "GC" -> "Yahoo GC=F (same instrument)"
                 else -> "--"
             }),
-            LabelStat("Final signal", "${sig.name} ← quant engine (7 pillars, 68% gate" + (if (a.quantBotSignal?.statusText?.contains("LEARNED FILTER") == true) ", learned filter applied)" else ")")),
+            LabelStat("Final signal", "${sig.name} ← quant engine (7 pillars, 68% gate" + (if (a.quantBotSignal?.statusText?.contains("FILTER") == true) ", learned filter applied)" else ")")),
             LabelStat("Candles", "${a.recentCandles.size} × ${a.interval} • ${a.feed?.source ?: "--"} • last ${a.lastUpdated}"),
             LabelStat("Indicators", if (usable != null) "$usable/$indicators usable" else "$indicators"),
             LabelStat("Timeframes", if (mtf.isEmpty()) "not loaded" else "${mtf.size} real (PAXG/USDT)"),
