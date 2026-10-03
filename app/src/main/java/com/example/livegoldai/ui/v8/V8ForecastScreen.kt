@@ -143,6 +143,23 @@ fun V8ForecastScreen(
         }
 
         // ---------------- prediction trace
+        // ---------------- forecast timeline (real ledger records of this timeframe)
+        analysis.pulse?.let { p ->
+            V8Card(level = 2) {
+                V8Label(tr(lang, "Forecast timeline", "फोरकास्ट टाइमलाइन", "फोरकास्ट टाइमलाइन") + "  •  " + analysis.interval.uppercase())
+                if (p.timeline.isEmpty()) {
+                    Text(text = tr(lang, "No forecast recorded on this timeframe yet", "इस टाइमफ्रेम पर अभी कोई फोरकास्ट रिकॉर्ड नहीं", "या टाइमफ्रेमवर अजून फोरकास्ट नोंदलेला नाही"), color = V8.Text3, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+                } else {
+                    p.timeline.forEach { V8KeyValue(it.label, it.value) }
+                }
+                if (p.dataQuality != "--") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    V8KeyValue(tr(lang, "Data quality", "डेटा क्वालिटी", "डेटा गुणवत्ता"), p.dataQualityDetail,
+                        when (p.dataQuality) { "UNSAFE" -> V8.Red; "DEGRADED" -> V8.Amber; else -> V8.Text1 })
+                }
+            }
+        }
+
         V8Card(level = 3, onClick = { showTrace = !showTrace }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 V8Label(tr(lang, "Prediction trace", "प्रेडिक्शन ट्रेस", "प्रेडिक्शन ट्रेस"))

@@ -168,7 +168,8 @@ fun V8CockpitScreen(
                 listOf(
                     Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "last calls", "पिछले कॉल", "मागील कॉल")),
                     Triple(tr(lang, "EXPECTED MOVE", "अनुमानित चाल", "अपेक्षित हालचाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
-                    Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL")
+                    Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL"),
+                    Triple(tr(lang, "DATA", "डेटा", "डेटा"), p?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"))
                 ).forEach { (k, v, sub) ->
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)

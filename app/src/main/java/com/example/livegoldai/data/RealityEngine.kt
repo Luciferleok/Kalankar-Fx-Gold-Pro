@@ -166,21 +166,25 @@ object RealityEngine {
         if (appliedFilter.isNotEmpty()) {
             val cand = snapshot.candidates.firstOrNull { it.id == appliedFilter }
             val owner = LearningEngine.isOwnerFilter(appliedFilter)
+            val dataPause = appliedFilter == LearningCoordinator.DATA_PAUSE
             a = a.copy(
                 overallSignal = Signal.WAIT,
                 quantBotSignal = a.quantBotSignal?.copy(
                     signal = Signal.WAIT, isTradeActive = false, orderType = "STANDBY",
-                    statusText = if (owner) "RANGE FILTER $appliedFilter: WAIT" else "🧠 LEARNED FILTER $appliedFilter: WAIT",
-                    botReasoningEnglish = if (owner) "Sideways market (trend efficiency below 20%): the trend rules are unreliable here, so this ${analysis.overallSignal.name} is shown as WAIT."
+                    statusText = if (dataPause) "DATA FILTER: FORECAST PAUSED" else if (owner) "RANGE FILTER $appliedFilter: WAIT" else "🧠 LEARNED FILTER $appliedFilter: WAIT",
+                    botReasoningEnglish = if (dataPause) "Forecast paused: market data integrity issue. No BUY/SELL is shown or recorded until the data is clean."
+                        else if (owner) "Sideways market (trend efficiency below 20%): the trend rules are unreliable here, so this ${analysis.overallSignal.name} is shown as WAIT."
                         else "Learned filter ${cand?.titleEnglish ?: appliedFilter} blocked this ${analysis.overallSignal.name}. ${cand?.note ?: ""}",
-                    botReasoningHindi = if (owner) "मार्केट साइडवेज़ है (ट्रेंड एफिशिएंसी 20% से कम): यहाँ ट्रेंड के नियम भरोसेमंद नहीं, इसलिए यह ${analysis.overallSignal.name} WAIT दिखाया गया।"
+                    botReasoningHindi = if (dataPause) "फोरकास्ट रुका है: मार्केट डेटा में गड़बड़ी है। डेटा साफ़ होने तक BUY/SELL न दिखेगा, न रिकॉर्ड होगा।"
+                        else if (owner) "मार्केट साइडवेज़ है (ट्रेंड एफिशिएंसी 20% से कम): यहाँ ट्रेंड के नियम भरोसेमंद नहीं, इसलिए यह ${analysis.overallSignal.name} WAIT दिखाया गया।"
                         else "सीखे गए फ़िल्टर ${cand?.titleHindi ?: appliedFilter} ने यह ${analysis.overallSignal.name} रोका।",
-                    botReasoningMarathi = if (owner) "मार्केट साइडवेज आहे (ट्रेंड एफिशियन्सी 20% पेक्षा कमी): इथे ट्रेंडचे नियम विश्वासार्ह नाहीत, म्हणून हा ${analysis.overallSignal.name} WAIT दाखवला आहे."
+                    botReasoningMarathi = if (dataPause) "फोरकास्ट थांबवला आहे: मार्केट डेटामध्ये त्रुटी आहे. डेटा स्वच्छ होईपर्यंत BUY/SELL दाखवला किंवा नोंदवला जाणार नाही."
+                        else if (owner) "मार्केट साइडवेज आहे (ट्रेंड एफिशियन्सी 20% पेक्षा कमी): इथे ट्रेंडचे नियम विश्वासार्ह नाहीत, म्हणून हा ${analysis.overallSignal.name} WAIT दाखवला आहे."
                         else "शिकलेल्या फिल्टर ${cand?.titleMarathi ?: appliedFilter} ने हा ${analysis.overallSignal.name} थांबवला."
                 ),
                 nextPrediction = a.nextPrediction?.copy(
                     verdict = Signal.WAIT,
-                    urgencyTag = if (owner) "WAIT • RANGE MARKET" else "WAIT • LEARNED FILTER $appliedFilter"
+                    urgencyTag = if (dataPause) "FORECAST PAUSED • DATA" else if (owner) "WAIT • RANGE MARKET" else "WAIT • LEARNED FILTER $appliedFilter"
                 )
             )
         }

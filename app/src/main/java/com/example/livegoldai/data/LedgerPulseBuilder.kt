@@ -144,6 +144,16 @@ object LedgerPulseBuilder {
         val verification = "same instrument $same • proxy (decisive) $proxy • too close to call $unsureAll" + if (legacyV > 0) " • older, source not stored $legacyV" else ""
         val audit = PredictionAudit.build(state, integrity?.status ?: "")
         val lab = ResearchLab.build(state, a.interval)
+        val dq = DataQualityEngine.assess(a.recentCandles, a.feed?.fetchedAtMs ?: 0L, !a.isSimulatedFallback, now, closed)
+        // forecast timeline: what the app said on this timeframe, and what then really happened
+        val timeline = state.records.filter { it.interval.equals(a.interval, ignoreCase = true) }.takeLast(8).reversed().map { r ->
+            val res = state.resultOf(r.id)
+            com.example.livegoldai.model.LabelStat(
+                PredictionLedger.utcLabel(r.createdAt, true),
+                "${r.finalSignal.name} ${r.confidence}%" + (if (r.appliedFilter.isNotEmpty()) " (engine said ${r.rawSignal.name})" else "") + "  •  " +
+                    if (res == null) "running" else BackgroundRecorder.mark(res.outcome) + " " + String.format(Locale.US, "%+.2f", res.move)
+            )
+        }
         return LedgerPulse(
             modelHealth = audit.health,
             modelHealthLine = audit.headline,
@@ -151,6 +161,9 @@ object LedgerPulseBuilder {
             stability = lab.stability,
             expectedMove = lab.expectedMove,
             coverage = lab.coverage,
+            dataQuality = dq.level,
+            dataQualityDetail = dq.summary,
+            timeline = timeline,
             directionPct = if (audit.decided == 0) -1 else audit.directionPct.toInt(),
             directionN = audit.decided,
             directionMinN = PredictionAudit.MIN_N,

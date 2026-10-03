@@ -88,12 +88,17 @@ class LearningCoordinator(
     }
 
     companion object {
+        const val DATA_PAUSE = "D-UNSAFE"
         const val MAX_CHECKS_PER_REFRESH = 6
         const val GIVE_UP_AFTER_MS = 72 * 3_600_000L
         const val SETTLE_MS = 90_000L
     }
 
     fun currentState(): LedgerState = state
+
+    /** Result of the last data-quality check (null before the first forecast). */
+    @Volatile var lastDataQuality: DataQualityEngine.Report? = null
+        private set
 
     suspend fun process(
         analysis: GoldAnalysisResult,
@@ -121,12 +126,15 @@ class LearningCoordinator(
             val canRecord = !analysis.isSimulatedFallback && !PredictionLedger.isMarketClosed(now) && analysis.lastUpdated.isNotBlank()
 
             val draft = buildRecord(analysis, analysis, interval, now, newsActive, htf, "")
-            val filter = existing?.appliedFilter ?: LearningEngine.firingFilter(state, draft)
+            // data integrity comes first: on UNSAFE data no BUY/SELL is published, and nothing is recorded
+            val dq = DataQualityEngine.assess(analysis.recentCandles, analysis.feed?.fetchedAtMs ?: 0L, !analysis.isSimulatedFallback, now, PredictionLedger.isMarketClosed(now))
+            lastDataQuality = dq
+            val filter = if (dq.unsafe && !analysis.isSimulatedFallback) DATA_PAUSE else (existing?.appliedFilter ?: LearningEngine.firingFilter(state, draft))
 
             val snap1 = LearningEngine.snapshot(state, interval, now, lastReport)
             val applied = RealityEngine.apply(analysis, snap1, state, mtf, interval, filter)
 
-            if (existing == null && canRecord) {
+            if (existing == null && canRecord && filter != DATA_PAUSE) {
                 val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter)
                 if (safeAppend(listOf(PredictionLedger.encodeRecord(rec)))) {
                     state = LedgerState(state.records + rec, state.results, state.events, state.skippedLines)

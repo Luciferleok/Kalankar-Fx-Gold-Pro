@@ -50,7 +50,8 @@ fun ProCandleChart(
     pivotLevels: PivotLevels? = null,
     currentPrice: Double = 0.0,
     modifier: Modifier = Modifier,
-    groups: List<com.example.livegoldai.model.GroupAnalysis> = emptyList()
+    groups: List<com.example.livegoldai.model.GroupAnalysis> = emptyList(),
+    volumeSource: String = ""
 ) {
     if (candles.isEmpty()) return
 
@@ -196,7 +197,7 @@ fun ProCandleChart(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Touch or drag on the chart to inspect a candle" + if (!hasRealVolume) "  •  Volume / VWAP: this feed gives no real volume" else "",
+                text = "Touch or drag on the chart to inspect a candle" + if (!hasRealVolume) "  •  Volume / VWAP: this feed gives no real volume" else if (volumeSource.isNotBlank()) "  •  Volume / VWAP: real trades of $volumeSource" else "",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                 color = TextMuted
             )

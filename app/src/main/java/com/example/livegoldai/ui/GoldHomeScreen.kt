@@ -729,6 +729,7 @@ fun GoldHomeScreen(
                                     ProCandleChart(
                                         candles = analysis.chartCandles.ifEmpty { analysis.recentCandles },
                                         groups = analysis.groups,
+                                        volumeSource = analysis.feed?.volumeSource ?: "",
                                         buyerSellerRatio = analysis.buyerSellerRatio,
                                         tradeSetup = analysis.tradeSetup,
                                         pivotLevels = analysis.pivotLevels,

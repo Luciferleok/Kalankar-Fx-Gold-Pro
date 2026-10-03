@@ -31,7 +31,62 @@ class GoldApiService(
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, GoldAnalysisResult>>()
     private val cacheTtlMs = 15_000L // 15 seconds cache to avoid API burnout
 
+    class VolBar(val t: Long, val v: Double, val buy: Double)
+
     companion object {
+        const val VOLUME_SOURCE = "PAXG/USDT (Binance)"
+
+        /** Twelve Data candle size -> (Binance bar size used to rebuild its volume, candle length in ms). */
+        fun volumePlan(tdInterval: String): Pair<String, Long>? {
+            val m = 60_000L
+            return when (tdInterval) {
+                "1min" -> "1m" to m
+                "5min" -> "1m" to 5 * m
+                "15min" -> "5m" to 15 * m
+                "30min" -> "15m" to 30 * m
+                "45min" -> "15m" to 45 * m
+                "1h" -> "30m" to 60 * m
+                "2h" -> "1h" to 120 * m
+                "4h" -> "1h" to 240 * m
+                "1day" -> "2h" to 1440 * m
+                "1week" -> "1d" to 7 * 1440 * m
+                else -> null      // monthly: the token has too little history, so no volume is shown
+            }
+        }
+
+        fun parseCandleUtc(dt: String): Long? = try {
+            val f = SimpleDateFormat(if (dt.length > 10) "yyyy-MM-dd HH:mm:ss" else "yyyy-MM-dd", Locale.US)
+            f.timeZone = TimeZone.getTimeZone("UTC")
+            f.parse(dt)?.time
+        } catch (_: Exception) { null }
+
+        /**
+         * Puts real traded volume on spot candles: every candle gets the sum of the volume bars that opened
+         * inside its own time window. Returns null (nothing is changed) unless EVERY candle is covered,
+         * so real and filler volume are never mixed.
+         */
+        fun mergeRealVolume(candles: List<CandleBar>, bars: List<VolBar>, durMs: Long): List<CandleBar>? {
+            if (candles.isEmpty() || bars.isEmpty()) return null
+            val starts = candles.map { parseCandleUtc(it.datetime) ?: return null }
+            val sorted = bars.sortedBy { it.t }
+            if (sorted.first().t > starts.first()) return null                 // oldest candle not covered
+            if (sorted.last().t < starts.last()) return null                   // volume is older than the newest candle
+            val out = ArrayList<CandleBar>(candles.size)
+            var j = 0
+            for (i in candles.indices) {
+                val start = starts[i]
+                val end = minOf(start + durMs, if (i + 1 < starts.size) starts[i + 1] else Long.MAX_VALUE)
+                if (end <= start) return null                                  // candles out of order
+                while (j < sorted.size && sorted[j].t < start) j++
+                var v = 0.0; var buy = 0.0; var n = 0
+                while (j < sorted.size && sorted[j].t < end) { v += sorted[j].v; buy += sorted[j].buy; n++; j++ }
+                if (n == 0 && i < candles.size - 1) return null                // a hole in the volume history
+                out.add(candles[i].copy(volume = v, buyVolume = buy))
+            }
+            if (out.count { (it.volume ?: 0.0) > 0.0 } < out.size / 2) return null   // too thin to mean anything
+            return out
+        }
+
         const val SPOT_MIN_GAP_MS = 15 * 60_000L     // Twelve Data quota: verification history at most 4x per hour
         const val PROXY_AFTER_MS = 60 * 60_000L      // fall back to a proxy instrument only when an hour overdue
     }
@@ -103,7 +158,7 @@ class GoldApiService(
                     else -> Pair("4h", 1)
                 }
                 val outputSize = (200 * tdGroup).coerceAtMost(5000)
-                val tdUrl = "https://api.twelvedata.com/time_series?symbol=$symbol&interval=$tdInterval&outputsize=$outputSize&apikey=$apiKey&order=ASC"
+                val tdUrl = "https://api.twelvedata.com/time_series?symbol=$symbol&interval=$tdInterval&outputsize=$outputSize&timezone=UTC&apikey=$apiKey&order=ASC"
                 val request = Request.Builder()
                     .url(tdUrl)
                     .header("User-Agent", "KalankarFXGoldPro/1.0")
@@ -132,7 +187,11 @@ class GoldApiService(
                                 rawList.add(CandleBar(datetime = dt, open = o, high = h, low = l, close = c, volume = v, buyVolume = buyV))
                             }
                         }
-                        val candleList = if (tdGroup > 1) aggregateCandles(rawList, tdGroup) else rawList
+                        // real traded volume (spot XAU/USD has none): taken from PAXG/USDT trades and clearly labelled
+                        val withVol = try { realVolumeFor(rawList, tdInterval) } catch (_: Exception) { null }
+                        val volSource = if (withVol != null) VOLUME_SOURCE else ""
+                        val merged = withVol ?: rawList
+                        val candleList = if (tdGroup > 1) aggregateCandles(merged, tdGroup) else merged
                         if (candleList.size >= 10) {
                             val analysis = TechnicalEngine.analyze(
                                 candles = candleList,
@@ -141,7 +200,7 @@ class GoldApiService(
                                 customUs10y = us10yDeferred.await(),
                                 customEvents = eventsDeferred.await()
                             )
-                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Twelve Data XAU/USD", now, 1, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
+                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Twelve Data XAU/USD", now, 1, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, volSource)
                             memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                             return@withContext Result.success(finalResult)
                         }
@@ -224,7 +283,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, VOLUME_SOURCE)
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -291,7 +350,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size)
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures" else "")
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -413,9 +472,62 @@ class GoldApiService(
         return emptyList() // calendar unavailable: show nothing rather than invented events
     }
 
-    private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int): GoldAnalysisResult {
+    private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int, volumeSource: String = ""): GoldAnalysisResult {
         val end = System.currentTimeMillis()
-        return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried))
+        return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried, volumeSource))
+    }
+
+    // ---------------- REAL VOLUME FOR THE SPOT FEED ----------------
+    // Spot XAU/USD is an over-the-counter market: no exchange publishes its volume, so Twelve Data sends none.
+    // The candles keep their spot prices; only the volume is taken from real PAXG/USDT trades (gold-backed
+    // token, Binance) in the same time window. It is real traded volume, but of that market, and is labelled so.
+    private val volCache = HashMap<String, java.util.TreeMap<Long, VolBar>>()
+
+    private fun fetchVolumeBars(interval: String, limit: Int, endMs: Long?): List<VolBar>? {
+        return try {
+            val url = "https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=$interval&limit=$limit" + if (endMs != null) "&endTime=$endMs" else ""
+            val resp = client.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
+            val body = resp.body?.string()
+            if (!resp.isSuccessful || body.isNullOrBlank()) return null
+            json.parseToJsonElement(body).jsonArray.mapNotNull { el ->
+                val a = el.jsonArray
+                val t = a[0].jsonPrimitive.content.toLongOrNull() ?: return@mapNotNull null
+                val v = a[5].jsonPrimitive.content.toDoubleOrNull() ?: return@mapNotNull null
+                val buy = (if (a.size > 9) a[9].jsonPrimitive.content.toDoubleOrNull() else null) ?: return@mapNotNull null
+                VolBar(t, v, buy)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun realVolumeFor(candles: List<CandleBar>, tdInterval: String): List<CandleBar>? {
+        val (sub, durMs) = volumePlan(tdInterval) ?: return null
+        val firstStart = candles.firstNotNullOfOrNull { parseCandleUtc(it.datetime) } ?: return null
+        val bars: List<VolBar>
+        synchronized(volCache) {
+            val map = volCache.getOrPut(sub) { java.util.TreeMap() }
+            if (map.isEmpty() || map.firstKey() > firstStart) {
+                // first load: page backwards until the oldest candle is covered (at most 5 requests)
+                var end: Long? = null
+                for (page in 0 until 5) {
+                    val got = fetchVolumeBars(sub, 1000, end) ?: break
+                    if (got.isEmpty()) break
+                    got.forEach { map[it.t] = it }
+                    if (map.firstKey() <= firstStart || got.size < 1000) break
+                    end = map.firstKey() - 1
+                }
+            } else {
+                // refresh: only the bars since the last one we hold (the live bar is always re-read)
+                val subMs = (if (map.size >= 2) map.higherKey(map.firstKey())!! - map.firstKey() else 60_000L).coerceAtLeast(60_000L)
+                val need = (System.currentTimeMillis() - map.lastKey()) / subMs + 3
+                if (need > 1000) map.clear()
+                fetchVolumeBars(sub, need.coerceIn(3, 1000).toInt(), null)?.forEach { map[it.t] = it }
+            }
+            while (map.size > 8000) map.pollFirstEntry()
+            bars = ArrayList(map.values)
+        }
+        return mergeRealVolume(candles, bars, durMs)
     }
 
     // ---------------- REAL VERIFICATION & MULTI-TIMEFRAME DATA ----------------

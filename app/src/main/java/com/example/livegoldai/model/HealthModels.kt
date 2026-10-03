@@ -12,7 +12,8 @@ data class FeedStatus(
     val dxyAvailable: Boolean,
     val us10yAvailable: Boolean,
     val calendarEvents: Int,
-    val sourcesTried: Int        // 1 = primary worked, 2+ = backup was used
+    val sourcesTried: Int,       // 1 = primary worked, 2+ = backup was used
+    val volumeSource: String = "" // where the candle volume comes from ("" = this feed has no real volume)
 )
 
 @Serializable
@@ -120,5 +121,9 @@ data class LedgerPulse(
     // ---- research lab (V19): all measured from the ledger, "--" until there is enough history
     val stability: String = "--",                    // HIGH / MEDIUM / LOW: do recent calls on this timeframe keep flipping?
     val expectedMove: String = "--",                 // median of what past calls on this timeframe did, in the call's direction
-    val coverage: String = "--"                      // share of checked calls that were BUY/SELL (the rest were WAIT)
+    val coverage: String = "--",                     // share of checked calls that were BUY/SELL (the rest were WAIT)
+    // ---- V21
+    val dataQuality: String = "--",                  // EXCELLENT / GOOD / DEGRADED / UNSAFE for the candles behind this forecast
+    val dataQualityDetail: String = "",
+    val timeline: List<LabelStat> = emptyList()      // recent forecasts on this timeframe, newest first, with their real result
 )
