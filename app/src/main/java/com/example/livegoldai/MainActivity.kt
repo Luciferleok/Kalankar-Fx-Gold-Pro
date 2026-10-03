@@ -53,6 +53,9 @@ class MainActivity : ComponentActivity() {
                             LuxurySplashScreen(
                                 ready = uiState.data != null,
                                 offline = uiState.data == null && uiState.errorMessage != null,
+                                // "live" only for a real quote while the gold market is open (weekend quotes are not live)
+                                live = uiState.data?.feed?.isLive == true && uiState.data?.isSimulatedFallback != true &&
+                                    !com.example.livegoldai.data.PredictionLedger.isMarketClosed(System.currentTimeMillis()),
                                 onSplashFinished = { viewModel.launchDone = true; isSplashVisible = false }
                             )
                         } else {
