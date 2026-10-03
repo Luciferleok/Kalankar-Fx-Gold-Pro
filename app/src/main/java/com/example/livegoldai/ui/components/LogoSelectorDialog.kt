@@ -45,6 +45,13 @@ fun LogoSelectorDialog(
     val logoOptions = remember {
         listOf(
             LogoOption(
+                id = "kalankar_official",
+                title = "Kalankar FX Gold Pro",
+                tag = "OFFICIAL LOGO",
+                description = "The official K + bull + trading ring emblem.",
+                drawableRes = R.drawable.kalankar_logo_mark
+            ),
+            LogoOption(
                 id = "kalankar_gold_crest",
                 title = "Kalankar 24K Sovereign Bullion Crest",
                 tag = "👑 ULTRA-HD 24K GOLD CREST • SIGNATURE",

@@ -124,7 +124,7 @@ object PreNewsAlertNotificationManager {
         }
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setSmallIcon(R.drawable.ic_stat_kalankar)
             .setContentTitle(title)
             .setContentText(bodySummary)
             .setStyle(NotificationCompat.BigTextStyle().bigText(detailedBigText))

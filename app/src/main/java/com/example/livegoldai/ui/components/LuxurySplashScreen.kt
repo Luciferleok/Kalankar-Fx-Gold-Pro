@@ -67,13 +67,8 @@ fun LuxurySplashScreen(
     )
 
     LaunchedEffect(Unit) {
-        delay(400)
-        progressStep = 1
-        delay(500)
-        progressStep = 2
-        delay(500)
-        progressStep = 3
-        delay(400)
+        // no artificial wait: just long enough for the logo to be seen once
+        delay(450)
         onSplashFinished()
     }
 
@@ -81,11 +76,11 @@ fun LuxurySplashScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(
+                // always obsidian black, whatever theme is selected: the gold logo is made for it
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF04060A),
-                        Color(0xFF090D15),
-                        Color(0xFF06080D)
+                        Color(0xFF050505),
+                        Color(0xFF050505)
                     )
                 )
             )
@@ -97,52 +92,16 @@ fun LuxurySplashScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp)
         ) {
-            // Pure Vector Royal Medallion Emblem with Glow & Shimmer
-            Box(
+            // Official full logo: emblem + KALANKAR / FX GOLD PRO / PRIVATE MARKET INTELLIGENCE.
+            // Fit keeps the aspect ratio: never stretched or cropped. widthIn keeps it sane on foldables.
+            Image(
+                painter = painterResource(id = R.drawable.kalankar_full_logo),
+                contentDescription = "Kalankar FX Gold Pro",
                 modifier = Modifier
-                    .size(118.dp)
-                    .scale(pulseScale)
-                    .clip(CircleShape)
-                    .background(Color(0xFF0D111A))
-                    .border(
-                        2.5.dp,
-                        Brush.sweepGradient(
-                            listOf(GoldLight, GoldPrimary, Color(0xFFD4AF37), GoldLight)
-                        ),
-                        CircleShape
-                    )
-                    .padding(14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_kalankar_royal_emblem),
-                    contentDescription = "Kalankar Sovereign Bullion Emblem",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Main Brand Title
-            Text(
-                text = "KALANKAR FX",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 24.sp,
-                    letterSpacing = 2.sp
-                ),
-                fontWeight = FontWeight.Black,
-                color = GoldLight
-            )
-
-            Text(
-                text = "XAU/USD PRO • INSTITUTIONAL TERMINAL",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 1.5.sp
-                ),
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                contentScale = ContentScale.Fit
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -150,8 +109,8 @@ fun LuxurySplashScreen(
             // Sync Status Pill
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = ObsidianSurfaceElevated,
-                border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.4f))
+                color = Color(0xFF101215),
+                border = BorderStroke(0.75.dp, Color(0xFFD4B56A).copy(alpha = 0.35f))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -159,27 +118,19 @@ fun LuxurySplashScreen(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        color = GoldPrimary,
-                        strokeWidth = 2.dp
+                        color = Color(0xFFD4B56A),
+                        strokeWidth = 1.5.dp
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = progressTexts.getOrElse(progressStep) { progressTexts.last() },
+                        text = "Initializing Market Intelligence…",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = TextPrimary,
+                        color = Color(0xFFF2F0EA),
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "24K Sovereign Bullion • Pure Vector Integrated Core",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color = TextMuted,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

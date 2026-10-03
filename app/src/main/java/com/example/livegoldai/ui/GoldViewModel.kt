@@ -84,7 +84,7 @@ data class GoldUiState(
     val showLotCalculator: Boolean = false,
     val selectedSlPips: Double = 90.0,
     val showPriceAlertDialog: Boolean = false,
-    val selectedLogoRes: Int = R.drawable.ic_kalankar_royal_emblem,
+    val selectedLogoRes: Int = R.drawable.kalankar_logo_mark,
     val showLogoSelectorDialog: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
     val showThemeSelectorDialog: Boolean = false,

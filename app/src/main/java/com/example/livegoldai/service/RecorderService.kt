@@ -17,6 +17,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.example.livegoldai.MainActivity
+import com.example.livegoldai.R
 import com.example.livegoldai.data.AppEngine
 import com.example.livegoldai.data.BackgroundRecorder
 import kotlinx.coroutines.CoroutineScope
@@ -110,7 +111,7 @@ class RecorderService : Service() {
             if (now - (lastAlertAt[p.code] ?: 0L) < ALERT_REPEAT_MS) continue
             lastAlertAt[p.code] = now
             val n = NotificationCompat.Builder(this, ALERT_CHANNEL)
-                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setSmallIcon(R.drawable.ic_stat_kalankar)
                 .setContentTitle("Kalankar FX: " + p.title)
                 .setContentText(p.text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(p.text))
@@ -137,7 +138,7 @@ class RecorderService : Service() {
 
     private fun statusNotification(title: String, text: String, big: String?): Notification {
         val b = NotificationCompat.Builder(this, STATUS_CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setSmallIcon(R.drawable.ic_stat_kalankar)
             .setContentTitle(title)
             .setContentText(text)
             .setOngoing(true)
