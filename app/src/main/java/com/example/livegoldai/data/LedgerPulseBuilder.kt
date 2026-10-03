@@ -143,10 +143,14 @@ object LedgerPulseBuilder {
         }
         val verification = "same instrument $same • proxy (decisive) $proxy • too close to call $unsureAll" + if (legacyV > 0) " • older, source not stored $legacyV" else ""
         val audit = PredictionAudit.build(state, integrity?.status ?: "")
+        val lab = ResearchLab.build(state, a.interval)
         return LedgerPulse(
             modelHealth = audit.health,
             modelHealthLine = audit.headline,
-            audit = audit.lines,
+            audit = audit.lines + lab.lines,
+            stability = lab.stability,
+            expectedMove = lab.expectedMove,
+            coverage = lab.coverage,
             directionPct = if (audit.decided == 0) -1 else audit.directionPct.toInt(),
             directionN = audit.decided,
             directionMinN = PredictionAudit.MIN_N,

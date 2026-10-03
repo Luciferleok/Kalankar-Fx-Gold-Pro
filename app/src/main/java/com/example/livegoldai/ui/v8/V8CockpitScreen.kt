@@ -161,6 +161,22 @@ fun V8CockpitScreen(
                     }
                 }
             }
+            // second row: measured from the ledger; "--" until there is enough real history
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val p = analysis.pulse
+                listOf(
+                    Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "last calls", "पिछले कॉल", "मागील कॉल")),
+                    Triple(tr(lang, "EXPECTED MOVE", "अनुमानित चाल", "अपेक्षित हालचाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
+                    Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL")
+                ).forEach { (k, v, sub) ->
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                        Text(text = v, color = V8.Text1, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                    }
+                }
+            }
             if (calibrated == null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = tr(lang, "Pillar agreement, not a win probability (not calibrated yet)", "पिलर सहमति है, जीत की संभावना नहीं (अभी कैलिब्रेट नहीं)", "पिलर सहमती आहे, जिंकण्याची शक्यता नाही (अजून कॅलिब्रेट नाही)"), color = V8.Text3, fontSize = 9.sp)

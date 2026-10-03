@@ -116,5 +116,9 @@ data class LedgerPulse(
     val audit: List<LabelStat> = emptyList(),
     val directionPct: Int = -1,                      // verified direction accuracy, -1 until at least one decided call
     val directionN: Int = 0,                         // decided calls behind that number
-    val directionMinN: Int = 30                      // calls needed before the number is shown as a judgement
+    val directionMinN: Int = 30,                     // calls needed before the number is shown as a judgement
+    // ---- research lab (V19): all measured from the ledger, "--" until there is enough history
+    val stability: String = "--",                    // HIGH / MEDIUM / LOW: do recent calls on this timeframe keep flipping?
+    val expectedMove: String = "--",                 // median of what past calls on this timeframe did, in the call's direction
+    val coverage: String = "--"                      // share of checked calls that were BUY/SELL (the rest were WAIT)
 )
