@@ -142,6 +142,9 @@ fun GoldHomeScreen(
         )
     }
 
+    // Back from any other tab returns to Home first; from Home the system closes the app as usual.
+    androidx.activity.compose.BackHandler(enabled = uiState.bottomTab != 0) { viewModel.setBottomTab(0) }
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -302,7 +305,15 @@ fun GoldHomeScreen(
                         )
                     }
 
-                    when (uiState.bottomTab) {
+                    // Each tab keeps its own scroll position and sub-state; switching is a short crossfade, never a reload.
+                    val tabStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+                    androidx.compose.animation.Crossfade(
+                        targetState = uiState.bottomTab,
+                        animationSpec = androidx.compose.animation.core.tween(durationMillis = 180),
+                        label = "tab_switch"
+                    ) { tab ->
+                    tabStateHolder.SaveableStateProvider(tab) {
+                    when (tab) {
                     0 -> V8CockpitScreen(
                         analysis = analysis,
                         lang = uiState.language,
@@ -906,6 +917,8 @@ fun GoldHomeScreen(
                                 )
                             }
                         }
+                    }
+                    }
                     }
                     }
                     }

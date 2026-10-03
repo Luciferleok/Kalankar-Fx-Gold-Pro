@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -33,12 +34,16 @@ fun V8BottomNav(selected: Int, lang: AppLanguage, healthStatus: String?, onSelec
         "◆" to tr(lang, "Learn", "लर्निंग", "लर्निंग"),
         "☰" to tr(lang, "More", "और", "अधिक")
     )
+    val haptic = LocalHapticFeedback.current
     NavigationBar(containerColor = V8.Bg, contentColor = V8.Text2) {
         items.forEachIndexed { i, (icon, label) ->
             val iconColor = if (i == 3 && healthStatus != null && healthStatus != "HEALTHY") statusColor(healthStatus) else null
             NavigationBarItem(
                 selected = selected == i,
-                onClick = { onSelect(i) },
+                onClick = {
+                    if (selected != i) haptic.performHapticFeedback(V8Haptics.Light)
+                    onSelect(i)
+                },
                 icon = {
                     // selected tab: a short champagne line above the icon, no filled pill
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

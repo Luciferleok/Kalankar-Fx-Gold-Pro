@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,22 @@ internal object V8 {
     val Text1: Color get() = p.textPrimary
     val Text2: Color get() = p.textSecondary
     val Text3: Color get() = p.textMuted
+}
+
+/**
+ * Haptic language (V18). Android itself honours the phone's "touch feedback" setting.
+ * Light = a selection changed. Medium = an important action. Nothing vibrates on scroll, price ticks or animation.
+ */
+internal object V8Haptics {
+    val Light = HapticFeedbackType.TextHandleMove
+    val Medium = HapticFeedbackType.LongPress
+}
+
+/** Motion tokens (milliseconds) for the V8 screens: short and calm, no bounce. */
+internal object V8Motion {
+    const val TabSwitch = 180
+    const val Reveal = 260
+    const val Emphasis = 420
 }
 
 internal fun tr(lang: AppLanguage, en: String, hi: String, mr: String): String = when (lang) {
@@ -142,12 +160,16 @@ internal fun V8KeyValue(label: String, value: String, valueColor: Color = V8.Tex
 
 @Composable
 internal fun V8Chip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(if (selected) V8.Gold.copy(alpha = 0.12f) else V8.Card2)
             .border(0.75.dp, if (selected) V8.Gold.copy(alpha = 0.7f) else V8.Line, RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .clickable {
+                if (!selected) haptic.performHapticFeedback(V8Haptics.Light)
+                onClick()
+            }
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(text = text, color = if (selected) V8.Gold else V8.Text3, fontSize = 11.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, letterSpacing = 0.8.sp)

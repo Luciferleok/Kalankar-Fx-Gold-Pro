@@ -126,6 +126,8 @@ class GoldViewModel @JvmOverloads constructor(
         GoldUiState(
             language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi")),
             amoled = prefs.getBoolean("amoled_black", false),
+            // last used timeframe is remembered, so the app does not jump back to a default
+            selectedInterval = prefs.getString("selected_interval", null)?.takeIf { it in setOf("5m", "15m", "30m", "1h", "4h", "1d") } ?: "4h",
             // restored before the first frame, so there is no flash of the default theme
             themeMode = prefs.getString("selected_theme_mode", null)?.let { n -> ThemeMode.values().firstOrNull { it.name == n } } ?: ThemeMode.ROYAL_OBSIDIAN
         )
@@ -276,6 +278,7 @@ class GoldViewModel @JvmOverloads constructor(
 
     fun setInterval(interval: String) {
         if (_uiState.value.selectedInterval == interval) return
+        prefs.edit().putString("selected_interval", interval).apply()
         _uiState.update { it.copy(selectedInterval = interval, isLoading = true) }
         loadData(isInitial = true)
     }
