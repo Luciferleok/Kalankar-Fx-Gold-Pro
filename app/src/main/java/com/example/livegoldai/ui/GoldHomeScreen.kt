@@ -175,7 +175,7 @@ fun GoldHomeScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF080A0F))
                                 .border(
-                                    1.8.dp,
+                                    0.75.dp,
                                     Brush.sweepGradient(listOf(appColors.lightGold, appColors.primaryGold, Color(0xFFD4AF37), appColors.lightGold)),
                                     RoundedCornerShape(12.dp)
                                 )
@@ -194,33 +194,28 @@ fun GoldHomeScreen(
 
                         Spacer(modifier = Modifier.width(10.dp))
 
+                        // Brand lockup: two short lines, never ellipsised. The actions on the right are only
+                        // two icons, so this always fits, also on a 360dp phone and with large fonts.
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "KALANKAR FX GOLD PRO",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Black,
-                                    color = appColors.textPrimary,
-                                    letterSpacing = 0.5.sp,
-                                    fontSize = 15.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(appColors.signalBuy)
-                                )
-                            }
                             Text(
-                                text = when (uiState.language) {
-                                    com.example.livegoldai.localization.AppLanguage.ENGLISH -> "VIP BULLION TERMINAL • By Rudvay Ujjwal Kalankar"
-                                    com.example.livegoldai.localization.AppLanguage.HINDI -> "VIP बुलियन टर्मिनल • रुद्वय उज्ज्वल कलणकर"
-                                    com.example.livegoldai.localization.AppLanguage.MARATHI -> "VIP बुलियन टर्मिनल • रुद्वय उज्ज्वल काळणकर"
-                                },
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
+                                text = "KALANKAR",
+                                fontWeight = FontWeight.SemiBold,
+                                color = appColors.textPrimary,
+                                letterSpacing = 3.sp,
+                                fontSize = 17.sp,
+                                lineHeight = 20.sp,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Text(
+                                text = "FX GOLD PRO",
+                                fontWeight = FontWeight.Medium,
                                 color = appColors.primaryGold,
-                                fontWeight = FontWeight.SemiBold
+                                letterSpacing = 2.5.sp,
+                                fontSize = 10.sp,
+                                lineHeight = 13.sp,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -245,58 +240,7 @@ fun GoldHomeScreen(
                         }
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (uiState.isNewsModeActive) Color(0xFFFF1744).copy(alpha = 0.25f) else appColors.primaryGold.copy(alpha = 0.15f),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (uiState.isNewsModeActive) Color(0xFFFF1744) else appColors.primaryGold.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { viewModel.openThemeSelector() }
-                            .testTag("top_theme_button")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = if (uiState.isNewsModeActive) "!" else uiState.themeMode.icon, fontSize = 12.sp, color = appColors.primaryGold)
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (uiState.isNewsModeActive) "NEWS ACTIVE" else uiState.themeMode.shortLabel,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black,
-                                color = if (uiState.isNewsModeActive) Color(0xFFFF264D) else appColors.primaryGold
-                            )
-                        }
-                    }
-
-                    // Language Quick Pill (English 🇬🇧, Hindi 🇮🇳, Marathi 🚩)
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = appColors.primaryGold.copy(alpha = 0.18f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, appColors.lightGold.copy(alpha = 0.7f)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { showSettings = true }
-                            .testTag("top_language_pill")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = uiState.language.flag, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = uiState.language.nativeName,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black,
-                                color = appColors.primaryGold
-                            )
-                        }
-                    }
-
+                    // Theme and language live in Settings: the header keeps its width for the brand.
                     IconButton(
                         onClick = { showSettings = true },
                         modifier = Modifier.testTag("settings_button")

@@ -113,5 +113,8 @@ data class LedgerPulse(
     // ---- root-cause audit (V11.3)
     val modelHealth: String = "",                    // COLLECTING / VALIDATING / HEALTHY / WEAK / CRITICAL / POLARITY_SUSPECT
     val modelHealthLine: String = "",
-    val audit: List<LabelStat> = emptyList()
+    val audit: List<LabelStat> = emptyList(),
+    val directionPct: Int = -1,                      // verified direction accuracy, -1 until at least one decided call
+    val directionN: Int = 0,                         // decided calls behind that number
+    val directionMinN: Int = 30                      // calls needed before the number is shown as a judgement
 )

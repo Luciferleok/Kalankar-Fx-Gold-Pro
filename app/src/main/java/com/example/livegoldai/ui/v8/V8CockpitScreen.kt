@@ -74,6 +74,11 @@ fun V8CockpitScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Text(
+            text = "PRIVATE MARKET INTELLIGENCE", color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Medium,
+            letterSpacing = 3.sp, maxLines = 1, modifier = Modifier.fillMaxWidth().padding(start = 4.dp)
+        )
+
         // ---------------- LEVEL 1: price + live feed
         V8Card(level = 1) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,6 +139,28 @@ fun V8CockpitScreen(
                     label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
                 )
             }
+            // Four different things, shown side by side so they are never read as one number.
+            V8Hairline(V8.Line)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val p = analysis.pulse
+                val b = analysis.brain
+                listOf(
+                    Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
+                    Triple(tr(lang, "QUALITY", "क्वालिटी", "गुणवत्ता"), b?.qualityIndex?.toString() ?: "--", tr(lang, "of data", "डेटा की", "डेटाची")),
+                    Triple("EDGE", b?.edge ?: "--", tr(lang, "measured", "मापा हुआ", "मोजलेले")),
+                    Triple(
+                        tr(lang, "ACCURACY", "सटीकता", "अचूकता"),
+                        if (p == null || p.directionN < p.directionMinN) "--" else "${p.directionPct}%",
+                        if (p == null) "" else "N=${p.directionN}" + if (p.directionN < p.directionMinN) "/${p.directionMinN}" else ""
+                    )
+                ).forEach { (k, v, sub) ->
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                        Text(text = v, color = V8.Text1, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                    }
+                }
+            }
             if (calibrated == null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = tr(lang, "Pillar agreement, not a win probability (not calibrated yet)", "पिलर सहमति है, जीत की संभावना नहीं (अभी कैलिब्रेट नहीं)", "पिलर सहमती आहे, जिंकण्याची शक्यता नाही (अजून कॅलिब्रेट नाही)"), color = V8.Text3, fontSize = 9.sp)
@@ -157,6 +184,36 @@ fun V8CockpitScreen(
             Spacer(modifier = Modifier.height(6.dp))
             V8Hairline(V8.Line)
             Text(text = tr(lang, "FULL FORECAST  ›", "पूरा अनुमान  ›", "पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
+        }
+
+        // ---------------- health strip
+        if (health != null) {
+            V8Card(level = 2, onClick = onOpenHealth) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    V8Label(tr(lang, "System pulse", "सिस्टम पल्स", "सिस्टम पल्स"))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "${health.overallScore}/100", color = statusColor(health.overallStatus), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(text = "›", color = V8.Text3, fontSize = 16.sp)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    listOf("DATA" to "DATA", "INDICATORS" to "IND", "BOTS" to "BOTS", "AI" to "AI", "LEARNING" to "LEARN").forEach { (key, label) ->
+                        val c = health.category(key)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                V8Dot(if (c == null || c.score < 0) V8.Text3 else statusColor(c.status), 5.dp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = label, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                            }
+                            Text(
+                                text = if (c == null) "--" else if (c.score < 0) "OFF" else c.summary.substringBefore(" "),
+                                color = if (c == null || c.score < 0) V8.Text3 else V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // ---------------- intelligence: quant vs bots vs AI (real answers only)
@@ -198,36 +255,6 @@ fun V8CockpitScreen(
 
         // ---------------- V10 market brain summary
         analysis.brain?.let { V10BrainStrip(it, lang, onOpenForecast) }
-
-        // ---------------- health strip
-        if (health != null) {
-            V8Card(level = 2, onClick = onOpenHealth) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    V8Label(tr(lang, "System", "सिस्टम", "सिस्टम"))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "${health.overallScore}/100", color = statusColor(health.overallStatus), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(text = "›", color = V8.Text3, fontSize = 16.sp)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("DATA" to "DATA", "INDICATORS" to "IND", "BOTS" to "BOTS", "AI" to "AI", "LEARNING" to "LEARN").forEach { (key, label) ->
-                        val c = health.category(key)
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                V8Dot(if (c == null || c.score < 0) V8.Text3 else statusColor(c.status), 5.dp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(text = label, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-                            }
-                            Text(
-                                text = if (c == null) "--" else if (c.score < 0) "OFF" else c.summary.substringBefore(" "),
-                                color = if (c == null || c.score < 0) V8.Text3 else V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
         // ---------------- early warnings
         if (ins != null && ins.warnings.isNotEmpty()) {
