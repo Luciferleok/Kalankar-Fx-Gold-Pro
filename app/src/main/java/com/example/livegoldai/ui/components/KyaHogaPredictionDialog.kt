@@ -156,7 +156,8 @@ fun KyaHogaPredictionDialog(
                                         AppLanguage.MARATHI -> "पुढे काय घडणार?"
                                     },
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = GoldLight,
                                     letterSpacing = 0.8.sp
                                 )
@@ -169,7 +170,9 @@ fun KyaHogaPredictionDialog(
                                     )
                                 ) {
                                     Text(
-                                        text = "${prediction?.winProbabilityPercent ?: baseProb}% CONFIDENCE",
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        text = "${prediction?.winProbabilityPercent ?: baseProb}%",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -180,9 +183,9 @@ fun KyaHogaPredictionDialog(
                             }
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "AI Future Forecast & Scenario Breakdown"
-                                    AppLanguage.HINDI -> "AI भविष्य का पूर्वानुमान और परिदृश्य संभावना"
-                                    AppLanguage.MARATHI -> "AI भविष्यातील अंदाज आणि परिस्थिती विश्लेषण"
+                                    AppLanguage.ENGLISH -> "Rule-based forecast and scenarios • pillar agreement, not a probability"
+                                    AppLanguage.HINDI -> "नियम-आधारित अनुमान • पिलर सहमति है, संभावना नहीं"
+                                    AppLanguage.MARATHI -> "नियम-आधारित अंदाज • पिलर सहमती आहे, शक्यता नाही"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 11.sp,
@@ -231,9 +234,9 @@ fun KyaHogaPredictionDialog(
                             ) {
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "🔮 AI MAIN VERDICT / FORECAST"
-                                        AppLanguage.HINDI -> "🔮 AI मुख्य फैसला / भविष्यवाणी"
-                                        AppLanguage.MARATHI -> "🔮 AI मुख्य निर्णय / भाकीत"
+                                        AppLanguage.ENGLISH -> "MAIN VERDICT"
+                                        AppLanguage.HINDI -> "मुख्य फैसला"
+                                        AppLanguage.MARATHI -> "मुख्य निर्णय"
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Black,
@@ -254,14 +257,14 @@ fun KyaHogaPredictionDialog(
                             Text(
                                 text = when {
                                     isBuy -> when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "🟢 GOLD HAS HIGH PROBABILITY OF +${tradeSetup.takeProfit2Pips.toInt()} PIPS BULLISH RALLY!"
-                                        AppLanguage.HINDI -> "🟢 GOLD में +${tradeSetup.takeProfit2Pips.toInt()} PIPS की UPWARD RALLY की पूरी संभावना है!"
-                                        AppLanguage.MARATHI -> "🟢 GOLD मध्ये +${tradeSetup.takeProfit2Pips.toInt()} PIPS ची जोरदार तेजी येण्याची दाट शक्यता आहे!"
+                                        AppLanguage.ENGLISH -> "Rules point UP • target 2 is ${tradeSetup.takeProfit2Pips.toInt()} pips away"
+                                        AppLanguage.HINDI -> "नियम ऊपर की ओर हैं • टारगेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
+                                        AppLanguage.MARATHI -> "नियम वरच्या दिशेने आहेत • टार्गेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
                                     }
                                     isSell -> when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "🔴 GOLD HAS HIGH PROBABILITY OF -${tradeSetup.takeProfit2Pips.toInt()} PIPS BEARISH DROP!"
-                                        AppLanguage.HINDI -> "🔴 GOLD में -${tradeSetup.takeProfit2Pips.toInt()} PIPS के BEARISH DROP की संभावना है!"
-                                        AppLanguage.MARATHI -> "🔴 GOLD मध्ये -${tradeSetup.takeProfit2Pips.toInt()} PIPS चा मोठा घसरणीचा अंदाज आहे!"
+                                        AppLanguage.ENGLISH -> "Rules point DOWN • target 2 is ${tradeSetup.takeProfit2Pips.toInt()} pips away"
+                                        AppLanguage.HINDI -> "नियम नीचे की ओर हैं • टारगेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
+                                        AppLanguage.MARATHI -> "नियम खालच्या दिशेने आहेत • टार्गेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
                                     }
                                     else -> when (currentLanguage) {
                                         AppLanguage.ENGLISH -> "🟡 GOLD IS CURRENTLY IN CONSOLIDATION / RANGE-BOUND MOVE!"
@@ -706,7 +709,7 @@ fun KyaHogaPredictionDialog(
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = when (currentLanguage) {
-                                                AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & 6 AI FIXES ⚡"
+                                                AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS"
                                                 AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
                                                 AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                                             },
@@ -1288,27 +1291,27 @@ fun KyaHogaPredictionDialog(
                             ReasonRow(
                                 number = "1",
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Smart Money: Strong wick rejection detected from institutional order block after liquidity grab."
-                                    AppLanguage.HINDI -> "Smart Money: Liquidity grab के बाद institutional order block से strong wick rejection मिली है।"
-                                    AppLanguage.MARATHI -> "Smart Money: Liquidity grab नंतर institutional order block कडून strong wick rejection मिळाले आहे."
+                                    AppLanguage.ENGLISH -> "Smart-money pillar now: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
+                                    AppLanguage.HINDI -> "Smart-money पिलर अभी: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}।"
+                                    AppLanguage.MARATHI -> "Smart-money पिलर आता: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
                                 }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             ReasonRow(
                                 number = "2",
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Trend Confluence: ${analysis.buyCount} out of ${analysis.totalGroups} major indicator groups confirm ${analysis.overallSignal.name} bias."
-                                    AppLanguage.HINDI -> "Trend Confluence: ${analysis.totalGroups} में से ${analysis.buyCount} मुख्य इंडिकेटर ग्रुप्स ${analysis.overallSignal.name} संकेत दिखा रहे हैं।"
-                                    AppLanguage.MARATHI -> "Trend Confluence: ${analysis.totalGroups} पैकी ${analysis.buyCount} प्रमुख इंडिकेटर गट ${analysis.overallSignal.name} संकेत दाखवत आहेत."
+                                    AppLanguage.ENGLISH -> "Pillars: ${analysis.groups.count { it.verdict == analysis.overallSignal }} of ${analysis.totalGroups} indicator groups say ${analysis.overallSignal.name}."
+                                    AppLanguage.HINDI -> "पिलर: ${analysis.totalGroups} में से ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर ग्रुप ${analysis.overallSignal.name} कह रहे हैं।"
+                                    AppLanguage.MARATHI -> "पिलर: ${analysis.totalGroups} पैकी ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर गट ${analysis.overallSignal.name} सांगत आहेत."
                                 }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             ReasonRow(
                                 number = "3",
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Multi-Timeframe: Momentum expansion has triggered across M15 and H1 charts."
-                                    AppLanguage.HINDI -> "Multi-Timeframe: M15 और H1 चार्ट्स पर मोमेंटम एक्सपेंशन शुरू हो चुका है।"
-                                    AppLanguage.MARATHI -> "Multi-Timeframe: M15 आणि H1 चार्ट्सवर momentum expansion सुरू झाले आहे."
+                                    AppLanguage.ENGLISH -> "Market regime: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. Trend rules are weak in a RANGE."
+                                    AppLanguage.HINDI -> "मार्केट की स्थिति: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}। RANGE में ट्रेंड के नियम कमज़ोर रहते हैं।"
+                                    AppLanguage.MARATHI -> "मार्केटची स्थिती: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. RANGE मध्ये ट्रेंडचे नियम कमकुवत असतात."
                                 }
                             )
                         }
@@ -1332,9 +1335,9 @@ fun KyaHogaPredictionDialog(
                 ) {
                     Text(
                         text = when (currentLanguage) {
-                            AppLanguage.ENGLISH -> "I UNDERSTAND THE PROBABILITIES • GOT IT"
-                            AppLanguage.HINDI -> "मुझे समझ आ गया • ठीक है"
-                            AppLanguage.MARATHI -> "मला सर्व समजले • ठीक आहे"
+                            AppLanguage.ENGLISH -> "GOT IT"
+                            AppLanguage.HINDI -> "ठीक है"
+                            AppLanguage.MARATHI -> "ठीक आहे"
                         },
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Black,

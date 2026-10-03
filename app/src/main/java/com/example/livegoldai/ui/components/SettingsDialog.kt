@@ -184,7 +184,7 @@ fun SettingsDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                                     Icon(
                                         imageVector = Icons.Default.Language,
                                         contentDescription = null,
@@ -205,7 +205,9 @@ fun SettingsDialog(
                                     color = GoldPrimary,
                                 ) {
                                     Text(
-                                        text = "${selectedLanguage.flag} ${selectedLanguage.displayName.uppercase()}",
+                                        text = selectedLanguage.displayName.uppercase(),
+                                        maxLines = 1,
+                                        softWrap = false,
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         fontWeight = FontWeight.Black,
                                         color = ObsidianBackground,

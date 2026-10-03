@@ -211,7 +211,8 @@ fun PriceHeaderCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                Column {
+                // weight(1f): the change pill on the right is measured first and keeps its natural width
+                Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -224,7 +225,8 @@ fun PriceHeaderCard(
                             text = "XAU/USD • GOLD SPOT",
                             style = MaterialTheme.typography.labelMedium,
                             color = GoldLight,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.sp,
+                            maxLines = 1
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
@@ -232,7 +234,7 @@ fun PriceHeaderCard(
                             color = GoldPrimary.copy(alpha = 0.15f)
                         ) {
                             Text(
-                                text = "TAP TO INSPECT 🔍",
+                                text = "INSPECT",
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
                                 fontWeight = FontWeight.Bold,
@@ -267,13 +269,17 @@ fun PriceHeaderCard(
                             text = "${if (isPositive) "+" else ""}${String.format(Locale.US, "%.2f", analysis.changeAmount)}",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = changeColor
+                            color = changeColor,
+                            maxLines = 1,
+                            softWrap = false
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "(${if (isPositive) "+" else ""}${String.format(Locale.US, "%.2f", analysis.changePercent)}%)",
                             style = MaterialTheme.typography.labelMedium,
-                            color = changeColor
+                            color = changeColor,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -345,9 +351,9 @@ fun PriceHeaderCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Buyers (${String.format(Locale.US, "%,d", bs.orderBookBidCount)} Bids)"
-                                            AppLanguage.HINDI -> "खरीदारी (${String.format(Locale.US, "%,d", bs.orderBookBidCount)} Bids)"
-                                            AppLanguage.MARATHI -> "खरेदीदार (${String.format(Locale.US, "%,d", bs.orderBookBidCount)} Bids)"
+                                            AppLanguage.ENGLISH -> "Up candles"
+                                            AppLanguage.HINDI -> "ऊपर की कैंडल"
+                                            AppLanguage.MARATHI -> "वरच्या कँडल"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                         color = TextSecondary
@@ -368,17 +374,23 @@ fun PriceHeaderCard(
                                 )
                             ) {
                                 Text(
-                                    text = if (bs.buyersPercent >= bs.sellersPercent) {
+                                    text = if (bs.buyersPercent == bs.sellersPercent) {
                                         when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "🟢 BULLS DOMINANT"
-                                            AppLanguage.HINDI -> "🟢 खरीदार भारी"
-                                            AppLanguage.MARATHI -> "🟢 खरेदीदार वरचढ"
+                                            AppLanguage.ENGLISH -> "BALANCED"
+                                            AppLanguage.HINDI -> "बराबर"
+                                            AppLanguage.MARATHI -> "समान"
+                                        }
+                                    } else if (bs.buyersPercent > bs.sellersPercent) {
+                                        when (currentLanguage) {
+                                            AppLanguage.ENGLISH -> "BUY PRESSURE"
+                                            AppLanguage.HINDI -> "खरीद दबाव"
+                                            AppLanguage.MARATHI -> "खरेदीचा दबाव"
                                         }
                                     } else {
                                         when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "🔴 BEARS DOMINANT"
-                                            AppLanguage.HINDI -> "🔴 विक्रेता भारी"
-                                            AppLanguage.MARATHI -> "🔴 विक्रेते वरचढ"
+                                            AppLanguage.ENGLISH -> "SELL PRESSURE"
+                                            AppLanguage.HINDI -> "बिक्री दबाव"
+                                            AppLanguage.MARATHI -> "विक्रीचा दबाव"
                                         }
                                     },
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
@@ -399,9 +411,9 @@ fun PriceHeaderCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Sellers (${String.format(Locale.US, "%,d", bs.orderBookAskCount)} Asks)"
-                                            AppLanguage.HINDI -> "बिकवाली (${String.format(Locale.US, "%,d", bs.orderBookAskCount)} Asks)"
-                                            AppLanguage.MARATHI -> "विक्रेते (${String.format(Locale.US, "%,d", bs.orderBookAskCount)} Asks)"
+                                            AppLanguage.ENGLISH -> "Down candles"
+                                            AppLanguage.HINDI -> "नीचे की कैंडल"
+                                            AppLanguage.MARATHI -> "खालच्या कँडल"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                         color = TextSecondary
@@ -449,14 +461,14 @@ fun PriceHeaderCard(
                                 color = TextMuted
                             )
                             Text(
-                                text = "${when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Net Delta"
-                                    AppLanguage.HINDI -> "नेट डेल्टा"
-                                    AppLanguage.MARATHI -> "निव्वळ डेल्टा"
-                                }}: ${if (bs.netVolumeDelta >= 0) "+" else ""}${String.format(Locale.US, "%,.0f", bs.netVolumeDelta)} Lots",
+                                // spot gold has no public order book: no bid/ask counts or lot numbers are shown
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "not a real order book"
+                                    AppLanguage.HINDI -> "असली ऑर्डर बुक नहीं"
+                                    AppLanguage.MARATHI -> "खरे ऑर्डर बुक नाही"
+                                },
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                fontWeight = FontWeight.Bold,
-                                color = if (bs.buyersPercent >= bs.sellersPercent) SignalBuy else SignalSell
+                                color = TextMuted
                             )
                         }
                     }

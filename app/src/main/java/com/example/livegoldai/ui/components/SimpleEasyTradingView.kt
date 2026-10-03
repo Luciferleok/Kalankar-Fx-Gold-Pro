@@ -545,7 +545,7 @@ fun SimpleEasyTradingView(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "Next Move AI"
+                                AppLanguage.ENGLISH -> "Next Move"
                                 AppLanguage.HINDI -> "आगे क्या होगा?"
                                 AppLanguage.MARATHI -> "पुढे काय होईल?"
                             },
@@ -584,9 +584,9 @@ fun SimpleEasyTradingView(
                             Column {
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "Why Did Predictions Fail? • AI Autopsy"
-                                        AppLanguage.HINDI -> "प्रेडिक्शन गलत क्यों हुई? • AI गलती विश्लेषण"
-                                        AppLanguage.MARATHI -> "अंदाज का चुकला? • AI चूक विश्लेषण"
+                                        AppLanguage.ENGLISH -> "Why did predictions fail?"
+                                        AppLanguage.HINDI -> "प्रेडिक्शन गलत क्यों हुई?"
+                                        AppLanguage.MARATHI -> "अंदाज का चुकला?"
                                     },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,

@@ -310,7 +310,9 @@ fun UnifiedSignalDashboardView(
                         border = BorderStroke(0.6.dp, GoldPrimary.copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = "AI + 32 INDICATORS",
+                            text = "28 INDICATORS",
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,

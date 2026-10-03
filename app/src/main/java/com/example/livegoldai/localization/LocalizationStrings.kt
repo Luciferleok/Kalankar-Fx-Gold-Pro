@@ -126,7 +126,7 @@ object LocalizationStrings {
     }
 
     fun liveOrderFlowBalance(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Live Order Flow Balance"
+        AppLanguage.ENGLISH -> "Candle pressure (estimate)"
         AppLanguage.HINDI -> "लाइव ऑर्डर फ्लो बैलेंस"
         AppLanguage.MARATHI -> "लाईव्ह ऑर्डर फ्लो बॅलन्स"
     }

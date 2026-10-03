@@ -776,7 +776,7 @@ fun PredictionBigCard(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS & SEE 6 AI FIXES ⚡"
+                                        AppLanguage.ENGLISH -> "ANALYZE PAST ERRORS"
                                         AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
                                         AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                                     },

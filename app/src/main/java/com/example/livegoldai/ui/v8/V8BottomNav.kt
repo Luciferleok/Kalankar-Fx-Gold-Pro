@@ -29,7 +29,7 @@ fun V8BottomNav(selected: Int, lang: AppLanguage, healthStatus: String?, onSelec
         "◎" to tr(lang, "Cockpit", "कॉकपिट", "कॉकपिट"),
         "↗" to tr(lang, "Forecast", "अनुमान", "अंदाज"),
         "✦" to "AI",
-        "♥" to tr(lang, "Health", "हेल्थ", "हेल्थ"),
+        "♥\uFE0E" to tr(lang, "Health", "हेल्थ", "हेल्थ"),
         "◆" to tr(lang, "Learn", "लर्निंग", "लर्निंग"),
         "☰" to tr(lang, "More", "और", "अधिक")
     )

@@ -294,7 +294,7 @@ fun PredictionAccuracyAuditCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = when (currentLanguage) {
-                            AppLanguage.ENGLISH -> "ANALYZE WRONG PREDICTIONS & SEE AI FIXES ⚡"
+                            AppLanguage.ENGLISH -> "ANALYZE WRONG PREDICTIONS"
                             AppLanguage.HINDI -> "गलतियां क्यों हुईं? असली लर्निंग सेंटर देखें ⚡"
                             AppLanguage.MARATHI -> "चुका का झाल्या? खरे लर्निंग सेंटर पहा ⚡"
                         },
