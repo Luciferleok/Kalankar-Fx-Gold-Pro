@@ -644,7 +644,8 @@ object TechnicalEngine {
             } else null
             val cSuperTrend = if (globalIdx < superTrendSeries.size) superTrendSeries[globalIdx] else null
             val cVwap = if (globalIdx < vwapSeries.size) vwapSeries[globalIdx] else null
-            val estVolume = bar.volume ?: ((abs(bar.close - bar.open) + (bar.high - bar.low)) * 1420.0 + 800.0)
+            // no invented volume: a candle without volume keeps the same flat filler, which the chart recognises and hides
+            val estVolume = bar.volume ?: 1000.0
             val estBuyVolume = bar.buyVolume ?: run {
                 val rng = (bar.high - bar.low).coerceAtLeast(0.01)
                 val ratio = if (bar.close >= bar.open) (0.52 + 0.38 * (bar.close - bar.open) / rng) else (0.48 - 0.38 * (bar.open - bar.close) / rng)

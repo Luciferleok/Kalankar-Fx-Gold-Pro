@@ -72,6 +72,10 @@ fun ProCandleChart(
 
     val maxVolume = displayCandles.maxOfOrNull { it.volume ?: 1000.0 } ?: 1000.0
 
+    // Real volume = the feed gave different values per candle. Twelve Data XAU/USD has no volume (every candle
+    // carries the same filler), so volume bars, buy/sell split and VWAP are hidden instead of being drawn from filler.
+    val hasRealVolume = remember(candles) { candles.mapNotNull { it.volume }.distinct().size >= 3 }
+
     // Currently inspected candle or the latest candle
     val activeCandle = selectedCandleIndex?.let { idx ->
         if (idx in displayCandles.indices) displayCandles[idx] else null
@@ -189,7 +193,7 @@ fun ProCandleChart(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Real-Time Buyers vs Sellers Order Flow Pressure Bar
-            buyerSellerRatio?.let { bs ->
+            buyerSellerRatio?.takeIf { hasRealVolume }?.let { bs ->
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = ObsidianSurfaceElevated.copy(alpha = 0.85f),
@@ -302,9 +306,11 @@ fun ProCandleChart(
                             HudItem(label = "H", value = String.format(Locale.US, "%.1f", activeCandle.high))
                             HudItem(label = "L", value = String.format(Locale.US, "%.1f", activeCandle.low))
                             HudItem(label = "C", value = String.format(Locale.US, "%.1f", activeCandle.close), color = if (isBull) SignalBuy else SignalSell)
-                            HudItem(label = "B/S", value = "${candleBuyPct}/${100 - candleBuyPct}%", color = if (candleBuyPct >= 50) SignalBuy else SignalSell)
-                            activeCandle.vwap?.let {
-                                HudItem(label = "VWAP", value = String.format(Locale.US, "%.1f", it), color = Color(0xFFFF9100))
+                            if (hasRealVolume) {
+                                HudItem(label = "B/S est.", value = "${candleBuyPct}/${100 - candleBuyPct}%", color = if (candleBuyPct >= 50) SignalBuy else SignalSell)
+                                activeCandle.vwap?.let {
+                                    HudItem(label = "VWAP", value = String.format(Locale.US, "%.1f", it), color = Color(0xFFFF9100))
+                                }
                             }
                         }
                     }
@@ -380,7 +386,7 @@ fun ProCandleChart(
                     }
 
                     // Draw Volume Bars at bottom if enabled (Buyer Green + Seller Red stacked)
-                    if (showVolume) {
+                    if (showVolume && hasRealVolume) {
                         val maxVolHeight = h * 0.22f
                         displayCandles.forEachIndexed { i, candle ->
                             val vol = candle.volume ?: 500.0
@@ -505,7 +511,7 @@ fun ProCandleChart(
                     }
 
                     // Draw VWAP (Volume-Weighted Average Price) Line (Amber)
-                    if (showVwap) {
+                    if (showVwap && hasRealVolume) {
                         val vwapPath = Path()
                         var firstVwap = false
                         displayCandles.forEachIndexed { i, c ->
@@ -559,6 +565,15 @@ fun ProCandleChart(
                             size = Size(candleWidth, bodyHeight)
                         )
                     }
+
+                    // Last-price line: one thin champagne line at the latest close
+                    val lastY = priceToY(displayCandles.last().close)
+                    drawLine(
+                        color = GoldPrimary.copy(alpha = 0.55f),
+                        start = Offset(0f, lastY),
+                        end = Offset(w, lastY),
+                        strokeWidth = 1f
+                    )
 
                     // Draw Crosshair on selected index
                     selectedCandleIndex?.let { selIdx ->
@@ -619,7 +634,7 @@ fun ProCandleChart(
                         activeColor = GoldLight,
                         onClick = { showEma = !showEma }
                     )
-                    ChartToggleChip(
+                    if (hasRealVolume) ChartToggleChip(
                         label = "VWAP",
                         isActive = showVwap,
                         activeColor = Color(0xFFFF9100),
@@ -631,7 +646,7 @@ fun ProCandleChart(
                         activeColor = Color(0xFFB388FF),
                         onClick = { showBb = !showBb }
                     )
-                    ChartToggleChip(
+                    if (hasRealVolume) ChartToggleChip(
                         label = "VOL",
                         isActive = showVolume,
                         activeColor = TextSecondary,

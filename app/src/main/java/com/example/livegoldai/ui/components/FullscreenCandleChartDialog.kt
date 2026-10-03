@@ -88,6 +88,10 @@ fun FullscreenCandleChartDialog(
 
     val maxVolume = displayCandles.maxOfOrNull { it.volume ?: 1000.0 } ?: 1000.0
 
+    // Real volume = the feed gave different values per candle. Twelve Data XAU/USD has no volume (every candle
+    // carries the same filler), so volume bars, buy/sell split and VWAP are hidden instead of being drawn from filler.
+    val hasRealVolume = remember(candles) { candles.mapNotNull { it.volume }.distinct().size >= 3 }
+
     val activeCandle = selectedCandleIndex?.let { idx ->
         if (idx in displayCandles.indices) displayCandles[idx] else null
     } ?: displayCandles.lastOrNull()
@@ -299,7 +303,7 @@ fun FullscreenCandleChartDialog(
                                 FsHudItem("H", String.format(Locale.US, "%.2f", activeCandle.high))
                                 FsHudItem("L", String.format(Locale.US, "%.2f", activeCandle.low))
                                 FsHudItem("C", String.format(Locale.US, "%.2f", activeCandle.close), if (isBull) SignalBuy else SignalSell)
-                                activeCandle.vwap?.let {
+                                activeCandle.vwap?.takeIf { hasRealVolume }?.let {
                                     FsHudItem("VWAP", String.format(Locale.US, "%.2f", it), Color(0xFFFF9100))
                                 }
                                 activeCandle.superTrend?.let {
@@ -487,7 +491,7 @@ fun FullscreenCandleChartDialog(
                         }
 
                         // 5. VWAP Line (Orange)
-                        if (showVwap) {
+                        if (showVwap && hasRealVolume) {
                             val vwapPath = Path()
                             var started = false
                             displayCandles.forEachIndexed { i, c ->
@@ -551,7 +555,7 @@ fun FullscreenCandleChartDialog(
                         }
 
                         // 8. Volume Sub-Bars (Bottom 20% of canvas)
-                        if (showVolume) {
+                        if (showVolume && hasRealVolume) {
                             val volH = h * 0.18f
                             displayCandles.forEachIndexed { i, c ->
                                 val v = (c.volume ?: 1000.0).toFloat()
@@ -646,17 +650,17 @@ fun FullscreenCandleChartDialog(
                 ) {
                     FsToggleChip("SUPERTREND", showSuperTrend, NeonGreen) { showSuperTrend = !showSuperTrend }
                     FsToggleChip("EMA 9/21", showEma, GoldLight) { showEma = !showEma }
-                    FsToggleChip("VWAP", showVwap, Color(0xFFFF9100)) { showVwap = !showVwap }
+                    if (hasRealVolume) FsToggleChip("VWAP", showVwap, Color(0xFFFF9100)) { showVwap = !showVwap }
                     FsToggleChip("BB 2.0", showBb, Color(0xFFB388FF)) { showBb = !showBb }
                     FsToggleChip("SMC ZONES", showSmcZones, Color(0xFFFFD54F)) { showSmcZones = !showSmcZones }
                     FsToggleChip("TRADE LEVELS", showTradeLevels, SignalBuy) { showTradeLevels = !showTradeLevels }
-                    FsToggleChip("VOLUME", showVolume, TextSecondary) { showVolume = !showVolume }
+                    if (hasRealVolume) FsToggleChip("VOLUME", showVolume, TextSecondary) { showVolume = !showVolume }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // 6. Order Flow Bar & Quick Navigation Footer
-                buyerSellerRatio?.let { bs ->
+                buyerSellerRatio?.takeIf { hasRealVolume }?.let { bs ->
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = ObsidianSurfaceCard,
