@@ -23,6 +23,7 @@ object TechnicalEngine {
         "volatility" to 1.5
     )
     const val GATE_PERCENT = 68.0
+    const val CHART_CANDLES = 160
 
     fun analyze(
         candles: List<CandleBar>,
@@ -626,8 +627,9 @@ object TechnicalEngine {
 
         // Enrich candles with EMA, Bollinger bands, SuperTrend, and rolling VWAP for chart overlays
         val vwapSeries = calculateRollingVwap(candles, 30)
-        val enrichedCandles = candles.takeLast(60).mapIndexed { idx, bar ->
-            val globalIdx = (candles.size - min(60, candles.size)) + idx
+        // 160 enriched candles for the chart (zoom / history); the engine and the ledger keep using the last 60
+        val chartCandlesAll = candles.takeLast(CHART_CANDLES).mapIndexed { idx, bar ->
+            val globalIdx = (candles.size - min(CHART_CANDLES, candles.size)) + idx
             val cEma9 = if (globalIdx < ema9.size) ema9[globalIdx] else null
             val cEma21 = if (globalIdx < ema21.size) ema21[globalIdx] else null
             val cBbUpper = if (globalIdx >= 19) {
@@ -663,6 +665,7 @@ object TechnicalEngine {
                 vwap = cVwap
             )
         }
+        val enrichedCandles = chartCandlesAll.takeLast(60)
 
         val atrSafe = if (lastAtr14 > 0.5) lastAtr14 else 6.5
 
@@ -1517,6 +1520,7 @@ object TechnicalEngine {
             tradeSetup = tradeSetup,
             marketSessions = marketSessions,
             recentCandles = enrichedCandles,
+            chartCandles = chartCandlesAll,
             nextPrediction = nextPrediction,
             macroRadar = macroRadar,
             smartMoney = smartMoneyAnalysis,

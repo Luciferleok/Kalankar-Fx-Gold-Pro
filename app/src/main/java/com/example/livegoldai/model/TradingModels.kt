@@ -534,6 +534,8 @@ data class GoldAnalysisResult(
     val tradeSetup: TradeSetup,
     val marketSessions: List<MarketSession> = emptyList(),
     val recentCandles: List<CandleBar> = emptyList(),
+    /** Up to 160 enriched candles for the chart only (zoom and history). Empty on older cached results. */
+    val chartCandles: List<CandleBar> = emptyList(),
     val nextPrediction: NextPredictionPlaybook? = null,
     val macroRadar: MacroSentimentRadar? = null,
     val smartMoney: SmartMoneyAnalysis? = null,

@@ -65,7 +65,7 @@ fun IndicatorPillarDeepDiveSheet(
         sheetState = sheetState,
         containerColor = ObsidianBackground,
         contentColor = TextPrimary,
-        scrimColor = OnAccent.copy(alpha = 0.78f),
+        scrimColor = Color(0xFF000000).copy(alpha = 0.78f),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = Modifier.testTag("indicator_pillar_deep_dive_sheet")
     ) {

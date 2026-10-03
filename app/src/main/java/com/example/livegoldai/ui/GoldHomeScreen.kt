@@ -727,7 +727,8 @@ fun GoldHomeScreen(
                                 // Professional Candlestick Chart (With Fullscreen Studio)
                                 item(key = "cockpit_pro_chart") {
                                     ProCandleChart(
-                                        candles = analysis.recentCandles,
+                                        candles = analysis.chartCandles.ifEmpty { analysis.recentCandles },
+                                        groups = analysis.groups,
                                         buyerSellerRatio = analysis.buyerSellerRatio,
                                         tradeSetup = analysis.tradeSetup,
                                         pivotLevels = analysis.pivotLevels,

@@ -101,7 +101,8 @@ fun BuyerSellerDepthCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "BUY VS SELL (ESTIMATE)",
+                                text = "PRICE PRESSURE",
+                                maxLines = 1,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
@@ -114,9 +115,9 @@ fun BuyerSellerDepthCard(
                             ) {
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "ESTIMATED PRESSURE"
-                                        AppLanguage.HINDI -> "अनुमानित खरीदारी vs बिकवाली"
-                                        AppLanguage.MARATHI -> "अंदाजित खरेदीदार विरुद्ध विक्रेते"
+                                        AppLanguage.ENGLISH -> "ESTIMATED"
+                                        AppLanguage.HINDI -> "अनुमानित"
+                                        AppLanguage.MARATHI -> "अंदाजित"
                                     },
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),

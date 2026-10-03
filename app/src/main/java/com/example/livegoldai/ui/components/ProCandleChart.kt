@@ -49,23 +49,30 @@ fun ProCandleChart(
     tradeSetup: TradeSetup? = null,
     pivotLevels: PivotLevels? = null,
     currentPrice: Double = 0.0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    groups: List<com.example.livegoldai.model.GroupAnalysis> = emptyList()
 ) {
     if (candles.isEmpty()) return
 
     val currentLang = LocalAppLanguage.current
     var isFullscreenOpen by remember { mutableStateOf(false) }
 
-    var candleCount by remember { mutableIntStateOf(30) }
+    var candleCount by remember { mutableIntStateOf(60) }
+    // history: how many candles the view is moved back from the latest one (0 = live edge)
+    var panBack by remember { mutableIntStateOf(0) }
     var showSuperTrend by remember { mutableStateOf(true) }
     var showEma by remember { mutableStateOf(true) }
     var showBb by remember { mutableStateOf(false) }
     var showVolume by remember { mutableStateOf(true) }
     var showVwap by remember { mutableStateOf(true) }
+    var showPivots by remember { mutableStateOf(false) }
+    var showIndicatorSheet by remember { mutableStateOf(false) }
 
     var selectedCandleIndex by remember { mutableStateOf<Int?>(null) }
 
-    val displayCandles = candles.takeLast(candleCount)
+    val maxBack = (candles.size - candleCount).coerceAtLeast(0)
+    val back = panBack.coerceIn(0, maxBack)
+    val displayCandles = candles.dropLast(back).takeLast(candleCount)
     val maxPrice = displayCandles.maxOfOrNull { it.high } ?: 1.0
     val minPrice = displayCandles.minOfOrNull { it.low } ?: 0.0
     val priceSpan = max(maxPrice - minPrice, 0.5)
@@ -128,8 +135,14 @@ fun ProCandleChart(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Candle count selector chips
+                    Text(
+                        text = "BARS",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                        color = TextMuted,
+                        maxLines = 1
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(15, 30, 45).forEach { count ->
+                        listOf(30, 60, 120).filter { it == 30 || candles.size >= it }.forEach { count ->
                             val isSelected = candleCount == count
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
@@ -139,12 +152,13 @@ fun ProCandleChart(
                                     .pointerInput(count) {
                                         detectTapGestures {
                                             candleCount = count
+                                            panBack = 0
                                             selectedCandleIndex = null
                                         }
                                     }
                             ) {
                                 Text(
-                                    text = "${count}B",
+                                    text = "$count",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                     fontWeight = FontWeight.Bold,
@@ -172,18 +186,7 @@ fun ProCandleChart(
                                 imageVector = Icons.Default.Fullscreen,
                                 contentDescription = "Open Full Screen",
                                 tint = GoldLight,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "FULL SCREEN ⛶"
-                                    AppLanguage.HINDI -> "फुल स्क्रीन ⛶"
-                                    AppLanguage.MARATHI -> "फुल स्क्रीन ⛶"
-                                },
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                fontWeight = FontWeight.Black,
-                                color = GoldLight
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -191,6 +194,15 @@ fun ProCandleChart(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Touch or drag on the chart to inspect a candle" + if (!hasRealVolume) "  •  Volume / VWAP: this feed gives no real volume" else "",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                color = TextMuted
+            )
+            if (showIndicatorSheet) {
+                ChartIndicatorSheet(groups = groups, hasRealVolume = hasRealVolume, onDismiss = { showIndicatorSheet = false })
+            }
 
             // Real-Time Buyers vs Sellers Order Flow Pressure Bar
             buyerSellerRatio?.takeIf { hasRealVolume }?.let { bs ->
@@ -323,7 +335,7 @@ fun ProCandleChart(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
+                    .height(220.dp)
                     .pointerInput(displayCandles) {
                         detectDragGestures(
                             onDragStart = { offset ->
@@ -359,6 +371,21 @@ fun ProCandleChart(
                         }
                     }
             ) {
+                // price scale on the right: top, three guide levels, bottom
+                Column(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    for (i in 0..4) {
+                        Text(
+                            text = String.format(Locale.US, "%,.1f", maxPrice - priceSpan * (i / 4.0)),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                            color = TextMuted,
+                            maxLines = 1
+                        )
+                    }
+                }
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val w = size.width
                     val h = size.height
@@ -566,9 +593,19 @@ fun ProCandleChart(
                         )
                     }
 
-                    // Last-price line: one thin champagne line at the latest close
+                    // Floor pivots as a chart layer (only the levels inside the visible price range)
+                    if (showPivots && pivotLevels != null) {
+                        listOf(pivotLevels.r1 to SignalSell, pivotLevels.pivot to TextSecondary, pivotLevels.s1 to SignalBuy).forEach { (lv, col) ->
+                            if (lv in minPrice..maxPrice) {
+                                val py = priceToY(lv)
+                                drawLine(color = col.copy(alpha = 0.6f), start = Offset(0f, py), end = Offset(w, py), strokeWidth = 1.2f)
+                            }
+                        }
+                    }
+
+                    // Last-price line: one thin champagne line at the latest close (only while the live edge is in view)
                     val lastY = priceToY(displayCandles.last().close)
-                    drawLine(
+                    if (back == 0) drawLine(
                         color = GoldPrimary.copy(alpha = 0.55f),
                         start = Offset(0f, lastY),
                         end = Offset(w, lastY),
@@ -612,6 +649,55 @@ fun ProCandleChart(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Bottom Controls Row: Overlays Toggles & Legend
+            // ---- time axis: first, middle and last candle of the visible window
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                listOf(displayCandles.first(), displayCandles[displayCandles.size / 2], displayCandles.last()).forEach { c ->
+                    Text(
+                        text = c.datetime.take(16),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = TextMuted,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            // ---- history: slide back through older candles; LIVE returns to the latest candle
+            if (maxBack > 0) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Slider(
+                        value = (maxBack - back).toFloat(),
+                        onValueChange = { v ->
+                            panBack = (maxBack - v.roundToInt()).coerceIn(0, maxBack)
+                            selectedCandleIndex = null
+                        },
+                        valueRange = 0f..maxBack.toFloat(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = GoldPrimary,
+                            activeTrackColor = GoldPrimary.copy(alpha = 0.55f),
+                            inactiveTrackColor = ObsidianBorder
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (back == 0) SignalBuy.copy(alpha = 0.14f) else GoldPrimary.copy(alpha = 0.18f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { panBack = 0; selectedCandleIndex = null }
+                    ) {
+                        Text(
+                            text = if (back == 0) "LIVE" else "LIVE ›",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (back == 0) SignalBuy else GoldLight,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -652,13 +738,33 @@ fun ProCandleChart(
                         activeColor = TextSecondary,
                         onClick = { showVolume = !showVolume }
                     )
+                    if (pivotLevels != null) ChartToggleChip(
+                        label = "PIVOTS",
+                        isActive = showPivots,
+                        activeColor = GoldLight,
+                        onClick = { showPivots = !showPivots }
+                    )
+                    // the complete indicator list (everything the engine calculates), with search
+                    if (groups.isNotEmpty()) Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = GoldPrimary.copy(alpha = 0.16f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { showIndicatorSheet = true }
+                            .testTag("btn_all_indicators")
+                    ) {
+                        Text(
+                            text = "+ INDICATORS ${groups.sumOf { it.indicators.size }}",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontWeight = FontWeight.SemiBold,
+                            color = GoldLight,
+                            maxLines = 1
+                        )
+                    }
                 }
 
-                Text(
-                    text = "Touch to scrub",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = TextMuted
-                )
+
             }
         }
     }
@@ -716,11 +822,13 @@ private fun ChartToggleChip(
             }
     ) {
         Text(
-            text = label,
+            // active chips carry a tick, so on / off is obvious at a glance
+            text = if (isActive) "$label ✓" else label,
+            maxLines = 1,
             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            color = if (isActive) activeColor else TextMuted
+            color = if (isActive) activeColor else TextSecondary
         )
     }
 }

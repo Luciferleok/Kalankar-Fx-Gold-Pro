@@ -737,7 +737,8 @@ fun SimpleEasyTradingView(
 
         // --- 3. CLEAN CANDLESTICK CHART ---
         ProCandleChart(
-            candles = analysis.recentCandles,
+            candles = analysis.chartCandles.ifEmpty { analysis.recentCandles },
+            groups = analysis.groups,
             buyerSellerRatio = analysis.buyerSellerRatio,
             tradeSetup = analysis.tradeSetup,
             pivotLevels = analysis.pivotLevels,
