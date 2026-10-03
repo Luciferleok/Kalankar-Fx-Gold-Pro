@@ -84,8 +84,7 @@ data class GoldUiState(
     val showLotCalculator: Boolean = false,
     val selectedSlPips: Double = 90.0,
     val showPriceAlertDialog: Boolean = false,
-    val selectedLogoRes: Int = R.drawable.kalankar_logo_mark,
-    val showLogoSelectorDialog: Boolean = false,
+    val amoled: Boolean = false,          // true black background on dark themes
     val themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
     val showThemeSelectorDialog: Boolean = false,
     val isCompactEasyView: Boolean = false,
@@ -123,6 +122,7 @@ class GoldViewModel @JvmOverloads constructor(
     private val _uiState = MutableStateFlow(
         GoldUiState(
             language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi")),
+            amoled = prefs.getBoolean("amoled_black", false),
             // restored before the first frame, so there is no flash of the default theme
             themeMode = prefs.getString("selected_theme_mode", null)?.let { n -> ThemeMode.values().firstOrNull { it.name == n } } ?: ThemeMode.ROYAL_OBSIDIAN
         )
@@ -457,16 +457,9 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(isAlertTriggered = false) }
     }
 
-    fun openLogoSelector() {
-        _uiState.update { it.copy(showLogoSelectorDialog = true) }
-    }
-
-    fun closeLogoSelector() {
-        _uiState.update { it.copy(showLogoSelectorDialog = false) }
-    }
-
-    fun selectLogo(logoRes: Int) {
-        _uiState.update { it.copy(selectedLogoRes = logoRes, showLogoSelectorDialog = false) }
+    fun setAmoled(on: Boolean) {
+        prefs.edit().putBoolean("amoled_black", on).apply()
+        _uiState.update { it.copy(amoled = on) }
     }
 
     fun openThemeSelector() {

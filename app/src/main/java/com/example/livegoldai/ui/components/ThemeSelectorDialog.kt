@@ -30,6 +30,8 @@ fun ThemeSelectorDialog(
     currentTheme: ThemeMode,
     isCompactEasyView: Boolean,
     onToggleEasyView: () -> Unit,
+    amoled: Boolean = false,
+    onToggleAmoled: (Boolean) -> Unit = {},
     onSelectTheme: (ThemeMode) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -80,14 +82,14 @@ fun ThemeSelectorDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "TERMINAL THEME & VIEW",
+                                text = "APPEARANCE",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
                                 letterSpacing = 0.8.sp
                             )
                             Text(
-                                text = "Choose luxury styling & layout mode",
+                                text = "Theme, true black and view mode",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontSize = 11.sp,
                                 color = TextMuted
@@ -194,10 +196,46 @@ fun ThemeSelectorDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // AMOLED: pure black background on the dark themes (no effect on Ivory Executive)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("amoled_row"),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "True Black (AMOLED)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Pure black background on dark themes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
+                    }
+                    Switch(
+                        checked = amoled,
+                        onCheckedChange = { on -> onToggleAmoled(on) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = OnAccent,
+                            checkedTrackColor = GoldPrimary,
+                            uncheckedThumbColor = TextSecondary,
+                            uncheckedTrackColor = ObsidianBorder
+                        )
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "SELECT COLOR PALETTE",
+                    text = "THEME",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Black,
                     color = TextGold,

@@ -46,7 +46,6 @@ fun SettingsDialog(
     currentLanguage: AppLanguage,
     onSelectLanguage: (AppLanguage) -> Unit,
     onSaveKey: (String) -> Unit,
-    onOpenLogoGallery: () -> Unit = {},
     onOpenThemeSelector: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -421,34 +420,6 @@ fun SettingsDialog(
                         Text(
                             text = LocalizationStrings.customizeTheme(selectedLanguage),
                             color = GoldLight,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-
-                    // 3. VIP EMBLEM CUSTOMIZATION
-                    OutlinedButton(
-                        onClick = {
-                            onDismiss()
-                            onOpenLogoGallery()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("change_emblem_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, ObsidianBorderHighlight),
-                        colors = ButtonDefaults.outlinedButtonColors(containerColor = ObsidianSurfaceCard)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Diamond,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = LocalizationStrings.customizeEmblem(selectedLanguage),
-                            color = TextSecondary,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelLarge
                         )

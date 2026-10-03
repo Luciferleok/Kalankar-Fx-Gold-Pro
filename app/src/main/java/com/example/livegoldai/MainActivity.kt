@@ -40,7 +40,8 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalAppLanguage provides uiState.language) {
                 LiveGoldAITheme(
                     themeMode = uiState.themeMode,
-                    isNewsModeActive = uiState.isNewsModeActive
+                    isNewsModeActive = uiState.isNewsModeActive,
+                    amoled = uiState.amoled
                 ) {
                     Crossfade(
                         targetState = isSplashVisible,

@@ -161,9 +161,9 @@ object LocalizationStrings {
     }
 
     fun customizeTheme(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Customize Theme & View Mode"
-        AppLanguage.HINDI -> "थीम और व्यू मोड बदलें"
-        AppLanguage.MARATHI -> "थीम आणि व्ह्यू मोड बदला"
+        AppLanguage.ENGLISH -> "Appearance"
+        AppLanguage.HINDI -> "दिखावट"
+        AppLanguage.MARATHI -> "स्वरूप"
     }
 
     fun customizeEmblem(lang: AppLanguage): String = when (lang) {

@@ -45,7 +45,7 @@ import com.example.livegoldai.theme.*
 fun PredictionOracleCard(
     prediction: NextPredictionPlaybook,
     onOpenCalculator: () -> Unit = {},
-    logoRes: Int = R.drawable.ic_luxury_gold_logo,
+    logoRes: Int = R.drawable.kalankar_logo_mark,
     onLogoClick: () -> Unit = {},
     timeframeAudit: TimeframeAccuracyAudit? = null,
     modifier: Modifier = Modifier

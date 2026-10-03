@@ -80,7 +80,6 @@ fun GoldHomeScreen(
             currentLanguage = uiState.language,
             onSelectLanguage = { lang -> viewModel.selectLanguage(lang) },
             onSaveKey = { newKey -> viewModel.updateApiKey(newKey) },
-            onOpenLogoGallery = { viewModel.openLogoSelector() },
             onOpenThemeSelector = { viewModel.openThemeSelector() },
             onDismiss = { showSettings = false }
         )
@@ -103,19 +102,14 @@ fun GoldHomeScreen(
         )
     }
 
-    if (uiState.showLogoSelectorDialog) {
-        LogoSelectorDialog(
-            currentSelectedLogo = uiState.selectedLogoRes,
-            onSelectLogo = { logoRes -> viewModel.selectLogo(logoRes) },
-            onDismiss = { viewModel.closeLogoSelector() }
-        )
-    }
 
     if (uiState.showThemeSelectorDialog) {
         ThemeSelectorDialog(
             currentTheme = uiState.themeMode,
             isCompactEasyView = uiState.isCompactEasyView,
             onToggleEasyView = { viewModel.toggleCompactEasyView() },
+            amoled = uiState.amoled,
+            onToggleAmoled = { on -> viewModel.setAmoled(on) },
             onSelectTheme = { mode -> viewModel.selectTheme(mode) },
             onDismiss = { viewModel.closeThemeSelector() }
         )
@@ -166,8 +160,7 @@ fun GoldHomeScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clickable { viewModel.openLogoSelector() }
-                            .testTag("app_logo_clickable")
+                            .testTag("app_logo")
                     ) {
                         Box(
                             modifier = Modifier
@@ -183,8 +176,8 @@ fun GoldHomeScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = painterResource(id = uiState.selectedLogoRes),
-                                contentDescription = "Kalankar FX Gold Royal Logo - Tap to customize emblem",
+                                painter = painterResource(id = R.drawable.kalankar_logo_mark),
+                                contentDescription = "Kalankar FX Gold Pro",
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(RoundedCornerShape(10.dp)),

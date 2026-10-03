@@ -324,17 +324,26 @@ object ActivePalette {
     var current: AppThemeColors by mutableStateOf(RoyalObsidianPalette)
 }
 
+/** One stable AMOLED copy per theme, so the palette object does not change on every recomposition. */
+private object AmoledCache {
+    private val map = HashMap<ThemeMode, AppThemeColors>()
+    fun of(base: AppThemeColors): AppThemeColors = map.getOrPut(base.themeMode) { base.copy(background = Color(0xFF000000)) }
+}
+
 val LocalAppColors = staticCompositionLocalOf { RoyalObsidianPalette }
 
 @Composable
 fun LiveGoldAITheme(
     themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
     isNewsModeActive: Boolean = false,
+    amoled: Boolean = false,
     content: @Composable () -> Unit
 ) {
     // High-impact news no longer repaints the whole app red: the news banner and cards carry the warning.
     @Suppress("UNUSED_VARIABLE") val news = isNewsModeActive
-    val palette = getPaletteForMode(themeMode)
+    val base = getPaletteForMode(themeMode)
+    // AMOLED: only the background goes to pure black; cards keep their own (slightly raised) surface
+    val palette = if (amoled && !base.isLight) AmoledCache.of(base) else base
     if (ActivePalette.current !== palette) ActivePalette.current = palette
 
     val colorScheme = if (palette.isLight) lightColorScheme(
