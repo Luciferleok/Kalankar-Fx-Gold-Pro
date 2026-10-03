@@ -10,8 +10,8 @@ object LocalizationStrings {
 
     fun appSubtitle(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> "Trading Intelligence by Rudvay Ujjwal Kalankar"
-        AppLanguage.HINDI -> "रुद्वय उज्ज्वल कलणकर द्वारा ट्रेडिंग इंटेलिजेंस"
-        AppLanguage.MARATHI -> "रुद्वय उज्ज्वल काळणकर यांचे ट्रेडिंग इंटेलिजन्स"
+        AppLanguage.HINDI -> "रुद्वय उज्ज्वल कलंकार द्वारा ट्रेडिंग इंटेलिजेंस"
+        AppLanguage.MARATHI -> "रुद्वय उज्ज्वल कलंकार यांचे ट्रेडिंग इंटेलिजन्स"
     }
 
     fun autoRefreshIn(lang: AppLanguage, seconds: Int): String = when (lang) {
@@ -88,16 +88,17 @@ object LocalizationStrings {
         AppLanguage.MARATHI -> "5 प्रो मॉड्यूल्स"
     }
 
+    /** Footer creator line (the name of this function is historical: it is no longer a dedication). */
     fun dedicatedTo(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Dedicated to Mr. Rudvay Ujjwal Kalankar"
-        AppLanguage.HINDI -> "श्री रुद्वय उज्ज्वल कलणकर को समर्पित"
-        AppLanguage.MARATHI -> "श्री रुद्वय उज्ज्वल काळणकर यांना समर्पित"
+        AppLanguage.ENGLISH -> "By Mr. Rudvay Ujjwal Kalankar"
+        AppLanguage.HINDI -> "श्री रुद्वय उज्ज्वल कलंकार द्वारा"
+        AppLanguage.MARATHI -> "श्री. रुद्वय उज्ज्वल कलंकार यांच्याकडून"
     }
 
     fun disclaimer(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Advanced AI analysis engine • For educational & trading reference"
-        AppLanguage.HINDI -> "उन्नत AI विश्लेषण इंजन • केवल शैक्षणिक और ट्रेडिंग संदर्भ के लिए"
-        AppLanguage.MARATHI -> "प्रगत AI विश्लेषण इंजिन • केवळ शैक्षणिक आणि ट्रेडिंग संदर्भासाठी"
+        AppLanguage.ENGLISH -> "For education and reference only • Not financial advice"
+        AppLanguage.HINDI -> "केवल शिक्षा और संदर्भ के लिए • यह वित्तीय सलाह नहीं है"
+        AppLanguage.MARATHI -> "केवळ शिक्षण आणि संदर्भासाठी • हा आर्थिक सल्ला नाही"
     }
 
     fun loadingLiveIndicators(lang: AppLanguage): String = when (lang) {

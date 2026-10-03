@@ -16,7 +16,7 @@ enum class AppLanguage(
         nativeName = "English",
         subLabel = "Global Trading Standard",
         flag = "🇬🇧",
-        greeting = "Welcome to Kalankar FX Gold Pro"
+        greeting = "Welcome to KALANKAR FX GOLD PRO"
     ),
     HINDI(
         code = "hi",
@@ -24,7 +24,7 @@ enum class AppLanguage(
         nativeName = "हिंदी",
         subLabel = "भारतीय भाषा • सरल विश्लेषण",
         flag = "🇮🇳",
-        greeting = "कलणकर एफएक्स गोल्ड प्रो में आपका स्वागत है"
+        greeting = "KALANKAR FX GOLD PRO में आपका स्वागत है"
     ),
     MARATHI(
         code = "mr",
@@ -32,7 +32,7 @@ enum class AppLanguage(
         nativeName = "मराठी",
         subLabel = "महाराष्ट्र राजभाषा • अचूक मार्गदर्शन",
         flag = "🚩",
-        greeting = "काळणकर एफएक्स गोल्ड प्रो मध्ये आपले स्वागत आहे"
+        greeting = "KALANKAR FX GOLD PRO मध्ये आपले स्वागत आहे"
     );
 
     companion object {

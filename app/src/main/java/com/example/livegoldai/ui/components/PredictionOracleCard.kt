@@ -1466,7 +1466,7 @@ fun PredictionOracleCard(
                                 "TP 2: ${prediction.takeProfit2} (Book 30%)\n" +
                                 "TP 3: ${prediction.takeProfit3} (Moonbag 20%)\n" +
                                 "Confidence: ${prediction.winProbabilityPercent}% (real accuracy: see Learning Center)\n" +
-                                "Curated by Rudvay Ujjwal Kalankar"
+                                "By Mr. Rudvay Ujjwal Kalankar"
                         )
                         clipboard.setPrimaryClip(clip)
                         val copyToast = when (currentLang) {

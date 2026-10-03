@@ -270,7 +270,7 @@ fun TradeSetupCard(
                             Take Profit 2: $${String.format(Locale.US, "%.2f", setup.takeProfit2)} (+${String.format(Locale.US, "%.0f", setup.takeProfit2Pips)} pips)
                             Risk:Reward: ${setup.riskRewardRatio} | Confluence: ${setup.confidencePercent}%
                             Analysis: ${setup.strategyNote}
-                            (By Rudvay Ujjwal Kalankar)
+                            By Mr. Rudvay Ujjwal Kalankar
                         """.trimIndent()
                         clipboardManager.setText(AnnotatedString(text))
                         val copiedToast = when (currentLanguage) {

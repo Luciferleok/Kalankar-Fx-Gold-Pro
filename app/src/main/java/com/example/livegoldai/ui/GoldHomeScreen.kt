@@ -880,23 +880,29 @@ fun GoldHomeScreen(
                                     .padding(vertical = 16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = "KALANKAR FX GOLD PRO",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GoldLight
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = LocalizationStrings.dedicatedTo(uiState.language),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                // risk note first, so the brand footer is the last thing on the page
                                 Text(
                                     text = LocalizationStrings.disclaimer(uiState.language),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
-                                    color = TextMuted
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
+                                    color = TextMuted,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    text = "KALANKAR FX GOLD PRO",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 2.5.sp,
+                                    color = GoldPrimary,
+                                    maxLines = 1
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = LocalizationStrings.dedicatedTo(uiState.language),
+                                    fontSize = 11.sp,
+                                    color = TextMuted,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                 )
                             }
                         }
