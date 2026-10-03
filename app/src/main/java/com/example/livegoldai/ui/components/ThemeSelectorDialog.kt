@@ -143,7 +143,7 @@ fun ThemeSelectorDialog(
                                 Icon(
                                     imageVector = Icons.Default.Speed,
                                     contentDescription = null,
-                                    tint = if (isCompactEasyView) Color.Black else GoldLight,
+                                    tint = if (isCompactEasyView) OnAccent else GoldLight,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -154,7 +154,7 @@ fun ThemeSelectorDialog(
                                         text = "Easy 1-Glance View",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isCompactEasyView) GoldLight else Color.White
+                                        color = if (isCompactEasyView) GoldLight else TextPrimary
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Surface(
@@ -166,7 +166,7 @@ fun ThemeSelectorDialog(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Black,
-                                            color = if (isCompactEasyView) Color.Black else TextSecondary,
+                                            color = if (isCompactEasyView) OnAccent else TextSecondary,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -185,7 +185,7 @@ fun ThemeSelectorDialog(
                             checked = isCompactEasyView,
                             onCheckedChange = { onToggleEasyView() },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.Black,
+                                checkedThumbColor = OnAccent,
                                 checkedTrackColor = GoldPrimary,
                                 uncheckedThumbColor = TextSecondary,
                                 uncheckedTrackColor = ObsidianBorder
@@ -297,7 +297,7 @@ fun ThemeSelectorDialog(
                                         text = mode.title,
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isChosen) Color.White else TextSecondary
+                                        color = if (isChosen) TextPrimary else TextSecondary
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -337,7 +337,7 @@ fun ThemeSelectorDialog(
                         .testTag("apply_theme_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = appColors.primaryGold,
-                        contentColor = Color.Black
+                        contentColor = OnAccent
                     ),
                     shape = RoundedCornerShape(14.dp)
                 ) {

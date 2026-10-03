@@ -124,7 +124,7 @@ fun SmartMoneySmcCard(
                             text = smc.liquiditySweepAlert,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = TextPrimary
                         )
                     }
                 }
@@ -199,7 +199,7 @@ fun SmartMoneySmcCard(
                             text = "$${String.format(Locale.US, "%.2f", smc.vwapValue)}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Black,
-                            color = Color.White
+                            color = TextPrimary
                         )
                         Text(
                             text = if (smc.vwapSignal == Signal.BUY) "Markup (> VWAP)" else "Discount (< VWAP)",

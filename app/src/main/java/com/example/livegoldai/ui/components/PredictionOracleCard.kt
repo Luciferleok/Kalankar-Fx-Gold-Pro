@@ -651,7 +651,7 @@ fun PredictionOracleCard(
                                 text = prediction.actionHeading,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = TextPrimary
                             )
                         }
 
@@ -664,7 +664,7 @@ fun PredictionOracleCard(
                                 text = prediction.verdict.label,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
-                                color = if (prediction.verdict == Signal.BUY) Color.Black else Color.White,
+                                color = if (prediction.verdict == Signal.BUY) OnAccent else TextPrimary,
                                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                             )
                         }
@@ -796,7 +796,7 @@ fun PredictionOracleCard(
                             text = prediction.recommendedEntryZone,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Black,
-                            color = Color.White
+                            color = TextPrimary
                         )
                         Text(
                             text = when (currentLang) {
@@ -1124,7 +1124,7 @@ fun PredictionOracleCard(
                                     Text(
                                         text = whereToEnterText.removePrefix("✅ KAHAN ENTRY KAREIN: "),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.White,
+                                        color = TextPrimary,
                                         fontWeight = FontWeight.SemiBold,
                                         lineHeight = 17.sp,
                                         fontSize = 12.sp
@@ -1236,7 +1236,7 @@ fun PredictionOracleCard(
                                     text = currentAudio,
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    color = TextPrimary
                                 )
                             }
                         }
@@ -1326,7 +1326,7 @@ fun PredictionOracleCard(
                                         text = tier.balanceLabel.replace(" Account", "").replace(" VIP", ""),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                        color = if (isSelected) Color.Black else TextMuted,
+                                        color = if (isSelected) OnAccent else TextMuted,
                                         fontSize = 11.sp,
                                         modifier = Modifier.padding(vertical = 6.dp),
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1509,7 +1509,7 @@ fun PredictionOracleCard(
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GoldPrimary,
-                        contentColor = Color.Black
+                        contentColor = OnAccent
                     )
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(16.dp))

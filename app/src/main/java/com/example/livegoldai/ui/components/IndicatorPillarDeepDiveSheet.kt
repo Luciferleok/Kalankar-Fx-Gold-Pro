@@ -65,7 +65,7 @@ fun IndicatorPillarDeepDiveSheet(
         sheetState = sheetState,
         containerColor = ObsidianBackground,
         contentColor = TextPrimary,
-        scrimColor = Color.Black.copy(alpha = 0.78f),
+        scrimColor = OnAccent.copy(alpha = 0.78f),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = Modifier.testTag("indicator_pillar_deep_dive_sheet")
     ) {
@@ -180,7 +180,7 @@ fun IndicatorPillarDeepDiveSheet(
                     onClick = { onOpenLotCalculator(85.0) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = OnAccent)
                 ) {
                     Text(
                         text = when (lang) {

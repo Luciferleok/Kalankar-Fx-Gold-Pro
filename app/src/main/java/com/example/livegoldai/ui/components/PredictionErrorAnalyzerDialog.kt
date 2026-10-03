@@ -144,7 +144,7 @@ fun LearningCenterContent(
                         .clickable { tab = i }
                         .padding(horizontal = 10.dp, vertical = 7.dp)
                 ) {
-                    Text(text = label, color = if (selected) Color.Black else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(text = label, color = if (selected) OnAccent else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -174,7 +174,7 @@ fun LearningCenterContent(
             onClick = { recalPressed = true; onRecalibrate() },
             modifier = Modifier.fillMaxWidth().height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = OnAccent)
         ) {
             Text(
                 text = t(lang, "🔄 RUN SAFE RECALIBRATION", "🔄 सुरक्षित री-कैलिब्रेशन चलाएँ", "🔄 सुरक्षित री-कॅलिब्रेशन चालवा"),

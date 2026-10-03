@@ -151,7 +151,7 @@ fun SimpleEasyTradingView(
                                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
-                                    color = if (isSelected) Color.Black else TextSecondary
+                                    color = if (isSelected) OnAccent else TextSecondary
                                 )
                             }
                         }
@@ -528,7 +528,7 @@ fun SimpleEasyTradingView(
                         onClick = onOpenPredictionDialog,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoldPrimary,
-                            contentColor = Color.Black
+                            contentColor = OnAccent
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
@@ -540,7 +540,7 @@ fun SimpleEasyTradingView(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Black
+                            tint = OnAccent
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(

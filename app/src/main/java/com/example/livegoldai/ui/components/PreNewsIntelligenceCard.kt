@@ -199,7 +199,7 @@ fun PreNewsIntelligenceCard(
                                 text = primaryEvent.title,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = TextPrimary,
                                 fontSize = 13.sp
                             )
                         }
@@ -323,7 +323,7 @@ fun PreNewsIntelligenceCard(
                                 text = if (preBias == Signal.BUY) "PRE-BIAS: BUY 🟢" else "PRE-BIAS: SELL 🔴",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
-                                color = Color.Black,
+                                color = OnAccent,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 fontSize = 11.sp
                             )
@@ -371,7 +371,7 @@ fun PreNewsIntelligenceCard(
                                     text = "$${String.format(Locale.US, "%.2f", upperBreakout)}",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color.White
+                                    color = TextPrimary
                                 )
                             }
                         }
@@ -388,7 +388,7 @@ fun PreNewsIntelligenceCard(
                                     text = "$${String.format(Locale.US, "%.2f", lowerBreakdown)}",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color.White
+                                    color = TextPrimary
                                 )
                             }
                         }
@@ -513,7 +513,7 @@ fun PreNewsIntelligenceCard(
                 Icon(
                     imageVector = Icons.Default.NotificationsActive,
                     contentDescription = null,
-                    tint = Color.Black,
+                    tint = OnAccent,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -525,7 +525,7 @@ fun PreNewsIntelligenceCard(
                     },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black,
+                    color = OnAccent,
                     fontSize = 11.5.sp
                 )
             }

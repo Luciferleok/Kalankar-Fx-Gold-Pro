@@ -34,25 +34,25 @@ import com.example.livegoldai.model.Signal
 import com.example.livegoldai.theme.*
 
 /** V8 design tokens: graphite surfaces, subtle borders, gold only for structure. */
-/* V12 "private terminal" palette: obsidian + graphite, champagne gold only for structure,
-   calm emerald / deep red for direction. No neon. */
+/* V13: every token comes from the selected theme. */
 internal object V8 {
-    val Bg = Color(0xFF070808)
-    val Card = Color(0xFF101215)        // level 2 surface
-    val CardTop = Color(0xFF15181C)     // top of the card gradient (soft inner highlight)
-    val Card2 = Color(0xFF181B20)       // level 1 flat / inset surface
-    val Hero = Color(0xFF1A1C20)        // level 3 hero, top of gradient
-    val Line = Color(0xFF22262C)        // hairline border
-    val Info = Color(0xFF6FB6D9)
-    val Learn = Color(0xFFA99BD6)
-    val Green = Color(0xFF2FBF8A)       // emerald
-    val Red = Color(0xFFD9475A)         // refined red
-    val Amber = Color(0xFFE0A94A)
-    val Gold = Color(0xFFD4B56A)        // champagne
-    val GoldDeep = Color(0xFFC9A65B)
-    val Text1 = Color(0xFFF2F0EA)
-    val Text2 = Color(0xFFB9B4A8)
-    val Text3 = Color(0xFF7C786F)
+    private val p get() = ActivePalette.current
+    val Bg: Color get() = p.background
+    val Card: Color get() = p.surfaceCard          // level 2 surface
+    val CardTop: Color get() = p.surface           // top of the card gradient (soft inner highlight)
+    val Card2: Color get() = p.surfaceElevated     // level 1 flat / inset surface
+    val Hero: Color get() = p.surfaceElevated      // level 3 hero, top of gradient
+    val Line: Color get() = p.border               // hairline border
+    val Info: Color get() = p.info
+    val Learn: Color get() = p.learn
+    val Green: Color get() = p.signalBuy
+    val Red: Color get() = p.signalSell
+    val Amber: Color get() = p.signalWait
+    val Gold: Color get() = p.primaryGold
+    val GoldDeep: Color get() = p.darkGold
+    val Text1: Color get() = p.textPrimary
+    val Text2: Color get() = p.textSecondary
+    val Text3: Color get() = p.textMuted
 }
 
 internal fun tr(lang: AppLanguage, en: String, hi: String, mr: String): String = when (lang) {

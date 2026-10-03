@@ -172,7 +172,7 @@ fun MacroNewsRadarCard(
                                 text = String.format(Locale.US, "%.2f", radar.dxyIndex.value),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = TextPrimary
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -244,7 +244,7 @@ fun MacroNewsRadarCard(
                                 text = "${String.format(Locale.US, "%.2f", radar.us10yYield.value)}%",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = TextPrimary
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -358,7 +358,7 @@ fun MacroNewsRadarCard(
                             text = item.getHeadline(currentLanguage),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

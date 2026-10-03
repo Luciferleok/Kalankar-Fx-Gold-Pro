@@ -261,7 +261,7 @@ fun NewsTradingModeCard(
                                 text = newsPlan.eventName,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
-                                color = if (isNewsModeActive) Color.White else GoldLight,
+                                color = if (isNewsModeActive) TextPrimary else GoldLight,
                                 fontSize = 10.sp
                             )
                             Text(

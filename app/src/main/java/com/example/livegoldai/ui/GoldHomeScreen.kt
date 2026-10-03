@@ -261,18 +261,10 @@ fun GoldHomeScreen(
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = if (uiState.isNewsModeActive) "🚨" else uiState.themeMode.icon, fontSize = 12.sp)
+                            Text(text = if (uiState.isNewsModeActive) "!" else uiState.themeMode.icon, fontSize = 12.sp, color = appColors.primaryGold)
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = if (uiState.isNewsModeActive) "NEWS ACTIVE" else when (uiState.themeMode) {
-                                    ThemeMode.DUBAI_ROYALE -> "DUBAI 24K"
-                                    ThemeMode.ROYAL_OBSIDIAN -> "24K GOLD"
-                                    ThemeMode.MONACO_ROSE -> "ROSE GOLD"
-                                    ThemeMode.CYBER_NEON -> "CYBER"
-                                    ThemeMode.SWISS_BANK -> "SWISS"
-                                    ThemeMode.EMERALD_ALPHA -> "EMERALD"
-                                    ThemeMode.NEWS_ALERT -> "NEWS ALERT"
-                                },
+                                text = if (uiState.isNewsModeActive) "NEWS ACTIVE" else uiState.themeMode.shortLabel,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = if (uiState.isNewsModeActive) Color(0xFFFF264D) else appColors.primaryGold
@@ -548,7 +540,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
-                                                    color = if (isUnified) Color.Black else TextPrimary
+                                                    color = if (isUnified) OnAccent else TextPrimary
                                                 )
                                                 Text(
                                                     text = when (uiState.language) {
@@ -558,7 +550,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,
-                                                    color = if (isUnified) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                    color = if (isUnified) OnAccent.copy(alpha = 0.8f) else TextMuted
                                                 )
                                             }
                                         }
@@ -592,7 +584,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
-                                                    color = if (isEasy) Color.Black else TextPrimary
+                                                    color = if (isEasy) OnAccent else TextPrimary
                                                 )
                                                 Text(
                                                     text = when (uiState.language) {
@@ -602,7 +594,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,
-                                                    color = if (isEasy) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                    color = if (isEasy) OnAccent.copy(alpha = 0.8f) else TextMuted
                                                 )
                                             }
                                         }
@@ -636,7 +628,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
-                                                    color = if (isPro) Color.Black else TextPrimary
+                                                    color = if (isPro) OnAccent else TextPrimary
                                                 )
                                                 Text(
                                                     text = when (uiState.language) {
@@ -646,7 +638,7 @@ fun GoldHomeScreen(
                                                     },
                                                     fontSize = 8.5.sp,
                                                     fontWeight = FontWeight.Medium,
-                                                    color = if (isPro) Color.Black.copy(alpha = 0.8f) else TextMuted
+                                                    color = if (isPro) OnAccent.copy(alpha = 0.8f) else TextMuted
                                                 )
                                             }
                                         }
@@ -755,7 +747,7 @@ fun GoldHomeScreen(
                                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
-                                                color = if (isSelected) Color.Black else TextSecondary
+                                                color = if (isSelected) OnAccent else TextSecondary
                                             )
                                         }
                                     }

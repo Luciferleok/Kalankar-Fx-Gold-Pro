@@ -260,7 +260,7 @@ fun UnifiedSignalDashboardView(
                                     text = tf.uppercase(),
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                    color = if (isSelected) Color.Black else TextSecondary
+                                    color = if (isSelected) OnAccent else TextSecondary
                                 )
                             }
                         }
@@ -431,7 +431,7 @@ fun UnifiedSignalDashboardView(
                             center = centerOffset
                         )
                         drawCircle(
-                            color = Color.Black,
+                            color = OnAccent,
                             radius = 5.dp.toPx(),
                             center = centerOffset
                         )

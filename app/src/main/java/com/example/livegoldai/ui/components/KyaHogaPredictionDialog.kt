@@ -271,7 +271,7 @@ fun KyaHogaPredictionDialog(
                                 },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White,
+                                color = TextPrimary,
                                 lineHeight = 22.sp
                             )
 
@@ -1031,7 +1031,7 @@ fun KyaHogaPredictionDialog(
                                         text = "$${String.format(Locale.US, "%.2f", analysis.currentPrice)}",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Black,
-                                        color = Color.White
+                                        color = TextPrimary
                                     )
                                     Text(
                                         text = "${if (analysis.changeAmount >= 0) "+" else ""}${String.format(Locale.US, "%.2f", analysis.changeAmount)} (${String.format(Locale.US, "%.2f", analysis.changePercent)}%)",
@@ -1326,7 +1326,7 @@ fun KyaHogaPredictionDialog(
                         .testTag("close_prediction_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GoldPrimary,
-                        contentColor = Color.Black
+                        contentColor = OnAccent
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -1365,7 +1365,7 @@ private fun ProbabilityItemRow(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isPrimary) FontWeight.Black else FontWeight.Bold,
-                    color = if (isPrimary) Color.White else TextSecondary
+                    color = if (isPrimary) TextPrimary else TextSecondary
                 )
                 Text(
                     text = hindiDetail,

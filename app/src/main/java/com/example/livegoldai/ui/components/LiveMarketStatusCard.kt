@@ -141,7 +141,7 @@ fun LiveMarketStatusCard(
                                 text = "Running Candle: ${candleInsight.lastCandleType}",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = TextPrimary
                             )
                             Text(
                                 text = candleInsight.lastCandleMeaning,
@@ -225,7 +225,7 @@ fun LiveMarketStatusCard(
                     .testTag("open_prediction_from_status_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GoldPrimary,
-                    contentColor = Color.Black
+                    contentColor = OnAccent
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {

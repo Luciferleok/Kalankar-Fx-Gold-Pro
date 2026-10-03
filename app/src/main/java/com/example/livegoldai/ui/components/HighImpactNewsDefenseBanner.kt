@@ -176,7 +176,7 @@ fun HighImpactNewsDefenseBanner(
                                 text = event.getIndiaTimeFormatted().ifBlank { "08:30 PM IST" },
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = TextPrimary
                             )
                         }
                     }
@@ -270,7 +270,7 @@ fun HighImpactNewsDefenseBanner(
                         imageVector = Icons.Default.FlashOn,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = Color.White
+                        tint = TextPrimary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
@@ -281,7 +281,7 @@ fun HighImpactNewsDefenseBanner(
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color.White
+                        color = TextPrimary
                     )
                 }
             }

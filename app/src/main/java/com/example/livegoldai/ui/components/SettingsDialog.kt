@@ -508,7 +508,7 @@ fun SettingsDialog(
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                             fontWeight = FontWeight.Black,
-                                            color = Color.Black
+                                            color = OnAccent
                                         )
                                     }
                                 }

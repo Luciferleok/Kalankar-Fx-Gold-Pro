@@ -196,7 +196,7 @@ fun ProductionImprovementAuditCard(
                     ) {
                         Text(text = "SIGNAL GATE", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = TextMuted)
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(text = "${engine.dynamicConfidenceThreshold}%", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+                        Text(text = "${engine.dynamicConfidenceThreshold}%", fontSize = 14.sp, fontWeight = FontWeight.Black, color = TextPrimary)
                         Text(text = "Weighted agreement", fontSize = 8.sp, color = TextSecondary)
                     }
                 }
@@ -263,7 +263,7 @@ fun ProductionImprovementAuditCard(
                                         text = if (currentLang == AppLanguage.HINDI) fix.ruleTitleHindi else fix.ruleTitle,
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = TextPrimary
                                     )
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
@@ -375,7 +375,7 @@ fun ProductionImprovementAuditCard(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = Color.Black,
+                        tint = OnAccent,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -387,7 +387,7 @@ fun ProductionImprovementAuditCard(
                         },
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color.Black
+                        color = OnAccent
                     )
                 }
             }

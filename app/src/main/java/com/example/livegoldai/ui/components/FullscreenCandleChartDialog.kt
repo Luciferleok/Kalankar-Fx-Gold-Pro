@@ -149,7 +149,7 @@ fun FullscreenCandleChartDialog(
                                     text = "$${String.format(Locale.US, "%,.2f", spotPrice)}",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color.White
+                                    color = TextPrimary
                                 )
                             }
                             Text(

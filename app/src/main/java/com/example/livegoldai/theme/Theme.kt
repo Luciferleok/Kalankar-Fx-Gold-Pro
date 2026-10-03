@@ -1,59 +1,80 @@
 package com.example.livegoldai.theme
 
+import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
+/**
+ * V13 theme engine.
+ * The enum names are kept from older versions because they are what is saved on the phone;
+ * only the look and the titles changed.
+ */
 enum class ThemeMode(
     val title: String,
     val subtitle: String,
     val badge: String,
-    val icon: String
+    val icon: String,
+    val shortLabel: String
 ) {
-    DUBAI_ROYALE(
-        title = "Dubai Royale 24K Bullion",
-        subtitle = "Prestige Dubai Gold Souk bullion metallic finish with diamond velvet",
-        badge = "✨ 24K PURE GOLD",
-        icon = "✨"
-    ),
     ROYAL_OBSIDIAN(
-        title = "Royal Obsidian Gold",
-        subtitle = "Pitch black OLED contrast with 24K bullion gold accents",
-        badge = "👑 SIGNATURE LUXURY",
-        icon = "👑"
-    ),
-    MONACO_ROSE(
-        title = "Monaco Rose Gold Sovereign",
-        subtitle = "Ultra-luxury French Riviera rose gold bullion with satin caviar black",
-        badge = "🌹 ROSE GOLD BULLION",
-        icon = "🌹"
+        title = "Obsidian Gold",
+        subtitle = "Near-black obsidian, graphite cards, champagne gold",
+        badge = "DEFAULT",
+        icon = "◆",
+        shortLabel = "OBSIDIAN"
     ),
     CYBER_NEON(
-        title = "Cyber Tokyo Matrix",
-        subtitle = "Ultra high-contrast neon cyan & emerald trading terminal",
-        badge = "⚡ HIGH FREQUENCY",
-        icon = "⚡"
+        title = "Platinum Ice",
+        subtitle = "Cold charcoal, metallic graphite, platinum and ice cyan",
+        badge = "QUANT LAB",
+        icon = "◇",
+        shortLabel = "PLATINUM"
     ),
     SWISS_BANK(
-        title = "Swiss Bullion Navy",
-        subtitle = "Deep institutional sapphire midnight & champagne accents",
-        badge = "🏦 INSTITUTIONAL",
-        icon = "🏛️"
+        title = "Midnight Sapphire",
+        subtitle = "Deep navy-black with sapphire and restrained gold",
+        badge = "PRIVATE BANK",
+        icon = "◈",
+        shortLabel = "MIDNIGHT"
     ),
     EMERALD_ALPHA(
-        title = "Emerald Alpha Hedge",
-        subtitle = "Prestige deep jade forest with glowing mint buy triggers",
-        badge = "💎 WEALTH HEDGE",
-        icon = "💎"
+        title = "Emerald Black",
+        subtitle = "Green-black depth with emerald and soft gold",
+        badge = "PRIVATE CAPITAL",
+        icon = "❖",
+        shortLabel = "EMERALD"
+    ),
+    MONACO_ROSE(
+        title = "Royal Amethyst",
+        subtitle = "Black-plum graphite with royal violet and platinum",
+        badge = "AI EXECUTIVE",
+        icon = "✦",
+        shortLabel = "ROYAL"
     ),
     NEWS_ALERT(
-        title = "News Volatility Alert (High-Impact)",
-        subtitle = "Emergency crimson & electric amber theme for CPI, NFP & FOMC volatility",
-        badge = "🚨 LIVE NEWS IMPACT",
-        icon = "🚨"
+        title = "Carbon Red",
+        subtitle = "Carbon black with deep crimson and gunmetal",
+        badge = "PERFORMANCE",
+        icon = "▲",
+        shortLabel = "CARBON"
+    ),
+    DUBAI_ROYALE(
+        title = "Ivory Executive",
+        subtitle = "Light theme: warm ivory, pearl cards, dark champagne",
+        badge = "LIGHT",
+        icon = "○",
+        shortLabel = "IVORY"
     )
 }
 
@@ -76,7 +97,12 @@ data class AppThemeColors(
     val signalSell: Color,
     val signalSellBg: Color,
     val signalWait: Color,
-    val signalWaitBg: Color
+    val signalWaitBg: Color,
+    val info: Color,
+    val learn: Color,
+    /** Text / icon colour that sits on top of the accent colour. */
+    val onAccent: Color,
+    val isLight: Boolean
 ) {
     val goldGradient: androidx.compose.ui.graphics.Brush
         get() = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(lightGold, primaryGold))
@@ -88,158 +114,193 @@ data class AppThemeColors(
         get() = androidx.compose.ui.graphics.Brush.linearGradient(listOf(borderHighlight, border))
 }
 
+// Obsidian Gold
 val RoyalObsidianPalette = AppThemeColors(
     themeMode = ThemeMode.ROYAL_OBSIDIAN,
-    background = Color(0xFF07090E),
-    surface = Color(0xFF0F141F),
-    surfaceElevated = Color(0xFF171E2D),
-    surfaceCard = Color(0xFF121824),
-    border = Color(0xFF242E40),
-    borderHighlight = Color(0xFFFFC72C),
-    primaryGold = Color(0xFFFFC72C),
-    lightGold = Color(0xFFFFE082),
-    darkGold = Color(0xFFD4AF37),
-    textPrimary = Color(0xFFF8FAFC),
-    textSecondary = Color(0xFF94A3B8),
-    textMuted = Color(0xFF64748B),
-    signalBuy = Color(0xFF00E676),
-    signalBuyBg = Color(0xFF072B19),
-    signalSell = Color(0xFFFF334B),
-    signalSellBg = Color(0xFF330B12),
-    signalWait = Color(0xFFFFB800),
-    signalWaitBg = Color(0xFF332408)
+    background = Color(0xFF070808),
+    surface = Color(0xFF15181C),
+    surfaceElevated = Color(0xFF1A1C20),
+    surfaceCard = Color(0xFF101215),
+    border = Color(0xFF24272C),
+    borderHighlight = Color(0xFFD4B56A),
+    primaryGold = Color(0xFFD4B56A),
+    lightGold = Color(0xFFE6CF94),
+    darkGold = Color(0xFFA8873F),
+    textPrimary = Color(0xFFF2F0EA),
+    textSecondary = Color(0xFFB9B4A8),
+    textMuted = Color(0xFF7C786F),
+    signalBuy = Color(0xFF2FBF8A),
+    signalBuyBg = Color(0xFF0C2A20),
+    signalSell = Color(0xFFD9475A),
+    signalSellBg = Color(0xFF2E1116),
+    signalWait = Color(0xFFE0A94A),
+    signalWaitBg = Color(0xFF2B2110),
+    info = Color(0xFF6FB6D9),
+    learn = Color(0xFFA99BD6),
+    onAccent = Color(0xFF0A0B0D),
+    isLight = false
 )
 
-val DubaiRoyalePalette = AppThemeColors(
-    themeMode = ThemeMode.DUBAI_ROYALE,
-    background = Color(0xFF050608),
-    surface = Color(0xFF0D1016),
-    surfaceElevated = Color(0xFF171B24),
-    surfaceCard = Color(0xFF12151D),
-    border = Color(0xFF382F1D),
-    borderHighlight = Color(0xFFFFD700),
-    primaryGold = Color(0xFFFFD700), // Pure 24K Gold
-    lightGold = Color(0xFFFFF0A6),
-    darkGold = Color(0xFFE5A700),
-    textPrimary = Color(0xFFFFFFFF),
-    textSecondary = Color(0xFFE0D5BE),
-    textMuted = Color(0xFF998E78),
-    signalBuy = Color(0xFF00FF88),
-    signalBuyBg = Color(0xFF052B19),
-    signalSell = Color(0xFFFF264D),
-    signalSellBg = Color(0xFF380710),
-    signalWait = Color(0xFFFFD700),
-    signalWaitBg = Color(0xFF302408)
-)
-
-val MonacoRosePalette = AppThemeColors(
-    themeMode = ThemeMode.MONACO_ROSE,
-    background = Color(0xFF080507),
-    surface = Color(0xFF130C10),
-    surfaceElevated = Color(0xFF1C1318),
-    surfaceCard = Color(0xFF170F14),
-    border = Color(0xFF361E26),
-    borderHighlight = Color(0xFFFF94A6),
-    primaryGold = Color(0xFFFF8599), // Monaco Rose Gold
-    lightGold = Color(0xFFFFB8C6),
-    darkGold = Color(0xFFC7556A),
-    textPrimary = Color(0xFFFFF6F8),
-    textSecondary = Color(0xFFDFB0BC),
-    textMuted = Color(0xFF966F7B),
-    signalBuy = Color(0xFF00FFAB),
-    signalBuyBg = Color(0xFF052B1E),
-    signalSell = Color(0xFFFF2E67),
-    signalSellBg = Color(0xFF3B0917),
-    signalWait = Color(0xFFFFB300),
-    signalWaitBg = Color(0xFF332308)
-)
-
+// Platinum Ice
 val CyberNeonPalette = AppThemeColors(
     themeMode = ThemeMode.CYBER_NEON,
-    background = Color(0xFF030710),
-    surface = Color(0xFF081324),
-    surfaceElevated = Color(0xFF0E1F38),
-    surfaceCard = Color(0xFF0A182C),
-    border = Color(0xFF16365C),
-    borderHighlight = Color(0xFF00F0FF),
-    primaryGold = Color(0xFF00F0FF), // Electric Cyan
-    lightGold = Color(0xFF80F7FF),
-    darkGold = Color(0xFF009AB0),
-    textPrimary = Color(0xFFF0FDF4),
-    textSecondary = Color(0xFF93C5FD),
-    textMuted = Color(0xFF477199),
-    signalBuy = Color(0xFF00FF9D),
-    signalBuyBg = Color(0xFF033320),
-    signalSell = Color(0xFFFF1744),
-    signalSellBg = Color(0xFF3B0713),
-    signalWait = Color(0xFFFFD600),
-    signalWaitBg = Color(0xFF332900)
+    background = Color(0xFF0B0E12),
+    surface = Color(0xFF171C23),
+    surfaceElevated = Color(0xFF1F262F),
+    surfaceCard = Color(0xFF12161C),
+    border = Color(0xFF2A323C),
+    borderHighlight = Color(0xFF8FD3E8),
+    primaryGold = Color(0xFFC7D3DE),
+    lightGold = Color(0xFFE4ECF3),
+    darkGold = Color(0xFF8FA3B5),
+    textPrimary = Color(0xFFF1F5F9),
+    textSecondary = Color(0xFFAAB6C3),
+    textMuted = Color(0xFF6E7B89),
+    signalBuy = Color(0xFF3CC6A0),
+    signalBuyBg = Color(0xFF0E2B24),
+    signalSell = Color(0xFFE0566B),
+    signalSellBg = Color(0xFF30141A),
+    signalWait = Color(0xFFD9B36A),
+    signalWaitBg = Color(0xFF2C2413),
+    info = Color(0xFF8FD3E8),
+    learn = Color(0xFFA9A6E0),
+    onAccent = Color(0xFF0B0E12),
+    isLight = false
 )
 
+// Midnight Sapphire
 val SwissBankPalette = AppThemeColors(
     themeMode = ThemeMode.SWISS_BANK,
-    background = Color(0xFF060B14),
-    surface = Color(0xFF0E182A),
-    surfaceElevated = Color(0xFF15233C),
-    surfaceCard = Color(0xFF111D32),
-    border = Color(0xFF243657),
-    borderHighlight = Color(0xFFE5C07B),
-    primaryGold = Color(0xFFE5C07B), // Champagne Bullion
-    lightGold = Color(0xFFF6E3B8),
-    darkGold = Color(0xFFB58B35),
-    textPrimary = Color(0xFFF8FAFC),
-    textSecondary = Color(0xFFA5B4CB),
-    textMuted = Color(0xFF677794),
-    signalBuy = Color(0xFF22C55E),
-    signalBuyBg = Color(0xFF0F311C),
-    signalSell = Color(0xFFEF4444),
-    signalSellBg = Color(0xFF3B1214),
-    signalWait = Color(0xFFF59E0B),
-    signalWaitBg = Color(0xFF382306)
+    background = Color(0xFF050A16),
+    surface = Color(0xFF0F1B36),
+    surfaceElevated = Color(0xFF152444),
+    surfaceCard = Color(0xFF0A1429),
+    border = Color(0xFF1E2E52),
+    borderHighlight = Color(0xFFD4B56A),
+    primaryGold = Color(0xFF5B8DEF),
+    lightGold = Color(0xFF9DBBFA),
+    darkGold = Color(0xFF3A66C4),
+    textPrimary = Color(0xFFF3F6FC),
+    textSecondary = Color(0xFFA7B4CE),
+    textMuted = Color(0xFF65749A),
+    signalBuy = Color(0xFF34C38F),
+    signalBuyBg = Color(0xFF0B2A24),
+    signalSell = Color(0xFFE05A6D),
+    signalSellBg = Color(0xFF2F1420),
+    signalWait = Color(0xFFD4B56A),
+    signalWaitBg = Color(0xFF2A2414),
+    info = Color(0xFF7FC4E8),
+    learn = Color(0xFFA9A6E0),
+    onAccent = Color(0xFF050A16),
+    isLight = false
 )
 
+// Emerald Black
 val EmeraldAlphaPalette = AppThemeColors(
     themeMode = ThemeMode.EMERALD_ALPHA,
-    background = Color(0xFF030E09),
-    surface = Color(0xFF081B13),
-    surfaceElevated = Color(0xFF0F261C),
-    surfaceCard = Color(0xFF0B2117),
-    border = Color(0xFF184230),
-    borderHighlight = Color(0xFF10B981),
-    primaryGold = Color(0xFF10B981), // Emerald Alpha
-    lightGold = Color(0xFF6EE7B7),
-    darkGold = Color(0xFF047857),
-    textPrimary = Color(0xFFF0FDF4),
-    textSecondary = Color(0xFF86EFAC),
-    textMuted = Color(0xFF4D7C66),
-    signalBuy = Color(0xFF10B981),
-    signalBuyBg = Color(0xFF063321),
-    signalSell = Color(0xFFF43F5E),
-    signalSellBg = Color(0xFF3D0C17),
-    signalWait = Color(0xFFEAB308),
-    signalWaitBg = Color(0xFF332605)
+    background = Color(0xFF050B08),
+    surface = Color(0xFF0F1C16),
+    surfaceElevated = Color(0xFF14261D),
+    surfaceCard = Color(0xFF0A1510),
+    border = Color(0xFF1C3327),
+    borderHighlight = Color(0xFFD4B56A),
+    primaryGold = Color(0xFF2FBF8A),
+    lightGold = Color(0xFF7FDDB8),
+    darkGold = Color(0xFF1E8A62),
+    textPrimary = Color(0xFFF0F7F3),
+    textSecondary = Color(0xFFA6BBB0),
+    textMuted = Color(0xFF667A70),
+    signalBuy = Color(0xFF2FBF8A),
+    signalBuyBg = Color(0xFF0C2A20),
+    signalSell = Color(0xFFE0566B),
+    signalSellBg = Color(0xFF2E1318),
+    signalWait = Color(0xFFD4B56A),
+    signalWaitBg = Color(0xFF2A2412),
+    info = Color(0xFF6FB6D9),
+    learn = Color(0xFFA99BD6),
+    onAccent = Color(0xFF050B08),
+    isLight = false
 )
 
+// Royal Amethyst
+val MonacoRosePalette = AppThemeColors(
+    themeMode = ThemeMode.MONACO_ROSE,
+    background = Color(0xFF0A070E),
+    surface = Color(0xFF19121F),
+    surfaceElevated = Color(0xFF21182C),
+    surfaceCard = Color(0xFF120D18),
+    border = Color(0xFF2E2340),
+    borderHighlight = Color(0xFFC7D3DE),
+    primaryGold = Color(0xFF9B7BE0),
+    lightGold = Color(0xFFC4B0F2),
+    darkGold = Color(0xFF7252B8),
+    textPrimary = Color(0xFFF5F2FA),
+    textSecondary = Color(0xFFB5AACB),
+    textMuted = Color(0xFF756A8C),
+    signalBuy = Color(0xFF3CC6A0),
+    signalBuyBg = Color(0xFF0E2A24),
+    signalSell = Color(0xFFE0566B),
+    signalSellBg = Color(0xFF30131C),
+    signalWait = Color(0xFFD9B36A),
+    signalWaitBg = Color(0xFF2B2314),
+    info = Color(0xFF8FD3E8),
+    learn = Color(0xFFC4B0F2),
+    onAccent = Color(0xFF0A070E),
+    isLight = false
+)
+
+// Carbon Red
 val NewsAlertPalette = AppThemeColors(
     themeMode = ThemeMode.NEWS_ALERT,
-    background = Color(0xFF0F0407), // Alarm Crimson Midnight
-    surface = Color(0xFF1E080F),
-    surfaceElevated = Color(0xFF2E0D17),
-    surfaceCard = Color(0xFF240A12),
-    border = Color(0xFF5C1525),
-    borderHighlight = Color(0xFFFF264D), // Glowing Neon Red Alert
-    primaryGold = Color(0xFFFF5500), // Electric Flame Orange
-    lightGold = Color(0xFFFF9944),
-    darkGold = Color(0xFFD63B00),
-    textPrimary = Color(0xFFFFFFFF),
-    textSecondary = Color(0xFFFFB3BA),
-    textMuted = Color(0xFFC4717F),
-    signalBuy = Color(0xFF00FF88),
-    signalBuyBg = Color(0xFF063319),
-    signalSell = Color(0xFFFF1744),
-    signalSellBg = Color(0xFF450613),
-    signalWait = Color(0xFFFF9100),
-    signalWaitBg = Color(0xFF3B1E05)
+    background = Color(0xFF0A0909),
+    surface = Color(0xFF181415),
+    surfaceElevated = Color(0xFF201B1C),
+    surfaceCard = Color(0xFF121011),
+    border = Color(0xFF302629),
+    borderHighlight = Color(0xFF8A9099),
+    primaryGold = Color(0xFFC23A4B),
+    lightGold = Color(0xFFE27A87),
+    darkGold = Color(0xFF8E2231),
+    textPrimary = Color(0xFFF4F1F1),
+    textSecondary = Color(0xFFB8AEB0),
+    textMuted = Color(0xFF7A7072),
+    signalBuy = Color(0xFF3CC6A0),
+    signalBuyBg = Color(0xFF0E2A23),
+    signalSell = Color(0xFFF0705E),
+    signalSellBg = Color(0xFF331612),
+    signalWait = Color(0xFFE0A94A),
+    signalWaitBg = Color(0xFF2B2110),
+    info = Color(0xFF8A9099),
+    learn = Color(0xFFA99BD6),
+    onAccent = Color(0xFFFFFFFF),
+    isLight = false
+)
+
+// Ivory Executive
+val DubaiRoyalePalette = AppThemeColors(
+    themeMode = ThemeMode.DUBAI_ROYALE,
+    background = Color(0xFFF6F1E7),
+    surface = Color(0xFFFFFFFF),
+    surfaceElevated = Color(0xFFEFE8DA),
+    surfaceCard = Color(0xFFFBF8F1),
+    border = Color(0xFFE2D9C6),
+    borderHighlight = Color(0xFF9A7B2F),
+    primaryGold = Color(0xFF9A7B2F),
+    lightGold = Color(0xFF7D6325),
+    darkGold = Color(0xFF5E4A1A),
+    textPrimary = Color(0xFF23211D),
+    textSecondary = Color(0xFF5C574D),
+    textMuted = Color(0xFF8C8678),
+    signalBuy = Color(0xFF1E8A62),
+    signalBuyBg = Color(0xFFE1F1EA),
+    signalSell = Color(0xFFB8324A),
+    signalSellBg = Color(0xFFF7E3E6),
+    signalWait = Color(0xFFA8741A),
+    signalWaitBg = Color(0xFFF5EAD3),
+    info = Color(0xFF2D7FA6),
+    learn = Color(0xFF6B55B0),
+    onAccent = Color(0xFFFFFFFF),
+    isLight = true
 )
 
 fun getPaletteForMode(mode: ThemeMode): AppThemeColors {
@@ -254,6 +315,15 @@ fun getPaletteForMode(mode: ThemeMode): AppThemeColors {
     }
 }
 
+/**
+ * The palette every screen reads. The old colour names (GoldPrimary, TextPrimary, SignalBuy ...)
+ * in Color.kt read from here, so screens that were written with fixed colours now follow the theme.
+ * Backed by Compose state: changing it redraws the UI.
+ */
+object ActivePalette {
+    var current: AppThemeColors by mutableStateOf(RoyalObsidianPalette)
+}
+
 val LocalAppColors = staticCompositionLocalOf { RoyalObsidianPalette }
 
 @Composable
@@ -262,15 +332,33 @@ fun LiveGoldAITheme(
     isNewsModeActive: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val palette = if (isNewsModeActive) NewsAlertPalette else getPaletteForMode(themeMode)
+    // High-impact news no longer repaints the whole app red: the news banner and cards carry the warning.
+    @Suppress("UNUSED_VARIABLE") val news = isNewsModeActive
+    val palette = getPaletteForMode(themeMode)
+    if (ActivePalette.current !== palette) ActivePalette.current = palette
 
-    val colorScheme = darkColorScheme(
+    val colorScheme = if (palette.isLight) lightColorScheme(
         primary = palette.primaryGold,
-        onPrimary = palette.background,
+        onPrimary = palette.onAccent,
+        primaryContainer = palette.surfaceElevated,
+        onPrimaryContainer = palette.textPrimary,
+        secondary = palette.darkGold,
+        onSecondary = palette.onAccent,
+        background = palette.background,
+        onBackground = palette.textPrimary,
+        surface = palette.surface,
+        onSurface = palette.textPrimary,
+        surfaceVariant = palette.surfaceCard,
+        onSurfaceVariant = palette.textSecondary,
+        outline = palette.border,
+        outlineVariant = palette.border
+    ) else darkColorScheme(
+        primary = palette.primaryGold,
+        onPrimary = palette.onAccent,
         primaryContainer = palette.surfaceElevated,
         onPrimaryContainer = palette.lightGold,
         secondary = palette.lightGold,
-        onSecondary = palette.background,
+        onSecondary = palette.onAccent,
         background = palette.background,
         onBackground = palette.textPrimary,
         surface = palette.surface,
@@ -281,6 +369,19 @@ fun LiveGoldAITheme(
         outlineVariant = palette.borderHighlight
     )
 
+    // status / navigation bar icons must be dark on the light theme and light on the dark ones
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                val c = WindowCompat.getInsetsController(window, view)
+                c.isAppearanceLightStatusBars = palette.isLight
+                c.isAppearanceLightNavigationBars = palette.isLight
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalAppColors provides palette) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -289,4 +390,3 @@ fun LiveGoldAITheme(
         )
     }
 }
-

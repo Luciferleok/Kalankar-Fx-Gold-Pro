@@ -371,7 +371,7 @@ fun IndicatorPillarDeepDiveDialog(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth().height(44.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = OnAccent)
                 ) {
                     Text(
                         text = when (currentLang) {

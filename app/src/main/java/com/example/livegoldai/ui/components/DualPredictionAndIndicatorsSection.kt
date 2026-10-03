@@ -1144,7 +1144,7 @@ fun PredictionBigCard(
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = GoldPrimary,
-                                contentColor = Color.Black
+                                contentColor = OnAccent
                             ),
                             modifier = Modifier
                                 .weight(1f)

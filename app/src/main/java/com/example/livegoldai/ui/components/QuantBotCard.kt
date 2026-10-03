@@ -279,7 +279,7 @@ fun QuantBotCard(
 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color.Black.copy(alpha = 0.5f),
+                                    color = OnAccent.copy(alpha = 0.5f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
@@ -505,7 +505,7 @@ fun QuantBotCard(
 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color.Black.copy(alpha = 0.4f),
+                                    color = OnAccent.copy(alpha = 0.4f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -534,7 +534,7 @@ fun QuantBotCard(
                     // --- 4. ACCURACY PILLARS SUMMARY (WHY THIS SETUP IS ACCURATE) ---
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.Black.copy(alpha = 0.35f),
+                        color = OnAccent.copy(alpha = 0.35f),
                         border = BorderStroke(0.6.dp, ObsidianBorder),
                         modifier = Modifier.fillMaxWidth()
                     ) {

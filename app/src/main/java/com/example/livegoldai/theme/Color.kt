@@ -2,42 +2,49 @@ package com.example.livegoldai.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Trading Gold & Obsidian Palette
-val GoldPrimary = Color(0xFFFFD700)
-val GoldLight = Color(0xFFFFF0A6)
-val GoldDark = Color(0xFFE5A700)
-val GoldContainer = Color(0xFF261E0A)
-val GoldOnContainer = Color(0xFFFFF3C4)
+/*
+ * These names are used on almost every screen. Until V13 they were fixed colours, which is why
+ * every theme looked the same. They now read the active theme, so no screen has to change.
+ */
+private val p: AppThemeColors get() = ActivePalette.current
 
-// Dark Financial Terminal Backgrounds
-val ObsidianBackground = Color(0xFF050608)
-val ObsidianSurface = Color(0xFF0D1016)
-val ObsidianSurfaceElevated = Color(0xFF171B24)
-val ObsidianSurfaceCard = Color(0xFF12151D)
-val ObsidianBorder = Color(0xFF2B251A)
-val ObsidianBorderHighlight = Color(0xFFFFD700)
+val GoldPrimary: Color get() = p.primaryGold
+val GoldLight: Color get() = p.lightGold
+val GoldDark: Color get() = p.darkGold
+val GoldContainer: Color get() = p.signalWaitBg
+val GoldOnContainer: Color get() = p.lightGold
 
-// Trading Signals Neon Colors
-val SignalBuy = Color(0xFF00FF88)
-val SignalBuyContainer = Color(0xFF052B19)
-val SignalBuyBg = Color(0xFF052B19)
-val SignalBuyText = Color(0xFF69FFB4)
-val NeonGreen = SignalBuy
+val ObsidianBackground: Color get() = p.background
+val ObsidianSurface: Color get() = p.surface
+val ObsidianSurfaceElevated: Color get() = p.surfaceElevated
+val ObsidianSurfaceCard: Color get() = p.surfaceCard
+val ObsidianBorder: Color get() = p.border
+val ObsidianBorderHighlight: Color get() = p.borderHighlight
 
-val SignalSell = Color(0xFFFF264D)
-val SignalSellContainer = Color(0xFF380710)
-val SignalSellBg = Color(0xFF380710)
-val SignalSellText = Color(0xFFFF7A93)
-val NeonRed = SignalSell
+val SignalBuy: Color get() = p.signalBuy
+val SignalBuyContainer: Color get() = p.signalBuyBg
+val SignalBuyBg: Color get() = p.signalBuyBg
+val SignalBuyText: Color get() = p.signalBuy
+val NeonGreen: Color get() = p.signalBuy
 
-val SignalWait = Color(0xFFFFD700)
-val SignalWaitContainer = Color(0xFF302408)
-val SignalWaitBg = Color(0xFF302408)
-val SignalWaitText = Color(0xFFFFF0A6)
-val AmberWarning = SignalWait
+val SignalSell: Color get() = p.signalSell
+val SignalSellContainer: Color get() = p.signalSellBg
+val SignalSellBg: Color get() = p.signalSellBg
+val SignalSellText: Color get() = p.signalSell
+val NeonRed: Color get() = p.signalSell
 
-// Text Colors
-val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFE0D5BE)
-val TextMuted = Color(0xFF998E78)
-val TextGold = Color(0xFFFFD700)
+val SignalWait: Color get() = p.signalWait
+val SignalWaitContainer: Color get() = p.signalWaitBg
+val SignalWaitBg: Color get() = p.signalWaitBg
+val SignalWaitText: Color get() = p.signalWait
+val AmberWarning: Color get() = p.signalWait
+
+val TextPrimary: Color get() = p.textPrimary
+val TextSecondary: Color get() = p.textSecondary
+val TextMuted: Color get() = p.textMuted
+val TextGold: Color get() = p.primaryGold
+
+/** Text on top of the accent colour (was a fixed black). */
+val OnAccent: Color get() = p.onAccent
+val InfoBlue: Color get() = p.info
+val LearnViolet: Color get() = p.learn

@@ -153,7 +153,7 @@ fun ExecutiveSummaryBar(
                             text = prediction?.recommendedEntryZone?.split("-")?.firstOrNull()?.trim() ?: "$${String.format(Locale.US, "%.1f", analysis.tradeSetup.entryPrice)}",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Black,
-                            color = Color.White,
+                            color = TextPrimary,
                             fontSize = 12.sp
                         )
                     }
@@ -249,7 +249,7 @@ fun ExecutiveSummaryBar(
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = TextPrimary
                         )
                     }
 

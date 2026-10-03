@@ -134,7 +134,7 @@ fun CandleMtfOracleCard(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                            color = if (isSelected) Color.Black else TextMuted,
+                            color = if (isSelected) OnAccent else TextMuted,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(vertical = 7.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -189,7 +189,7 @@ fun CandleMtfOracleCard(
                                 text = candleInsight.lastCandleType,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = TextPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
@@ -271,7 +271,7 @@ fun CandleMtfOracleCard(
                                 text = candleInsight.nextCandleForecast,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = TextPrimary
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
@@ -377,7 +377,7 @@ fun CandleMtfOracleCard(
                                                 text = tf.label,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color.White,
+                                                color = TextPrimary,
                                                 fontSize = 11.sp
                                             )
                                             Text(
@@ -468,7 +468,7 @@ fun CandleMtfOracleCard(
                                                     text = trick.name,
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = FontWeight.Black,
-                                                    color = Color.White
+                                                    color = TextPrimary
                                                 )
                                             }
                                             Text(

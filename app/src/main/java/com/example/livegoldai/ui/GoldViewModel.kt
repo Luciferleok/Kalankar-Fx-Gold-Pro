@@ -86,7 +86,7 @@ data class GoldUiState(
     val showPriceAlertDialog: Boolean = false,
     val selectedLogoRes: Int = R.drawable.ic_kalankar_royal_emblem,
     val showLogoSelectorDialog: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.DUBAI_ROYALE,
+    val themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
     val showThemeSelectorDialog: Boolean = false,
     val isCompactEasyView: Boolean = false,
     val dashboardViewMode: DashboardViewMode = DashboardViewMode.UNIFIED,
@@ -110,8 +110,7 @@ data class GoldUiState(
         get() = isManualNewsMode ||
                 data?.isNewsModeTriggered == true ||
                 data?.newsTradingPlan?.isNewsActive == true ||
-                (data?.newsMode != null && data.newsMode.minutes <= 30) ||
-                themeMode == ThemeMode.NEWS_ALERT
+                (data?.newsMode != null && data.newsMode.minutes <= 30)
 }
 
 class GoldViewModel @JvmOverloads constructor(
@@ -123,7 +122,9 @@ class GoldViewModel @JvmOverloads constructor(
 
     private val _uiState = MutableStateFlow(
         GoldUiState(
-            language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi"))
+            language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi")),
+            // restored before the first frame, so there is no flash of the default theme
+            themeMode = prefs.getString("selected_theme_mode", null)?.let { n -> ThemeMode.values().firstOrNull { it.name == n } } ?: ThemeMode.ROYAL_OBSIDIAN
         )
     )
     val uiState: StateFlow<GoldUiState> = _uiState.asStateFlow()
@@ -477,6 +478,7 @@ class GoldViewModel @JvmOverloads constructor(
     }
 
     fun selectTheme(mode: ThemeMode) {
+        prefs.edit().putString("selected_theme_mode", mode.name).apply()
         _uiState.update { it.copy(themeMode = mode, showThemeSelectorDialog = false) }
     }
 

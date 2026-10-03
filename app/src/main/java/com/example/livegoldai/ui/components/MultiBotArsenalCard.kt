@@ -208,7 +208,7 @@ fun MultiBotArsenalCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "🟢 BUY: ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalBuy)
-                                Text(text = "${ensemble.buyVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                Text(text = "${ensemble.buyVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = TextPrimary)
                             }
                         }
 
@@ -225,7 +225,7 @@ fun MultiBotArsenalCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "🔴 SELL: ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalSell)
-                                Text(text = "${ensemble.sellVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                Text(text = "${ensemble.sellVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = TextPrimary)
                             }
                         }
 
@@ -242,7 +242,7 @@ fun MultiBotArsenalCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(text = "🟡 WAIT: ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalWait)
-                                Text(text = "${ensemble.waitVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
+                                Text(text = "${ensemble.waitVotes} / 6", fontSize = 11.sp, fontWeight = FontWeight.Black, color = TextPrimary)
                             }
                         }
                     }
@@ -381,7 +381,7 @@ fun MultiBotArsenalCard(
 
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = Color.Black.copy(alpha = 0.4f),
+                                        color = OnAccent.copy(alpha = 0.4f),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Row(

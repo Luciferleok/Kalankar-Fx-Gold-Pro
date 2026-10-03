@@ -206,7 +206,7 @@ fun MultiAiCouncilCard(
                                 },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White,
+                                color = TextPrimary,
                                 fontSize = 15.sp
                             )
                         }
@@ -221,7 +221,7 @@ fun MultiAiCouncilCard(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
-                                color = Color.Black
+                                color = OnAccent
                             )
                         }
                     }
@@ -521,7 +521,7 @@ fun MultiAiCouncilCard(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GoldPrimary,
-                        contentColor = Color.Black
+                        contentColor = OnAccent
                     ),
                     modifier = Modifier
                         .weight(1f)

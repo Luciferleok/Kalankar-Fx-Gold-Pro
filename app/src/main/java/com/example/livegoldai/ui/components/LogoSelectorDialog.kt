@@ -218,7 +218,7 @@ fun LogoSelectorDialog(
                                         text = option.title,
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isChosen) Color.White else TextSecondary
+                                        color = if (isChosen) TextPrimary else TextSecondary
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -257,7 +257,7 @@ fun LogoSelectorDialog(
                         .testTag("apply_logo_button"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GoldPrimary,
-                        contentColor = Color.Black
+                        contentColor = OnAccent
                     ),
                     shape = RoundedCornerShape(14.dp)
                 ) {
