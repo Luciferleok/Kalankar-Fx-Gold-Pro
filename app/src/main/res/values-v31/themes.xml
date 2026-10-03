@@ -1,8 +1,10 @@
 <resources>
-    <!-- Obsidian black everywhere before the first frame: no white or grey flash on start. -->
+    <!-- Android 12+: the system splash uses the same black and the official emblem, so it flows into the app's own launch screen. -->
     <style name="Theme.LiveGoldAI" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">#050505</item>
         <item name="android:navigationBarColor">#050505</item>
         <item name="android:windowBackground">#050505</item>
+        <item name="android:windowSplashScreenBackground">#050505</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_fg</item>
     </style>
 </resources>

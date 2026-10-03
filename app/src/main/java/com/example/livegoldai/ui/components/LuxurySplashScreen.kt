@@ -1,23 +1,15 @@
 package com.example.livegoldai.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -30,107 +22,172 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.livegoldai.R
-import com.example.livegoldai.theme.*
 import kotlinx.coroutines.delay
+
+/*
+ * LAUNCH EXPERIENCE (V16)
+ *
+ * One calm brand moment on obsidian black: emblem, then KALANKAR / FX GOLD PRO / tagline, one status line.
+ * - The colours are fixed (not themed): the gold logo is made for a black background, and the Android
+ *   system splash before this screen uses the same black, so there is no flash and no colour change.
+ * - The status line is real: it follows the first market-data load of the app (ready / offline).
+ * - No artificial wait: the reveal takes about 0.9 s; the screen leaves as soon as data is ready,
+ *   and never stays longer than about 2 s even if the network is slow (the home screen then shows loading).
+ */
+private val Obsidian = Color(0xFF050505)
+private val Champagne = Color(0xFFD4B56A)
+private val Platinum = Color(0xFFB9B4A8)
+private val Ivory = Color(0xFFF2F0EA)
+private val Hairline = Color(0xFF22262C)
 
 @Composable
 fun LuxurySplashScreen(
+    ready: Boolean = false,
+    offline: Boolean = false,
     onSplashFinished: () -> Unit
 ) {
-    var progressStep by remember { mutableIntStateOf(0) }
-    val progressTexts = listOf(
-        "Starting Kalankar FX Gold Pro...",
-        "Connecting to price feeds (Twelve Data, PAXG/USDT)...",
-        "Harmonizing 7-Pillar Institutional Confluence...",
-        "Loading live gold data • Opening Terminal"
-    )
-
-    val infiniteTransition = rememberInfiniteTransition(label = "luxury_splash")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_scale"
-    )
-
-    val borderRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "border_rotation"
-    )
+    // 0 = nothing yet, 1 = emblem, 2 = KALANKAR, 3 = FX GOLD PRO, 4 = tagline + status
+    var step by remember { mutableIntStateOf(0) }
+    var revealDone by remember { mutableStateOf(false) }
+    var timedOut by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        // no artificial wait: just long enough for the logo to be seen once
-        delay(450)
-        onSplashFinished()
+        step = 1
+        delay(280)
+        step = 2
+        delay(110)
+        step = 3
+        delay(110)
+        step = 4
+        delay(400)
+        revealDone = true
+        delay(1100)
+        timedOut = true
     }
+    LaunchedEffect(revealDone, ready, offline, timedOut) {
+        if (revealDone && (ready || offline || timedOut)) {
+            if (ready) delay(220)      // just long enough to read SYSTEM READY
+            onSplashFinished()
+        }
+    }
+
+    val logoAlpha by animateFloatAsState(targetValue = if (step >= 1) 1f else 0f, animationSpec = tween(250), label = "logo_alpha")
+    val logoScale by animateFloatAsState(targetValue = if (step >= 1) 1f else 0.96f, animationSpec = tween(450), label = "logo_scale")
+    val lineFraction by animateFloatAsState(
+        targetValue = if (ready) 1f else if (step >= 4) 0.38f else 0f,
+        animationSpec = tween(500), label = "status_line"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                // always obsidian black, whatever theme is selected: the gold logo is made for it
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF050505),
-                        Color(0xFF050505)
-                    )
-                )
-            )
-            .testTag("luxury_splash_screen"),
-        contentAlignment = Alignment.Center
+            .background(Obsidian)
+            .testTag("luxury_splash_screen")
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp)
         ) {
-            // Official full logo: emblem + KALANKAR / FX GOLD PRO / PRIVATE MARKET INTELLIGENCE.
-            // Fit keeps the aspect ratio: never stretched or cropped. widthIn keeps it sane on foldables.
-            Image(
-                painter = painterResource(id = R.drawable.kalankar_full_logo),
-                contentDescription = "Kalankar FX Gold Pro",
-                modifier = Modifier
-                    .widthIn(max = 360.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                contentScale = ContentScale.Fit
-            )
+            // emblem with a very soft warm light behind it (no box, no ring, no glow animation)
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(232.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(232.dp)
+                        .clip(CircleShape)
+                        .alpha(logoAlpha)
+                        .background(Brush.radialGradient(listOf(Champagne.copy(alpha = 0.10f), Color.Transparent)))
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.kalankar_logo_mark),
+                    contentDescription = "Kalankar FX Gold Pro",
+                    modifier = Modifier
+                        .size(168.dp)
+                        .alpha(logoAlpha)
+                        .scale(logoScale),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Sync Status Pill
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF101215),
-                border = BorderStroke(0.75.dp, Color(0xFFD4B56A).copy(alpha = 0.35f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Color(0xFFD4B56A),
-                        strokeWidth = 1.5.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
+            Staged(visible = step >= 2) {
+                Text(
+                    text = "KALANKAR",
+                    color = Ivory,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 8.sp,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Staged(visible = step >= 3) {
+                Text(
+                    text = "FX GOLD PRO",
+                    color = Champagne,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 6.sp,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Staged(visible = step >= 4) {
+                Text(
+                    text = "PRIVATE MARKET INTELLIGENCE",
+                    color = Platinum.copy(alpha = 0.75f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 3.sp,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+
+        // ---- one real status line near the bottom
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 56.dp)
+        ) {
+            Staged(visible = step >= 4) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(modifier = Modifier.width(132.dp).height(1.dp).background(Hairline)) {
+                        Box(modifier = Modifier.fillMaxWidth(lineFraction).height(1.dp).background(if (offline) Platinum else Champagne))
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
-                        text = "Initializing Market Intelligence…",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = Color(0xFFF2F0EA),
-                        fontWeight = FontWeight.Medium
+                        text = when {
+                            ready -> "SYSTEM READY"
+                            offline -> "MARKET DATA OFFLINE"
+                            else -> "CONNECTING MARKET DATA"
+                        },
+                        color = Platinum.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 2.5.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
                     )
                 }
             }
-
         }
     }
+}
+
+/** Soft fade + 6dp rise, once. */
+@Composable
+private fun Staged(visible: Boolean, content: @Composable () -> Unit) {
+    val a by animateFloatAsState(targetValue = if (visible) 1f else 0f, animationSpec = tween(260), label = "staged_alpha")
+    val dy by animateFloatAsState(targetValue = if (visible) 0f else 6f, animationSpec = tween(260), label = "staged_rise")
+    Box(modifier = Modifier.alpha(a).offset(y = dy.dp)) { content() }
 }

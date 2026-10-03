@@ -35,7 +35,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
-            var isSplashVisible by remember { mutableStateOf(true) }
+            // the brand reveal plays once per app start: not again on rotation or when coming back from the background
+            var isSplashVisible by remember { mutableStateOf(!viewModel.launchDone) }
 
             CompositionLocalProvider(LocalAppLanguage provides uiState.language) {
                 LiveGoldAITheme(
@@ -45,12 +46,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Crossfade(
                         targetState = isSplashVisible,
-                        animationSpec = tween(durationMillis = 500),
+                        animationSpec = tween(durationMillis = 320),
                         label = "splash_screen_crossfade"
                     ) { splashVisible ->
                         if (splashVisible) {
                             LuxurySplashScreen(
-                                onSplashFinished = { isSplashVisible = false }
+                                ready = uiState.data != null,
+                                offline = uiState.data == null && uiState.errorMessage != null,
+                                onSplashFinished = { viewModel.launchDone = true; isSplashVisible = false }
                             )
                         } else {
                             GoldHomeScreen(viewModel = viewModel)

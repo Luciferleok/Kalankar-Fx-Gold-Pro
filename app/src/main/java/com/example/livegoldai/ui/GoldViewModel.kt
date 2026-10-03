@@ -119,6 +119,9 @@ class GoldViewModel @JvmOverloads constructor(
 
     private val prefs = application.getSharedPreferences("kalankar_gold_prefs", Context.MODE_PRIVATE)
 
+    /** Set when the launch screen has been shown once in this app process. */
+    var launchDone: Boolean = false
+
     private val _uiState = MutableStateFlow(
         GoldUiState(
             language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi")),
