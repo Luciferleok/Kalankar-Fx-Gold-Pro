@@ -56,7 +56,7 @@ fun V8ForecastScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(V8.Bg)
+            // transparent: the shared signature background shows through
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)

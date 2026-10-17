@@ -168,9 +168,9 @@ object LocalizationStrings {
     }
 
     fun customizeEmblem(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Customize VIP Brand Emblem"
-        AppLanguage.HINDI -> "VIP ब्रांड प्रतीक बदलें"
-        AppLanguage.MARATHI -> "VIP ब्रँड चिन्ह बदला"
+        AppLanguage.ENGLISH -> "Brand Emblem"
+        AppLanguage.HINDI -> "ब्रांड प्रतीक"
+        AppLanguage.MARATHI -> "ब्रँड चिन्ह"
     }
 
     fun saveAndRefresh(lang: AppLanguage): String = when (lang) {
@@ -468,15 +468,15 @@ object LocalizationStrings {
     }
 
     fun themeSelectorTitle(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Customize VIP Terminal Theme"
-        AppLanguage.HINDI -> "VIP टर्मिनल थीम चुनें"
-        AppLanguage.MARATHI -> "VIP टर्मिनल थीम निवडा"
+        AppLanguage.ENGLISH -> "Appearance & Theme"
+        AppLanguage.HINDI -> "रूप और थीम"
+        AppLanguage.MARATHI -> "स्वरूप आणि थीम"
     }
 
     fun logoSelectorTitle(lang: AppLanguage): String = when (lang) {
-        AppLanguage.ENGLISH -> "Select VIP Brand Emblem"
-        AppLanguage.HINDI -> "VIP ब्रांड प्रतीक चुनें"
-        AppLanguage.MARATHI -> "VIP ब्रँड चिन्ह निवडा"
+        AppLanguage.ENGLISH -> "Brand Emblem"
+        AppLanguage.HINDI -> "ब्रांड प्रतीक"
+        AppLanguage.MARATHI -> "ब्रँड चिन्ह"
     }
 
     // Dual Column Switcher

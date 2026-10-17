@@ -4,6 +4,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +77,7 @@ internal object V8Haptics {
 
 /** Motion tokens (milliseconds) for the V8 screens: short and calm, no bounce. */
 internal object V8Motion {
+    const val Press = 90
     const val TabSwitch = 180
     const val Reveal = 260
     const val Emphasis = 420
@@ -123,13 +133,23 @@ internal fun V8Card(
         2 -> Brush.verticalGradient(listOf(V8.CardTop, V8.Card))
         else -> Brush.verticalGradient(listOf(V8.Card2, V8.Card2))
     }
-    var m = modifier
+    // press feedback first, so the whole surface compresses slightly (1.00 -> 0.985), no bounce
+    var m = (if (onClick != null) modifier.v8Press(onClick = onClick) else modifier)
         .fillMaxWidth()
         .clip(shape)
         .background(surface, shape)
         .border(0.75.dp, accent, shape)
-    if (onClick != null) m = m.clickable { onClick() }
     Column(modifier = m.padding(pad), content = content)
+}
+
+/** Shared press behaviour: a tiny compression while pressed, the platform ripple, no bounce. */
+internal fun Modifier.v8Press(onClick: () -> Unit): Modifier = composed {
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val s by animateFloatAsState(if (pressed) 0.985f else 1f, tween(V8Motion.Press), label = "press")
+    this
+        .graphicsLayer { scaleX = s; scaleY = s }
+        .clickable(interactionSource = src, indication = LocalIndication.current, onClick = onClick)
 }
 
 @Composable

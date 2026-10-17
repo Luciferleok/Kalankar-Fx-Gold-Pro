@@ -2,6 +2,8 @@ package com.example.livegoldai.ui.v8
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -30,20 +32,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.livegoldai.localization.AppLanguage
 
-/** COCKPIT • FORECAST • AI • HEALTH • LEARNING • MORE */
+/** HOME • BRAIN • INTEL • LEARN • SYSTEM • TOOLS (tab numbers stay the same, only names and order change) */
 @Composable
 fun V8BottomNav(selected: Int, lang: AppLanguage, healthStatus: String?, onSelect: (Int) -> Unit) {
-    val items = listOf(
-        tr(lang, "Cockpit", "कॉकपिट", "कॉकपिट"),
-        tr(lang, "Forecast", "अनुमान", "अंदाज"),
-        "AI",
-        tr(lang, "Health", "हेल्थ", "हेल्थ"),
-        tr(lang, "Learn", "लर्निंग", "लर्निंग"),
-        tr(lang, "More", "और", "अधिक")
-    )
+    fun label(tab: Int) = when (tab) {
+        0 -> tr(lang, "Home", "होम", "होम")
+        1 -> tr(lang, "Brain", "ब्रेन", "ब्रेन")
+        2 -> tr(lang, "Intel", "इंटेल", "इंटेल")
+        3 -> tr(lang, "System", "सिस्टम", "सिस्टम")
+        4 -> tr(lang, "Learn", "लर्निंग", "लर्निंग")
+        else -> tr(lang, "Tools", "टूल्स", "टूल्स")
+    }
+    val order = listOf(0, 1, 2, 4, 3, 5)
     val haptic = LocalHapticFeedback.current
+    Column {
+    // docked surface: one faint highlight line instead of a border
+    Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, V8.Line, V8.Gold.copy(alpha = 0.25f), V8.Line, Color.Transparent))))
     NavigationBar(containerColor = V8.Bg, contentColor = V8.Text2) {
-        items.forEachIndexed { i, label ->
+        order.forEach { i ->
+            val label = label(i)
             val iconColor = if (i == 3 && healthStatus != null && healthStatus != "HEALTHY") statusColor(healthStatus) else null
             NavigationBarItem(
                 selected = selected == i,
@@ -73,6 +80,7 @@ fun V8BottomNav(selected: Int, lang: AppLanguage, healthStatus: String?, onSelec
                 )
             )
         }
+    }
     }
 }
 

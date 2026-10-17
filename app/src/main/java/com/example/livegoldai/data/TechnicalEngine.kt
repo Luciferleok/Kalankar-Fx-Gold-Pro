@@ -821,7 +821,7 @@ object TechnicalEngine {
                         rewardTp2Dollars = "+$${format2(pips2 * 3.00)}"
                     ),
                     AccountTierRisk(
-                        balanceLabel = "$10,000 VIP",
+                        balanceLabel = "$10,000",
                         safeLotSize = "0.60 Standard",
                         riskAmountDollars = "-$${format2(pipsSL * 6.00)} (1.0%)",
                         rewardTp1Dollars = "+$${format2(pips1 * 6.00)}",
@@ -963,7 +963,7 @@ object TechnicalEngine {
                         rewardTp2Dollars = "+$${format2(pips2 * 3.00)}"
                     ),
                     AccountTierRisk(
-                        balanceLabel = "$10,000 VIP",
+                        balanceLabel = "$10,000",
                         safeLotSize = "0.60 Standard",
                         riskAmountDollars = "-$${format2(pipsSL * 6.00)} (1.0%)",
                         rewardTp1Dollars = "+$${format2(pips1 * 6.00)}",

@@ -1,6 +1,12 @@
 package com.example.livegoldai.ui.v8
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -53,13 +59,18 @@ fun V8CockpitScreen(
     val now = System.currentTimeMillis()
     val feed = analysis.feed
     val ageMs = feed?.let { now - it.fetchedAtMs } ?: -1L
-    val liveState = when {
-        feed == null -> "NO DATA"
-        !feed.isLive -> "OFFLINE DEMO"
+    // truthful feed state: LIVE only when fresh. RESTORED for one minute after a gap ends.
+    val rawState = when {
+        feed == null -> "OFFLINE"
+        !feed.isLive -> "OFFLINE"
+        com.example.livegoldai.data.PredictionLedger.isMarketClosed(now) -> "MARKET CLOSED"
         ageMs > 180_000 -> "STALE"
         else -> "LIVE"
     }
-    val liveColor = when (liveState) { "LIVE" -> V8.Green; "STALE" -> V8.Amber; else -> V8.Red }
+    var lastGapAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(rawState) { if (rawState == "STALE" || rawState == "OFFLINE") lastGapAt = System.currentTimeMillis() }
+    val liveState = if (rawState == "LIVE" && lastGapAt > 0 && now - lastGapAt < 60_000) "RESTORED" else rawState
+    val liveColor = when (liveState) { "LIVE" -> V8.Green; "RESTORED" -> V8.Info; "STALE" -> V8.Amber; "MARKET CLOSED" -> V8.Text3; else -> V8.Red }
     val sig = analysis.overallSignal
     val rawConf = analysis.agreementPercent.roundToInt()
     val calibrated = RealityEngine.calibratedConfidence(analysis.learning, rawConf)
@@ -69,7 +80,7 @@ fun V8CockpitScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(V8.Bg)
+            // transparent: the shared signature background shows through
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -85,7 +96,7 @@ fun V8CockpitScreen(
                 Text(text = "XAU / USD", color = V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
                 V8Dot(liveColor)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = liveState, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                Text(text = when (liveState) { "LIVE" -> tr(lang, "LIVE", "लाइव", "लाइव्ह"); "RESTORED" -> tr(lang, "RESTORED", "फिर से जुड़ा", "पुन्हा जोडले"); "STALE" -> tr(lang, "STALE", "पुराना", "जुना"); "MARKET CLOSED" -> tr(lang, "MARKET CLOSED", "मार्केट बंद", "मार्केट बंद"); else -> tr(lang, "OFFLINE", "ऑफ़लाइन", "ऑफलाइन") }, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = String.format(Locale.US, "$%,.2f", analysis.currentPrice), color = V8.Text1, fontSize = 42.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.5).sp)
@@ -108,8 +119,30 @@ fun V8CockpitScreen(
             }
         }
 
-        // ---------------- LEVEL 1: next move
-        V8Card(level = 1, accent = signalColor(sig).copy(alpha = 0.28f), onClick = onOpenForecast) {
+        // ---------------- context-aware priority: a RISK item (bad data, news window, unusual market, model alarm)
+        // moves above the forecast while it is true, and disappears by itself when the condition ends.
+        val matters = remember(analysis) { com.example.livegoldai.data.WhatMattersNow.build(analysis) }
+        val topRisk = matters.firstOrNull { it.level == "RISK" }
+        if (topRisk != null) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(KSurface.Plane, RoundedCornerShape(KShape.medium))
+                    .padding(horizontal = KSpace.md, vertical = KSpace.md)
+            ) {
+                Box(modifier = Modifier.padding(top = 5.dp)) { V8Dot(V8.Amber, 6.dp) }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(text = tr(lang, "RISK NOW", "अभी जोखिम", "आत्ता जोखीम"), color = V8.Amber, style = KType.SectionLabel)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(text = tr(lang, topRisk.en, topRisk.hi, topRisk.mr), color = V8.Text1, style = KType.BodyPrimary)
+                }
+            }
+        }
+
+        // ---------------- LEVEL 1: next move (accent turns amber while a risk is active)
+        V8Card(level = 1, accent = (if (topRisk != null) V8.Amber else signalColor(sig)).copy(alpha = 0.28f), onClick = onOpenForecast) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("5m", "15m", "30m", "1h", "4h", "1d").forEach { iv ->
                     V8Chip(text = iv.uppercase(), selected = iv.equals(selectedInterval, ignoreCase = true)) { onIntervalChange(iv) }
@@ -260,6 +293,22 @@ fun V8CockpitScreen(
                                 color = if (c == null || c.score < 0) V8.Text3 else V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Medium
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // ---------------- what matters now (the risk shown above is not repeated)
+        val rest = matters.filter { it !== topRisk }
+        if (rest.isNotEmpty()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp)) {
+                V8Label(tr(lang, "What matters now", "अभी क्या मायने रखता है", "आत्ता काय महत्त्वाचे"))
+                Spacer(modifier = Modifier.height(6.dp))
+                rest.forEach { m ->
+                    Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(vertical = 4.dp)) {
+                        Box(modifier = Modifier.padding(top = 5.dp)) { V8Dot(when (m.level) { "RISK" -> V8.Red; "WATCH" -> V8.Amber; else -> V8.Text3 }, 5.dp) }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(text = tr(lang, m.en, m.hi, m.mr), color = V8.Text2, style = KType.BodyPrimary)
                     }
                 }
             }

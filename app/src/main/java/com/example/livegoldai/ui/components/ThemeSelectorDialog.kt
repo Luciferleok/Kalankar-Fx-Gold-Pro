@@ -275,50 +275,8 @@ fun ThemeSelectorDialog(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Color swatches preview box
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(previewPalette.background)
-                                        .border(
-                                            width = if (isChosen) 2.dp else 1.dp,
-                                            color = if (isChosen) previewPalette.primaryGold else previewPalette.border,
-                                            shape = RoundedCornerShape(10.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = mode.icon,
-                                            fontSize = 14.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(previewPalette.primaryGold)
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(previewPalette.signalBuy)
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .clip(CircleShape)
-                                                    .background(previewPalette.signalSell)
-                                            )
-                                        }
-                                    }
-                                }
+                                // real miniature terminal in this theme: header, forecast, chart, navigation
+                                com.example.livegoldai.ui.v8.ThemePreviewMini(previewPalette, isChosen)
 
                                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -380,7 +338,7 @@ fun ThemeSelectorDialog(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = "APPLY THEME PREFERENCE",
+                        text = "APPLY THEME",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 0.5.sp

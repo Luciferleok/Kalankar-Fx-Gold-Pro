@@ -244,22 +244,20 @@ fun GoldHomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // signature background: still layers; a faint warm corner only while a real risk is active
+            val ambient = remember(uiState.data) {
+                val d = uiState.data
+                when {
+                    d == null -> "NORMAL"
+                    com.example.livegoldai.data.WhatMattersNow.build(d).any { it.level == "RISK" } -> "RISK"
+                    d.pulse?.modelHealth == "CRITICAL" || d.pulse?.modelHealth == "POLARITY_SUSPECT" || d.pulse?.modelHealth == "WEAK" -> "REVIEW"
+                    else -> "NORMAL"
+                }
+            }
+            KalankarBackdrop(ambient)
             when {
                 uiState.isLoading && uiState.data == null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = GoldPrimary)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = LocalizationStrings.loadingLiveIndicators(uiState.language),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = TextSecondary
-                            )
-                        }
-                    }
+                    V8LoadingSkeleton(uiState.language)
                 }
 
                 uiState.data != null -> {
@@ -910,34 +908,7 @@ fun GoldHomeScreen(
                 }
 
                 uiState.errorMessage != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp)
-                        ) {
-                            Text(
-                                text = LocalizationStrings.errorLoading(uiState.language),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SignalSell
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = uiState.errorMessage!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { viewModel.loadData(isInitial = true) },
-                                colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary)
-                            ) {
-                                Text(text = LocalizationStrings.tryAgain(uiState.language), color = ObsidianBackground)
-                            }
-                        }
-                    }
+                    V8ErrorState(uiState.language, uiState.errorMessage ?: "") { viewModel.loadData(isInitial = true) }
                 }
             }
         }
