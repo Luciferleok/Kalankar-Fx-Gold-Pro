@@ -158,6 +158,7 @@ fun GoldHomeScreen(
             ) { viewModel.setBottomTab(it) }
         },
         topBar = {
+          Column {
             TopAppBar(
                 title = {
                     Row(
@@ -165,28 +166,8 @@ fun GoldHomeScreen(
                         modifier = Modifier
                             .testTag("app_logo")
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF080A0F))
-                                .border(
-                                    0.75.dp,
-                                    Brush.sweepGradient(listOf(appColors.lightGold, appColors.primaryGold, Color(0xFFD4AF37), appColors.lightGold)),
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .padding(2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.kalankar_logo_mark),
-                                contentDescription = "Kalankar FX Gold Pro",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(10.dp)),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
+                        // one official emblem component; the light passes over it once after launch, then it stays still
+                        KalankarBrandEmblem(mode = EmblemMode.HEADER, highlightOnce = true)
 
                         Spacer(modifier = Modifier.width(10.dp))
 
@@ -197,7 +178,7 @@ fun GoldHomeScreen(
                                 text = "KALANKAR",
                                 fontWeight = FontWeight.SemiBold,
                                 color = appColors.textPrimary,
-                                letterSpacing = 3.sp,
+                                letterSpacing = 3.4.sp,
                                 fontSize = 17.sp,
                                 lineHeight = 20.sp,
                                 maxLines = 1,
@@ -207,7 +188,7 @@ fun GoldHomeScreen(
                                 text = "FX GOLD PRO",
                                 fontWeight = FontWeight.Medium,
                                 color = appColors.primaryGold,
-                                letterSpacing = 2.5.sp,
+                                letterSpacing = 3.sp,
                                 fontSize = 10.sp,
                                 lineHeight = 13.sp,
                                 maxLines = 1,
@@ -254,6 +235,8 @@ fun GoldHomeScreen(
                     actionIconContentColor = appColors.textPrimary
                 )
             )
+            KalankarSignatureStrip()
+          }
         }
     ) { innerPadding ->
         Box(
@@ -283,25 +266,25 @@ fun GoldHomeScreen(
                     val analysis = uiState.data!!
                     val tabs = when (uiState.language) {
                         com.example.livegoldai.localization.AppLanguage.ENGLISH -> listOf(
-                            "📊 COCKPIT",
-                            "🤖 RULE COUNCIL",
-                            "🚨 NEWS RADAR (AUTO)",
-                            "🏦 SMART MONEY SMC",
-                            "⚡ STRATEGY & TRICKS"
+                            "COCKPIT",
+                            "RULE COUNCIL",
+                            "NEWS RADAR (AUTO)",
+                            "SMART MONEY SMC",
+                            "STRATEGY & TRICKS"
                         )
                         com.example.livegoldai.localization.AppLanguage.HINDI -> listOf(
-                            "📊 कॉकपिट",
-                            "🤖 नियम काउंसिल",
-                            "🚨 न्यूज़ रडार (ऑटो)",
-                            "🏦 स्मार्ट मनी SMC",
-                            "⚡ रणनीति और ट्रिक्स"
+                            "कॉकपिट",
+                            "नियम काउंसिल",
+                            "न्यूज़ रडार (ऑटो)",
+                            "स्मार्ट मनी SMC",
+                            "रणनीति और ट्रिक्स"
                         )
                         com.example.livegoldai.localization.AppLanguage.MARATHI -> listOf(
-                            "📊 कॉकपिट",
-                            "🤖 नियम कौन्सिल",
-                            "🚨 न्यूज रडार (ऑटो)",
-                            "🏦 स्मार्ट मनी SMC",
-                            "⚡ रणनीती आणि ट्रिक्स"
+                            "कॉकपिट",
+                            "नियम कौन्सिल",
+                            "न्यूज रडार (ऑटो)",
+                            "स्मार्ट मनी SMC",
+                            "रणनीती आणि ट्रिक्स"
                         )
                     }
 
@@ -477,7 +460,7 @@ fun GoldHomeScreen(
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "🎛️", fontSize = 13.sp)
+                                            Text(text = "▦\uFE0E", fontSize = 13.sp, color = appColors.primaryGold)
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Text(
@@ -521,7 +504,7 @@ fun GoldHomeScreen(
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "🌟", fontSize = 13.sp)
+                                            Text(text = "◇\uFE0E", fontSize = 13.sp, color = appColors.primaryGold)
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Text(
@@ -565,7 +548,7 @@ fun GoldHomeScreen(
                                             horizontalArrangement = Arrangement.Center,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "⚡", fontSize = 13.sp)
+                                            Text(text = "≡\uFE0E", fontSize = 13.sp, color = appColors.primaryGold)
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 Text(

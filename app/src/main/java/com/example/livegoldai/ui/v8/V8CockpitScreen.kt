@@ -117,6 +117,9 @@ fun V8CockpitScreen(
             }
             Spacer(modifier = Modifier.height(18.dp))
             val until = analysis.nextPrediction?.validUntilTimestamp ?: 0L
+            Box {
+            // brand watermark: one per screen, far below reading contrast, in the empty middle of the hero
+            KalankarBrandEmblem(mode = EmblemMode.WATERMARK, modifier = Modifier.align(Alignment.Center), watermarkAlpha = 0.045f)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     V8Label(tr(lang, "Next move", "अगली चाल", "पुढील हालचाल") + "  •  " + selectedInterval.uppercase())
@@ -138,6 +141,7 @@ fun V8CockpitScreen(
                     color = signalColor(sig),
                     label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
                 )
+            }
             }
             // Four different things, shown side by side so they are never read as one number.
             V8Hairline(V8.Line)
