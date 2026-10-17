@@ -182,6 +182,34 @@ fun V8CockpitScreen(
                     }
                 }
             }
+            // third row: market regime and the real 10-90% range of past calls (needs 30 checked calls and a direction)
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val p = analysis.pulse
+                val q10 = p?.expectedMoveQ10
+                val q90 = p?.expectedMoveQ90
+                val dir = when (sig) { Signal.BUY -> 1.0; Signal.SELL -> -1.0; else -> 0.0 }
+                val range = if (q10 == null || q90 == null || dir == 0.0) "--" else {
+                    val x = analysis.currentPrice + dir * q10
+                    val y = analysis.currentPrice + dir * q90
+                    String.format(Locale.US, "%.0f–%.0f", minOf(x, y), maxOf(x, y))
+                }
+                val rangeSub = when {
+                    dir == 0.0 -> tr(lang, "no direction", "दिशा नहीं", "दिशा नाही")
+                    q10 == null -> tr(lang, "needs 30 calls", "30 कॉल चाहिए", "30 कॉल लागतात")
+                    else -> tr(lang, "80% of past calls", "पिछली 80% कॉल", "मागील 80% कॉल")
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = tr(lang, "REGIME", "स्थिति", "स्थिती"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                    Text(text = analysis.brain?.regime?.replace('_', ' ') ?: "--", color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Text(text = tr(lang, "measured now", "अभी मापा", "आत्ता मोजलेले"), color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = tr(lang, "EXPECTED RANGE", "अनुमानित दायरा", "अपेक्षित पल्ला"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                    Text(text = range, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    Text(text = rangeSub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                }
+            }
             if (calibrated == null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = tr(lang, "Pillar agreement, not a win probability (not calibrated yet)", "पिलर सहमति है, जीत की संभावना नहीं (अभी कैलिब्रेट नहीं)", "पिलर सहमती आहे, जिंकण्याची शक्यता नाही (अजून कॅलिब्रेट नाही)"), color = V8.Text3, fontSize = 9.sp)
@@ -204,7 +232,7 @@ fun V8CockpitScreen(
             }
             Spacer(modifier = Modifier.height(6.dp))
             V8Hairline(V8.Line)
-            Text(text = tr(lang, "FULL FORECAST  ›", "पूरा अनुमान  ›", "पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
+            Text(text = tr(lang, "WHY?  FULL FORECAST  ›", "क्यों?  पूरा अनुमान  ›", "का?  पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
         }
 
         // ---------------- health strip

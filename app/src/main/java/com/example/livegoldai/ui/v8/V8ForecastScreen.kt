@@ -89,7 +89,7 @@ fun V8ForecastScreen(
         }
 
         // ---------------- V10 market brain (measured state, quality, uncertainty, cross-market, analogs)
-        analysis.brain?.let { V10BrainSection(it, lang) }
+        analysis.brain?.let { V10BrainSection(it, lang, com.example.livegoldai.data.WhatMattersNow.build(analysis)) }
 
         // ---------------- why this forecast (real weighted vote)
         if (ins != null) {

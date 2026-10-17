@@ -160,6 +160,8 @@ object LedgerPulseBuilder {
             audit = audit.lines + lab.lines,
             stability = lab.stability,
             expectedMove = lab.expectedMove,
+            expectedMoveQ10 = lab.moveQ10,
+            expectedMoveQ90 = lab.moveQ90,
             coverage = lab.coverage,
             dataQuality = dq.level,
             dataQualityDetail = dq.summary,

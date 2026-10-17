@@ -64,7 +64,7 @@ private fun MiniStat(label: String, value: String, color: Color, modifier: Modif
 
 /** Full brain: every line is a measured value, or says that it cannot be measured yet. */
 @Composable
-fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
+fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example.livegoldai.data.WhatMattersNow.Item> = emptyList()) {
     var showFeatures by remember { mutableStateOf(false) }
     var showLineage by remember { mutableStateOf(false) }
     var showResearch by remember { mutableStateOf(false) }
@@ -90,6 +90,22 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage) {
             Text(text = arrowOf(b.quantSignal) + " " + b.quantSignal.name + " ${b.baseConfidence}%", color = signalColor(b.quantSignal), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(text = b.baseLabel + tr(lang, " • the brain describes the market, it does not change the signal", " • ब्रेन मार्केट बताता है, सिग्नल नहीं बदलता", " • ब्रेन मार्केट सांगतो, सिग्नल बदलत नाही"), color = V8.Text3, fontSize = 9.sp)
+    }
+
+    // ================= WHAT MATTERS NOW: at most 3 lines, each read from a measured value
+    if (matters.isNotEmpty()) {
+        V8Card(level = 2) {
+            V8Label(tr(lang, "What matters now", "अभी क्या मायने रखता है", "आत्ता काय महत्त्वाचे"))
+            Spacer(modifier = Modifier.height(6.dp))
+            matters.forEachIndexed { i, m ->
+                if (i > 0) V8Hairline(V8.Line)
+                Row(verticalAlignment = Alignment.Top) {
+                    V8Dot(when (m.level) { "RISK" -> V8.Red; "WATCH" -> V8.Amber; else -> V8.Text3 }, 6.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = tr(lang, m.en, m.hi, m.mr), color = V8.Text1, fontSize = 12.sp, lineHeight = 17.sp)
+                }
+            }
+        }
     }
 
     // ================= QUALITY + EDGE

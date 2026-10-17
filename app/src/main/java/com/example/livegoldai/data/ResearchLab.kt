@@ -30,7 +30,9 @@ object ResearchLab {
         val stabilityDetail: String,
         val expectedMove: String,     // short text for the home screen, "--" when history is insufficient
         val expectedMoveDetail: String,
-        val coverage: String          // "62%" share of checked calls that were BUY/SELL, "--" when nothing checked
+        val coverage: String,         // "62%" share of checked calls that were BUY/SELL, "--" when nothing checked
+        val moveQ10: Double? = null,  // 10th / 90th percentile of past moves in the call's direction (null = not enough history)
+        val moveQ90: Double? = null
     )
 
     private fun pct(c: Int, n: Int) = if (n == 0) "--" else String.format(Locale.US, "%.0f%% (N=%d)", 100.0 * c / n, n)
@@ -158,16 +160,18 @@ object ResearchLab {
         val moves = directional.filter { it.r.interval.equals(interval, ignoreCase = true) }
             .map { if (it.r.finalSignal == Signal.SELL) -it.res.move else it.res.move }.sorted()
         val expShort: String; val expDetail: String
+        var q10: Double? = null; var q90: Double? = null
         if (moves.size < MIN_N) {
             expShort = "--"
             expDetail = "INSUFFICIENT HISTORY (N=${moves.size}/$MIN_N)"
         } else {
             fun q(p: Double) = moves[((moves.size - 1) * p).toInt()]
             expShort = String.format(Locale.US, "%+.1f", q(0.5))
+            q10 = q(0.1); q90 = q(0.9)
             expDetail = String.format(Locale.US, "median %+.1f • 80%% of past calls ended between %+.1f and %+.1f (N=%d, in the call's direction)", q(0.5), q(0.1), q(0.9), moves.size)
         }
         lines.add(LabelStat("Expected move (${interval.uppercase(Locale.US)})", expDetail))
 
-        return Report(lines, stab, stabDetail, expShort, expDetail, coverage)
+        return Report(lines, stab, stabDetail, expShort, expDetail, coverage, q10, q90)
     }
 }

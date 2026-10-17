@@ -121,6 +121,8 @@ data class LedgerPulse(
     // ---- research lab (V19): all measured from the ledger, "--" until there is enough history
     val stability: String = "--",                    // HIGH / MEDIUM / LOW: do recent calls on this timeframe keep flipping?
     val expectedMove: String = "--",                 // median of what past calls on this timeframe did, in the call's direction
+    val expectedMoveQ10: Double? = null,             // 10% / 90% of past moves in the call's direction, null until 30 calls
+    val expectedMoveQ90: Double? = null,
     val coverage: String = "--",                     // share of checked calls that were BUY/SELL (the rest were WAIT)
     // ---- V21
     val dataQuality: String = "--",                  // EXCELLENT / GOOD / DEGRADED / UNSAFE for the candles behind this forecast
