@@ -37,19 +37,21 @@ import com.example.livegoldai.theme.ActivePalette
  * Context: RISK adds a faint warm amber haze in one corner, REVIEW a muted research tint. Never the whole screen.
  */
 @Composable
-fun KalankarBackdrop(state: String = "NORMAL", modifier: Modifier = Modifier) {
+fun KalankarBackdrop(state: String = "NORMAL", modifier: Modifier = Modifier, depth: String = "SIGNATURE") {
     val p = ActivePalette.current
     val dark = !p.isLight
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
         drawRect(p.background)
+        if (depth == "FLAT") return@Canvas          // user choice: one plain colour, nothing else
+        val deep = depth == "DEEP"
         // 2. tonal plane
-        drawRect(Brush.verticalGradient(listOf(lerp(p.background, p.surface, if (dark) 0.55f else 0.35f), p.background), endY = h * 0.6f))
+        drawRect(Brush.verticalGradient(listOf(lerp(p.background, p.surface, if (dark) (if (deep) 0.8f else 0.55f) else 0.35f), p.background), endY = h * (if (deep) 0.75f else 0.6f)))
         // 3. directional light
         drawRect(
             Brush.radialGradient(
-                listOf((if (dark) Color.White else p.darkGold).copy(alpha = if (dark) 0.035f else 0.03f), Color.Transparent),
+                listOf((if (dark) Color.White else p.darkGold).copy(alpha = if (dark) (if (deep) 0.05f else 0.035f) else 0.03f), Color.Transparent),
                 center = Offset(w * 0.05f, -h * 0.05f), radius = w * 1.1f
             )
         )

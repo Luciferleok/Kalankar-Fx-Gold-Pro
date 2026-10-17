@@ -103,7 +103,9 @@ data class GoldUiState(
     val aiFreshnessSec: Int = 0,
     val aiTests: Map<String, com.example.livegoldai.model.AiTestUi> = emptyMap(),
     val aiRunning: Boolean = false,
-    val bgRecording: Boolean = true   // 24/7 background prediction recorder (foreground service)
+    val bgRecording: Boolean = true,  // 24/7 background prediction recorder (foreground service)
+    val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
+    val feedKeySaved: Boolean = false              // true when the user saved their own Twelve Data key
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -186,9 +188,18 @@ class GoldViewModel @JvmOverloads constructor(
                 aiMode = prefs.getString("ai_mode", "AUTO") ?: "AUTO",
                 aiDebate = prefs.getBoolean("ai_debate", false),
                 aiFreshnessSec = prefs.getInt("ai_freshness_sec", 0),
-                bgRecording = prefs.getBoolean("bg_recorder_on", true)
+                bgRecording = prefs.getBoolean("bg_recorder_on", true),
+                backgroundDepth = prefs.getString("bg_depth", "SIGNATURE") ?: "SIGNATURE"
             ) 
         }
+        // a Twelve Data key saved by the user (encrypted) replaces the built-in one
+        try {
+            val saved = aiVault.getFeedKey()
+            if (saved.isNotBlank()) {
+                apiService.setApiKey(saved)
+                _uiState.update { it.copy(apiKey = saved, feedKeySaved = true) }
+            }
+        } catch (_: Exception) { }
         if (_uiState.value.bgRecording) {
             try { com.example.livegoldai.service.RecorderService.start(application) } catch (_: Exception) { }
         }
@@ -434,9 +445,24 @@ class GoldViewModel @JvmOverloads constructor(
     }
 
     fun updateApiKey(newKey: String) {
-        apiService.setApiKey(newKey)
-        _uiState.update { it.copy(apiKey = newKey) }
+        val k = newKey.trim()
+        if (k.isBlank()) return
+        apiService.setApiKey(k)
+        val saved = aiVault.putFeedKey(k)          // encrypted with the Android Keystore, survives restarts
+        _uiState.update { it.copy(apiKey = k, feedKeySaved = saved) }
         loadData(isInitial = false)
+    }
+
+    fun setBackgroundDepth(depth: String) {
+        val d = depth.takeIf { it in setOf("FLAT", "SIGNATURE", "DEEP") } ?: "SIGNATURE"
+        prefs.edit().putString("bg_depth", d).apply()
+        _uiState.update { it.copy(backgroundDepth = d) }
+    }
+
+    /** Appearance only: theme, AMOLED and background depth back to defaults. Data, ledger and keys are untouched. */
+    fun resetAppearance() {
+        prefs.edit().putString("selected_theme_mode", ThemeMode.ROYAL_OBSIDIAN.name).putBoolean("amoled_black", false).putString("bg_depth", "SIGNATURE").apply()
+        _uiState.update { it.copy(themeMode = ThemeMode.ROYAL_OBSIDIAN, amoled = false, backgroundDepth = "SIGNATURE") }
     }
 
     fun openLotCalculator(slPips: Double) {

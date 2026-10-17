@@ -37,19 +37,27 @@ class AiKeyVault(private val prefs: SharedPreferences) {
         return gen.generateKey()
     }
 
-    fun putKey(id: AiProviderId, apiKey: String): Boolean = try {
+    fun putKey(id: AiProviderId, apiKey: String): Boolean = putSecret("ai_key_" + id.name, apiKey)
+
+    fun getKey(id: AiProviderId): String = getSecret("ai_key_" + id.name)
+
+    /** Market-data key (Twelve Data), encrypted the same way as the AI keys. */
+    fun putFeedKey(key: String): Boolean = putSecret("feed_key_twelvedata", key)
+    fun getFeedKey(): String = getSecret("feed_key_twelvedata")
+
+    private fun putSecret(name: String, value: String): Boolean = try {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, secretKey())
-        val ct = c.doFinal(apiKey.trim().toByteArray(Charsets.UTF_8))
+        val ct = c.doFinal(value.trim().toByteArray(Charsets.UTF_8))
         val enc = Base64.getEncoder()
-        prefs.edit().putString("ai_key_" + id.name, enc.encodeToString(c.iv) + ":" + enc.encodeToString(ct)).apply()
+        prefs.edit().putString(name, enc.encodeToString(c.iv) + ":" + enc.encodeToString(ct)).apply()
         true
     } catch (_: Exception) {
         false
     }
 
-    fun getKey(id: AiProviderId): String = try {
-        val stored = prefs.getString("ai_key_" + id.name, null)
+    private fun getSecret(name: String): String = try {
+        val stored = prefs.getString(name, null)
         if (stored.isNullOrBlank() || !stored.contains(':')) "" else {
             val dec = Base64.getDecoder()
             val iv = dec.decode(stored.substringBefore(':'))

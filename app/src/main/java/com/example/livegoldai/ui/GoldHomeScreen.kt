@@ -75,14 +75,59 @@ fun GoldHomeScreen(
     }
 
     if (showSettings) {
-        SettingsDialog(
-            currentApiKey = uiState.apiKey,
-            currentLanguage = uiState.language,
-            onSelectLanguage = { lang -> viewModel.selectLanguage(lang) },
-            onSaveKey = { newKey -> viewModel.updateApiKey(newKey) },
-            onOpenThemeSelector = { viewModel.openThemeSelector() },
-            onDismiss = { showSettings = false }
+        // V25.1 settings console: full screen, rows with real status lines, search, only working settings
+        val ctx = LocalContext.current
+        val appVersion = remember { try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "--" } catch (_: Exception) { "--" } }
+        val now = System.currentTimeMillis()
+        val f = uiState.data?.feed
+        val feedLine = if (f == null) "--" else {
+            val age = (now - f.fetchedAtMs) / 1000
+            val st = if (!f.isLive) "OFFLINE" else if (age > 180) "STALE" else "LIVE"
+            "${f.source} • $st • ${age}s" + if (f.volumeSource.isNotBlank()) " • volume: ${f.volumeSource}" else ""
+        }
+        val keys = uiState.aiProviders
+        val consoleState = com.example.livegoldai.ui.v8.SettingsConsoleState(
+            lang = uiState.language,
+            themeTitle = uiState.themeMode.title + if (uiState.amoled) " • AMOLED" else "",
+            amoled = uiState.amoled,
+            depth = uiState.backgroundDepth,
+            interval = uiState.selectedInterval,
+            feedLine = feedLine,
+            feedKeyLine = if (uiState.feedKeySaved) "Your own key (…${uiState.apiKey.takeLast(4)}), encrypted on this phone" else "Built-in shared key. Add your own for reliable quota.",
+            aiLine = "${keys.count { it.hasKey }} of ${keys.size} keys saved • mode ${uiState.aiMode}",
+            learnLine = uiState.data?.pulse?.let { "${it.checked} checked • ${it.active} waiting • ${it.modelHealth}" } ?: "--",
+            alertLine = uiState.priceAlertTarget?.let { String.format(java.util.Locale.US, "Alert at %,.2f", it) } ?: "Off",
+            recorderOn = uiState.bgRecording,
+            recorderLine = uiState.data?.pulse?.background?.takeIf { it.isNotBlank() } ?: if (uiState.bgRecording) "On" else "Off",
+            healthLine = uiState.data?.health?.let { "${it.overallScore}/100 • ${it.overallStatus}" } ?: "--",
+            engine = com.example.livegoldai.data.PredictionLedger.ENGINE_VERSION,
+            appVersion = appVersion
         )
+        val consoleActions = com.example.livegoldai.ui.v8.SettingsConsoleActions(
+            onLang = { viewModel.selectLanguage(it) },
+            onOpenTheme = { viewModel.openThemeSelector() },
+            onAmoled = { viewModel.setAmoled(it) },
+            onDepth = { viewModel.setBackgroundDepth(it) },
+            onInterval = { viewModel.setInterval(it) },
+            onSaveFeedKey = { viewModel.updateApiKey(it) },
+            onOpenAi = { showSettings = false; viewModel.setBottomTab(2) },
+            onOpenLearning = { showSettings = false; viewModel.setBottomTab(4) },
+            onOpenAlert = { viewModel.openPriceAlertDialog() },
+            onRecorder = { viewModel.setBackgroundRecording(it) },
+            onOpenSystem = { showSettings = false; viewModel.setBottomTab(3) },
+            onResetAppearance = { viewModel.resetAppearance() },
+            onResetChart = { viewModel.setInterval("4h") },
+            onClose = { showSettings = false }
+        )
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showSettings = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                KalankarBackdrop(depth = uiState.backgroundDepth)
+                com.example.livegoldai.ui.v8.V8SettingsConsole(consoleState, consoleActions)
+            }
+        }
     }
 
     if (uiState.showLotCalculator && uiState.data != null) {
@@ -254,7 +299,7 @@ fun GoldHomeScreen(
                     else -> "NORMAL"
                 }
             }
-            KalankarBackdrop(ambient)
+            KalankarBackdrop(ambient, depth = uiState.backgroundDepth)
             when {
                 uiState.isLoading && uiState.data == null -> {
                     V8LoadingSkeleton(uiState.language)
