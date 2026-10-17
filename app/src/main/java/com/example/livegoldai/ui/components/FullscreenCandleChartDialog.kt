@@ -368,6 +368,12 @@ fun FullscreenCandleChartDialog(
                             }
                         }
                 ) {
+                    // brand mark under the candles: tiny, far below reading contrast, never over the price scale
+                    com.example.livegoldai.ui.v8.KalankarBrandEmblem(
+                        mode = com.example.livegoldai.ui.v8.EmblemMode.WATERMARK,
+                        modifier = Modifier.align(Alignment.Center),
+                        watermarkAlpha = 0.035f
+                    )
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val w = size.width
                         val h = size.height

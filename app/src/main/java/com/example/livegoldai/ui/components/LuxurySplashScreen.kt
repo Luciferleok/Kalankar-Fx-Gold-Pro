@@ -143,32 +143,11 @@ fun LuxurySplashScreen(
                         .alpha(logoAlpha)
                         .background(Brush.radialGradient(listOf(Champagne.copy(alpha = 0.08f), Color.Transparent)))
                 )
-                Image(
-                    painter = painterResource(id = R.drawable.kalankar_logo_mark),
-                    contentDescription = "Kalankar FX Gold Pro",
-                    modifier = Modifier
-                        .size(168.dp)
-                        .alpha(logoAlpha)
-                        .scale(logoScale)
-                        // offscreen layer + SrcAtop: the light only touches the emblem's own pixels, never a rectangle
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            if (sweep > 0f && sweep < 1f) {
-                                val band = size.width * 0.22f
-                                val cx = size.width * (-0.2f + 1.4f * sweep)
-                                val cy = size.height * (1.2f - 1.4f * sweep)
-                                drawRect(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(Color.Transparent, TraceLight.copy(alpha = 0.42f), Color.Transparent),
-                                        start = Offset(cx - band, cy + band),
-                                        end = Offset(cx + band, cy - band)
-                                    ),
-                                    blendMode = BlendMode.SrcAtop
-                                )
-                            }
-                        },
-                    contentScale = ContentScale.Fit
+                // the one official emblem component, splash mode (frameless mark + one light pass)
+                com.example.livegoldai.ui.v8.KalankarBrandEmblem(
+                    mode = com.example.livegoldai.ui.v8.EmblemMode.SPLASH,
+                    modifier = Modifier.alpha(logoAlpha).scale(logoScale),
+                    splashSweep = sweep
                 )
             }
 

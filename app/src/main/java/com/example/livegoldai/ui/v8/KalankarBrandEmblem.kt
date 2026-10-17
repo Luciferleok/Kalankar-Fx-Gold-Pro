@@ -20,6 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -35,7 +39,7 @@ enum class EmblemMode(val size: Dp, val corner: Dp) {
     HEADER(46.dp, 13.dp),
     ABOUT(72.dp, 20.dp),
     HERO(96.dp, 26.dp),
-    SPLASH(120.dp, 32.dp),
+    SPLASH(168.dp, 0.dp),
     WATERMARK(112.dp, 0.dp)
 }
 
@@ -53,8 +57,37 @@ fun KalankarBrandEmblem(
     mode: EmblemMode = EmblemMode.HEADER,
     modifier: Modifier = Modifier,
     highlightOnce: Boolean = false,
-    watermarkAlpha: Float = 0.05f
+    watermarkAlpha: Float = 0.05f,
+    splashSweep: Float = 0f
 ) {
+    if (mode == EmblemMode.SPLASH) {
+        // launch: the mark alone, no plate; the light passes over the emblem's own pixels only (offscreen + SrcAtop)
+        Image(
+            painter = painterResource(id = R.drawable.kalankar_logo_mark),
+            contentDescription = "Kalankar FX Gold Pro",
+            modifier = modifier
+                .size(mode.size)
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    if (splashSweep > 0f && splashSweep < 1f) {
+                        val band = size.width * 0.22f
+                        val cx = size.width * (-0.2f + 1.4f * splashSweep)
+                        val cy = size.height * (1.2f - 1.4f * splashSweep)
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color.Transparent, Color(0xFFFFF4D6).copy(alpha = 0.42f), Color.Transparent),
+                                start = Offset(cx - band, cy + band),
+                                end = Offset(cx + band, cy - band)
+                            ),
+                            blendMode = BlendMode.SrcAtop
+                        )
+                    }
+                },
+            contentScale = ContentScale.Fit
+        )
+        return
+    }
     if (mode == EmblemMode.WATERMARK) {
         Image(
             painter = painterResource(id = R.drawable.kalankar_logo_mark),

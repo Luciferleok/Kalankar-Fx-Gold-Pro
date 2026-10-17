@@ -103,9 +103,9 @@ fun SettingsDialog(
                             )
                             Text(
                                 text = when (selectedLanguage) {
-                                    AppLanguage.ENGLISH -> "Language Selection & Pro Controls"
-                                    AppLanguage.HINDI -> "भाषा चयन एवं प्रो कंट्रोल्स"
-                                    AppLanguage.MARATHI -> "भाषा निवड आणि प्रो नियंत्रणे"
+                                    AppLanguage.ENGLISH -> "General • Appearance • Data • About"
+                                    AppLanguage.HINDI -> "सामान्य • रूप • डेटा • परिचय"
+                                    AppLanguage.MARATHI -> "सामान्य • स्वरूप • डेटा • माहिती"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                 color = TextMuted
@@ -167,6 +167,7 @@ fun SettingsDialog(
                         }
                     }
 
+                    SettingsSectionLabel(when (selectedLanguage) { AppLanguage.ENGLISH -> "GENERAL"; AppLanguage.HINDI -> "सामान्य"; AppLanguage.MARATHI -> "सामान्य" })
                     // 1. PRIMARY LANGUAGE SELECTOR CARD (ENGLISH / HINDI / MARATHI)
                     Surface(
                         shape = RoundedCornerShape(18.dp),
@@ -366,20 +367,15 @@ fun SettingsDialog(
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = when (selectedLanguage) {
-                                                    AppLanguage.ENGLISH -> "Sample Signal: BUY EXPECTED"
-                                                    AppLanguage.HINDI -> "सैंपल सिग्नल: BUY HO SAKTA HAI"
-                                                    AppLanguage.MARATHI -> "नमुना सिग्नल: BUY HO SAKTO"
+                                                    AppLanguage.ENGLISH -> "Preview: labels look like this"
+                                                    AppLanguage.HINDI -> "झलक: लेबल ऐसे दिखेंगे"
+                                                    AppLanguage.MARATHI -> "झलक: लेबल असे दिसतील"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = SignalBuy
                                             )
                                         }
-                                        Text(
-                                            text = "Win rate: see Learning Center",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                            color = GoldLight
-                                        )
                                     }
 
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -387,9 +383,9 @@ fun SettingsDialog(
                                     // Sample Decision advice in this Language
                                     Text(
                                         text = when (selectedLanguage) {
-                                            AppLanguage.ENGLISH -> "Advice: Strong bullish accumulation • Target upper resistance"
-                                            AppLanguage.HINDI -> "सलाह: मजबूत खरीदारी दबाव • ऊपरी रेजिस्टेंस का लक्ष्य रखें"
-                                            AppLanguage.MARATHI -> "सल्ला: मजबूत खरेदीचा जोर • वरील रेझिस्टन्सचे लक्ष्य ठेवा"
+                                            AppLanguage.ENGLISH -> "Forecast, Learning Center and Health screens use this language."
+                                            AppLanguage.HINDI -> "अनुमान, लर्निंग सेंटर और हेल्थ स्क्रीन इसी भाषा में दिखेंगी।"
+                                            AppLanguage.MARATHI -> "अंदाज, लर्निंग सेंटर आणि हेल्थ स्क्रीन याच भाषेत दिसतील."
                                         },
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                                         color = TextSecondary
@@ -399,6 +395,7 @@ fun SettingsDialog(
                         }
                     }
 
+                    SettingsSectionLabel(when (selectedLanguage) { AppLanguage.ENGLISH -> "APPEARANCE"; AppLanguage.HINDI -> "रूप"; AppLanguage.MARATHI -> "स्वरूप" })
                     // 2. THEME & VIEW MODE CUSTOMIZATION
                     OutlinedButton(
                         onClick = {
@@ -498,6 +495,7 @@ fun SettingsDialog(
                         }
                     }
 
+                    SettingsSectionLabel(when (selectedLanguage) { AppLanguage.ENGLISH -> "DATA FEED"; AppLanguage.HINDI -> "डेटा फ़ीड"; AppLanguage.MARATHI -> "डेटा फीड" })
                     // 4. API KEY CONFIGURATION
                     Surface(
                         shape = RoundedCornerShape(14.dp),
@@ -536,7 +534,8 @@ fun SettingsDialog(
                                         modifier = Modifier.size(16.dp)
                                     )
                                 },
-                                singleLine = true
+                                singleLine = true,
+                                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
                             )
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -548,27 +547,28 @@ fun SettingsDialog(
                         }
                     }
 
-                    // 5. BRANDING BADGE
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = ObsidianBackground,
-                        border = BorderStroke(0.5.dp, ObsidianBorderHighlight),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = LocalizationStrings.appTitle(selectedLanguage),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Black,
-                                color = GoldLight
-                            )
-                            Text(
-                                text = LocalizationStrings.appSubtitle(selectedLanguage),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = TextSecondary
-                            )
+                    SettingsSectionLabel(when (selectedLanguage) { AppLanguage.ENGLISH -> "ABOUT"; AppLanguage.HINDI -> "परिचय"; AppLanguage.MARATHI -> "माहिती" })
+                    // 5. ABOUT: the official emblem (one component), name, tagline, real engine version
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        com.example.livegoldai.ui.v8.KalankarBrandEmblem(mode = com.example.livegoldai.ui.v8.EmblemMode.ABOUT)
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(text = "KALANKAR", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
+                            Text(text = "FX GOLD PRO", color = GoldLight, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "PRIVATE MARKET INTELLIGENCE", color = TextMuted, fontSize = 9.sp, letterSpacing = 1.6.sp)
+                            Text(text = "Engine ${com.example.livegoldai.data.PredictionLedger.ENGINE_VERSION}", color = TextMuted, fontSize = 9.sp)
                         }
                     }
+                    Text(
+                        text = when (selectedLanguage) {
+                            AppLanguage.ENGLISH -> "Signals are research output, not financial advice. Accuracy is shown only from checked results in the Learning Center."
+                            AppLanguage.HINDI -> "सिग्नल रिसर्च हैं, निवेश सलाह नहीं। सटीकता सिर्फ लर्निंग सेंटर के जाँचे गए नतीजों से दिखाई जाती है।"
+                            AppLanguage.MARATHI -> "सिग्नल हे संशोधन आहे, गुंतवणूक सल्ला नाही. अचूकता फक्त लर्निंग सेंटरच्या तपासलेल्या निकालांवरून दाखवली जाते."
+                        },
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                        color = TextMuted
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -607,4 +607,17 @@ fun SettingsDialog(
             }
         }
     }
+}
+
+/** Small uppercase section label: structure by typography and spacing, not by another bordered card. */
+@Composable
+private fun SettingsSectionLabel(text: String) {
+    Text(
+        text = text,
+        color = TextMuted,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.6.sp,
+        modifier = Modifier.padding(top = 6.dp)
+    )
 }

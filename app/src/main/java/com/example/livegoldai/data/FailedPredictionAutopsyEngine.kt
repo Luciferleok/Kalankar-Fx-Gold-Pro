@@ -7,91 +7,107 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Multi-AI Failed Prediction Autopsy Engine
- * Reads the chart, candlestick anatomy (Open, High, Low, Close, Wicks), and failure mechanics
- * of the last wrong prediction so the Multi-AI committee can permanently correct future signals.
+ * STOPPED-REPLAY CANDLE CHECK (V23.1, rewritten)
+ *
+ * Takes the most recent replay trade that hit its stop and measures the REAL candle that touched the stop:
+ * its open/high/low/close, wick and body sizes, how far it went past the stop and (only when the feed has
+ * real volume) its volume against the 20-candle average.
+ *
+ * Nothing is invented: no AI "readings", no story about market makers, no claimed recalibration.
+ * Returns null when no replay trade was stopped or the candle cannot be found.
  */
 object FailedPredictionAutopsyEngine {
 
+    private fun f2(v: Double) = String.format(Locale.US, "%.2f", v)
+
     fun generateAutopsy(
         audit: TimeframeAccuracyAudit?,
+        candles: List<CandleBar>,
         currentPrice: Double,
         atrSafe: Double
-    ): FailedPredictionCandleAutopsy {
-        val lastOutcome = audit?.lastPredictionOutcome
-        val isLoss = lastOutcome?.outcomeStatus == PredictionOutcomeStatus.STOP_LOSS_HIT
-        val failedSignal = lastOutcome?.signal ?: Signal.BUY
+    ): FailedPredictionCandleAutopsy? {
+        val stopped = audit?.recentSignalAudits?.firstOrNull { it.outcomeStatus == PredictionOutcomeStatus.STOP_LOSS_HIT } ?: return null
+        val evalIdx = candles.indexOfFirst { it.datetime == stopped.timestamp }
+        if (evalIdx < 0) return null
+        val isBuy = stopped.signal == Signal.BUY
+        val sl = stopped.stopLossPrice
+        val hitIdx = (evalIdx + 1 until min(candles.size, evalIdx + 8)).firstOrNull { i ->
+            if (isBuy) candles[i].low <= sl else candles[i].high >= sl
+        } ?: return null
+        val c = candles[hitIdx]
 
-        // Construct realistic candle values around the last stop-loss zone
-        val entry = lastOutcome?.entryPrice ?: (currentPrice - 2.80)
-        val sl = if (failedSignal == Signal.BUY) entry - (1.5 * atrSafe) else entry + (1.5 * atrSafe)
-        val tp = if (failedSignal == Signal.BUY) entry + (2.5 * atrSafe) else entry - (2.5 * atrSafe)
+        val body = abs(c.close - c.open)
+        val upper = c.high - max(c.open, c.close)
+        val lower = min(c.open, c.close) - c.low
+        val range = (c.high - c.low).coerceAtLeast(1e-9)
+        val beyond = if (isBuy) sl - c.low else c.high - sl
+        val closedBack = if (isBuy) c.close > sl else c.close < sl
 
-        // Anatomy of the wick trap candle that swept the stop loss
-        val cOpen = entry + 0.60
-        val cClose = if (failedSignal == Signal.BUY) entry - 1.20 else entry + 1.20
-        val cHigh = if (failedSignal == Signal.BUY) entry + 1.80 else sl + 1.40
-        val cLow = if (failedSignal == Signal.BUY) sl - 1.50 else entry - 1.80 // Spiked 1.50 below SL!
-
-        val bodyPips = abs(cClose - cOpen) * 10.0
-        val upperWickPips = (cHigh - max(cOpen, cClose)) * 10.0
-        val lowerWickPips = (min(cOpen, cClose) - cLow) * 10.0
-        val pipsLoss = abs(entry - sl) * 10.0
-
-        val diagnosisEng = if (failedSignal == Signal.BUY) {
-            "Liquidity Hunt Trap: Smart money drove a deep volatility wick ($${String.format(Locale.US, "%.2f", cLow)}) exactly 15 pips beneath structural support to harvest retail stops before rallying +85 pips."
-        } else {
-            "Short-Squeeze Wick Trap: Price spiked past resistance ($${String.format(Locale.US, "%.2f", cHigh)}) on low volume, sweeping retail buy-stops before dumping aggressively."
+        val shape = when {
+            isBuy && lower >= 2 * body && lower >= 0.5 * range -> "Long lower wick"
+            !isBuy && upper >= 2 * body && upper >= 0.5 * range -> "Long upper wick"
+            body >= 0.6 * range -> "Large body candle"
+            else -> "Mixed candle"
+        }
+        val shapeHi = when (shape) {
+            "Long lower wick" -> "लंबी निचली विक"
+            "Long upper wick" -> "लंबी ऊपरी विक"
+            "Large body candle" -> "बड़ी बॉडी वाली कैंडल"
+            else -> "मिली-जुली कैंडल"
+        }
+        val shapeMr = when (shape) {
+            "Long lower wick" -> "लांब खालची विक"
+            "Long upper wick" -> "लांब वरची विक"
+            "Large body candle" -> "मोठ्या बॉडीची कँडल"
+            else -> "मिश्र कँडल"
         }
 
-        val diagnosisHin = if (failedSignal == Signal.BUY) {
-            "लिक्विडिटी हंट ट्रैप (कैंडल विश्लेषण): मार्केट मेकर्स ने सपोर्ट के नीचे एक लंबी निचली विक ($${String.format(Locale.US, "%.2f", cLow)}) बनाई, जिससे रिटेल बायर्स के स्टॉप लॉस कटे और उसके तुरंत बाद मार्केट 85 pips ऊपर भाग गया।"
-        } else {
-            "शॉर्ट-स्क्वीज विक ट्रैप: कम वॉल्यूम में एक तेज ऊपर की विक ($${String.format(Locale.US, "%.2f", cHigh)}) आई जिसने सेलर्स के SL उड़ाए और फिर तेजी से नीचे गिर गई।"
-        }
+        // volume only when the feed carries real volume (several different values), never the flat filler
+        val vols = candles.subList(max(0, hitIdx - 20), hitIdx).mapNotNull { it.volume }
+        val realVolume = candles.mapNotNull { it.volume }.distinct().size >= 3
+        val volRatio = if (realVolume && vols.isNotEmpty() && vols.average() > 0 && c.volume != null) c.volume / vols.average() else 0.0
 
-        val diagnosisMar = if (failedSignal == Signal.BUY) {
-            "लिक्विडिटी हंट ट्रॅप (कँडल विश्लेषण): मार्केट मेकर्सनी सपोर्टच्या खाली एक लांब खालची विक ($${String.format(Locale.US, "%.2f", cLow)}) बनवली, ज्यामुळे रिटेल बायर्सचे Stop Loss कट झाले आणि त्यानंतर लगेच मार्केट 85 pips वर पळाले."
-        } else {
-            "शॉर्ट-स्क्वीझ विक ट्रॅप: कमी व्हॉल्यूममध्ये एक वेगवान वरची विक ($${String.format(Locale.US, "%.2f", cHigh)}) आली ज्याने सेलर्सचे SL उडवले आणि नंतर वेगाने खाली कोसळले."
-        }
+        val closeEn = if (closedBack) "then closed back on the other side of the stop" else "and closed beyond the stop"
+        val closeHi = if (closedBack) "फिर Stop के दूसरी तरफ वापस बंद हुई" else "और Stop के पार ही बंद हुई"
+        val closeMr = if (closedBack) "नंतर Stop च्या दुसऱ्या बाजूला परत बंद झाली" else "आणि Stop च्या पलीकडेच बंद झाली"
+        val volEn = if (volRatio > 0) " Volume was ${String.format(Locale.US, "%.1f", volRatio)}x the 20-candle average." else ""
 
-        val geminiReading = "Gemini 3.5 Candle Reading: 15M candle had a massive 28-pip lower rejection shadow with 2.8x volume surge. High buyer absorption at the trough confirmed retail stop-sweeping."
-        val chatGptReading = "ChatGPT-4o Macro Reading: Dollar Index (DXY) had a brief 5-minute counter-spike due to bond auction headlines, triggering algorithmic stop-loss cascade before reversing."
-        val claudeReading = "Claude 3.7 Risk Guardrail: SL buffer was set at standard 1.5x ATR, which was +3.5 pips too shallow for volatile NY session handover wicks."
-        val deepSeekReading = "DeepSeek R1 SMC Reading: Price targeted the internal Fair Value Gap (FVG) discount block right under S1 support. The entry was rushed instead of waiting for FVG retest."
+        val diagEn = "The ${if (isBuy) "BUY" else "SELL"} replay stop ($${f2(sl)}) was touched by the candle of ${c.datetime}: " +
+            "it went $${f2(beyond)} past the stop $closeEn.$volEn"
+        val diagHi = "${if (isBuy) "BUY" else "SELL"} रीप्ले का Stop ($${f2(sl)}) ${c.datetime} की कैंडल ने छुआ: वह Stop से $${f2(beyond)} आगे गई $closeHi।"
+        val diagMr = "${if (isBuy) "BUY" else "SELL"} रीप्लेचा Stop ($${f2(sl)}) ${c.datetime} च्या कँडलने गाठला: ती Stop पासून $${f2(beyond)} पुढे गेली $closeMr."
 
-        val actionEng = "Immediate Recalibration: Stop Loss buffer expanded to 1.85x ATR (+3.5 pips safety zone) and entries strictly restricted to 50%-61.8% pullback limit orders."
-        val actionHin = "तुरंत किया गया सुधार: अगले प्रेडिक्शन में Stop Loss को +3.5 pips का एक्स्ट्रा सेफ बफर दिया गया और एंट्री को सीधे 50% पुलबैक डिस्काउंट ज़ोन पर शिफ्ट किया गया।"
-        val actionMar = "त्वरित केलेली सुधारणा: पुढील अंदाजात Stop Loss ला +3.5 pips चा अतिरिक्त सेफ बफर दिला गेला आणि एंट्री थेट 50% पुलबॅक डिस्काउंट झोनवर शिफ्ट केली गेली."
+        val actEn = "No rule is changed from one stopped trade. Rules change only after the Learning Center's shadow test on 50+ real results."
+        val actHi = "एक Stop से कोई नियम नहीं बदला जाता। नियम तभी बदलते हैं जब लर्निंग सेंटर 50+ असली नतीजों पर शैडो टेस्ट पास करे।"
+        val actMr = "एका Stop मुळे कोणताही नियम बदलत नाही. लर्निंग सेंटरने 50+ खऱ्या निकालांवर शॅडो टेस्ट पास केल्यावरच नियम बदलतात."
 
         return FailedPredictionCandleAutopsy(
-            previousTradeId = lastOutcome?.id ?: "TR-AUDIT-${System.currentTimeMillis() % 10000}",
-            failedSignal = failedSignal,
-            entryPrice = entry,
+            previousTradeId = stopped.id,
+            failedSignal = stopped.signal,
+            entryPrice = stopped.entryPrice,
             stopLossPrice = sl,
-            targetPrice = tp,
-            pipsLoss = pipsLoss,
-            timeAgo = lastOutcome?.timeAgo ?: "1 hour ago",
-            trapCandleType = if (failedSignal == Signal.BUY) "Long Lower-Wick Liquidity Grab Pinbar" else "Shooting Star Stop-Run Pinbar",
-            candleOpen = cOpen,
-            candleHigh = cHigh,
-            candleLow = cLow,
-            candleClose = cClose,
-            upperWickPips = upperWickPips,
-            lowerWickPips = lowerWickPips,
-            bodyPips = bodyPips,
-            volumeSurgeMultiplier = 2.8,
-            trapDiagnosisEnglish = diagnosisEng,
-            trapDiagnosisHindi = diagnosisHin,
-            trapDiagnosisMarathi = diagnosisMar,
-            geminiCandleReading = geminiReading,
-            chatGptCandleReading = chatGptReading,
-            claudeCandleReading = claudeReading,
-            deepSeekCandleReading = deepSeekReading,
-            recalibrationActionTakenEnglish = actionEng,
-            recalibrationActionTakenHindi = actionHin,
-            recalibrationActionTakenMarathi = actionMar
+            targetPrice = stopped.target1Price,
+            pipsLoss = abs(stopped.entryPrice - sl) * 10.0,
+            timeAgo = stopped.timeAgo,
+            trapCandleType = "$shape • $shapeHi • $shapeMr",
+            candleOpen = c.open,
+            candleHigh = c.high,
+            candleLow = c.low,
+            candleClose = c.close,
+            upperWickPips = upper * 10.0,
+            lowerWickPips = lower * 10.0,
+            bodyPips = body * 10.0,
+            volumeSurgeMultiplier = volRatio,
+            trapDiagnosisEnglish = diagEn,
+            trapDiagnosisHindi = diagHi,
+            trapDiagnosisMarathi = diagMr,
+            geminiCandleReading = "",
+            chatGptCandleReading = "",
+            claudeCandleReading = "",
+            deepSeekCandleReading = "",
+            recalibrationActionTakenEnglish = actEn,
+            recalibrationActionTakenHindi = actHi,
+            recalibrationActionTakenMarathi = actMr
         )
     }
 }

@@ -82,9 +82,9 @@ fun AiFailedPredictionAutopsyCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "LAST WRONG PREDICTION AUTOPSY"
-                                    AppLanguage.HINDI -> "पिछली गलत प्रेडिक्शन का कैंडल पोस्टमार्टम"
-                                    AppLanguage.MARATHI -> "मागील चुकीच्या अंदाजाचे कँडल विश्लेषण"
+                                    AppLanguage.ENGLISH -> "LAST STOPPED REPLAY • CANDLE CHECK"
+                                    AppLanguage.HINDI -> "पिछला Stop हुआ रीप्ले • कैंडल जाँच"
+                                    AppLanguage.MARATHI -> "मागील Stop झालेला रीप्ले • कँडल तपासणी"
                                 },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Black,
@@ -192,7 +192,7 @@ fun AiFailedPredictionAutopsyCard(
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = "Horizon candle",
+                                text = "Stop candle",
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = AmberWarning
@@ -241,9 +241,9 @@ fun AiFailedPredictionAutopsyCard(
                     Column {
                         Text(
                             text = when (currentLang) {
-                                AppLanguage.ENGLISH -> "HOW THIS MISTAKE FIXED THE NEXT PREDICTION:"
-                                AppLanguage.HINDI -> "इस गलती से अगले प्रेडिक्शन में क्या सुधार हुआ:"
-                                AppLanguage.MARATHI -> "या चुकीमुळे पुढील अंदाजात काय सुधारणा झाली:"
+                                AppLanguage.ENGLISH -> "WHAT CHANGES BECAUSE OF IT:"
+                                AppLanguage.HINDI -> "इससे क्या बदलता है:"
+                                AppLanguage.MARATHI -> "यामुळे काय बदलते:"
                             },
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             fontWeight = FontWeight.Black,
@@ -266,23 +266,23 @@ fun AiFailedPredictionAutopsyCard(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "EVIDENCE FROM THE LEDGER (NO AI CALL):",
+                        text = "MEASURED CANDLE (REAL PRICES):",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                         fontWeight = FontWeight.Black,
                         color = TextMuted
                     )
-
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "⚠️ ${autopsy.geminiCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(
+                            text = "Open ${String.format(Locale.US, "%.2f", autopsy.candleOpen)}  •  High ${String.format(Locale.US, "%.2f", autopsy.candleHigh)}  •  Low ${String.format(Locale.US, "%.2f", autopsy.candleLow)}  •  Close ${String.format(Locale.US, "%.2f", autopsy.candleClose)}",
+                            modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary
+                        )
                     }
                     Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "🌐 ${autopsy.chatGptCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
-                    }
-                    Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "📉 ${autopsy.claudeCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
-                    }
-                    Surface(shape = RoundedCornerShape(8.dp), color = ObsidianSurfaceElevated, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "🕒 ${autopsy.deepSeekCandleReading}", modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary)
+                        Text(
+                            text = "Entry ${String.format(Locale.US, "%.2f", autopsy.entryPrice)}  •  Stop ${String.format(Locale.US, "%.2f", autopsy.stopLossPrice)}  •  Target ${String.format(Locale.US, "%.2f", autopsy.targetPrice)}" +
+                                if (autopsy.volumeSurgeMultiplier > 0) "  •  Volume ${String.format(Locale.US, "%.1f", autopsy.volumeSurgeMultiplier)}x avg" else "  •  Volume: not available on this feed",
+                            modifier = Modifier.padding(8.dp), fontSize = 10.sp, color = TextPrimary
+                        )
                     }
                 }
             }

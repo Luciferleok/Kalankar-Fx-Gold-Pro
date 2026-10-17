@@ -734,6 +734,7 @@ object TechnicalEngine {
 
         val failedAutopsy = FailedPredictionAutopsyEngine.generateAutopsy(
             audit = timeframeAudit,
+            candles = candles,
             currentPrice = currentPrice,
             atrSafe = atrSafe
         )
@@ -2035,114 +2036,60 @@ object TechnicalEngine {
             val maxHigh = if (futureWindow.isNotEmpty()) futureWindow.maxOf { it.high } else evalBar.high
             val minLow = if (futureWindow.isNotEmpty()) futureWindow.minOf { it.low } else evalBar.low
 
-            val outcome: PredictionOutcomeStatus
-            val pips: Double
-            val whyHindi: String
-            val whyEnglish: String
-            val whyMarathi: String
-            val lessonHindi: String
-            val lessonEnglish: String
-            val lessonMarathi: String
-
-            if (signal == Signal.BUY) {
-                when {
-                    maxHigh >= target2 -> {
-                        outcome = PredictionOutcomeStatus.TP2_HIT
-                        pips = (target2 - entryPrice) * 10.0
-                        winCount++
-                        whyHindi = "EMA9 और VWAP सपोर्ट से मजबूत बुलिश उछाल आया। खरीदार वॉल्यूम 64%+ रहने से कीमत ने TP1 और TP2 दोनों सफलता से पार कर लिए।"
-                        whyEnglish = "Solid bullish bounce off EMA9 & VWAP support with strong buyer volume (>64%), propelling price through both TP1 & TP2."
-                        whyMarathi = "EMA9 आणि VWAP सपोर्टवरून मजबूत बुलिश उसळी आली. खरेदीदार व्हॉल्यूम 64%+ राहिल्याने किंमतीने TP1 आणि TP2 दोन्ही यशस्वीरित्या पार केले."
-                        lessonHindi = "सफलता का नियम: VWAP के ऊपर हरी पुष्टि कैंडल पर एंट्री करने से ट्रेड की सटीकता 88%+ हो जाती है।"
-                        lessonEnglish = "Winning Lesson: Taking entries on verified candle closes above VWAP yields >88% win consistency."
-                        lessonMarathi = "यशाचा नियम: VWAP च्या वर हिरव्या पुष्टी कँडलवर एंट्री घेतल्याने ट्रेडची अचूकता 88%+ होते."
+            // Walk the following candles in time order: whichever level is touched first decides the result.
+            // A candle that touches both the stop and a target is counted as a stop (we cannot know the order inside it).
+            var outcome = PredictionOutcomeStatus.IN_PROFIT_ACTIVE
+            var hitIdx = -1
+            for ((k, c) in futureWindow.withIndex()) {
+                val stopTouched = if (signal == Signal.BUY) c.low <= stopLoss else c.high >= stopLoss
+                val t1Touched = if (signal == Signal.BUY) c.high >= target1 else c.low <= target1
+                if (stopTouched) { outcome = PredictionOutcomeStatus.STOP_LOSS_HIT; hitIdx = k; break }
+                if (t1Touched) {
+                    // target 1 reached first; did the rest of the window also reach target 2 before the stop?
+                    var t2 = false
+                    for (c2 in futureWindow.drop(k)) {
+                        if (if (signal == Signal.BUY) c2.low <= stopLoss else c2.high >= stopLoss) break
+                        if (if (signal == Signal.BUY) c2.high >= target2 else c2.low <= target2) { t2 = true; break }
                     }
-                    maxHigh >= target1 -> {
-                        outcome = PredictionOutcomeStatus.TP1_HIT
-                        pips = (target1 - entryPrice) * 10.0
-                        winCount++
-                        whyHindi = "सपोर्ट डिमांड ज़ोन से खरीदारों का संचय हुआ और कीमत ने Stop Loss को छुए बिना TP1 लक्ष्य ($${format2(target1)}) हिट किया।"
-                        whyEnglish = "Demand accumulation at support carried price to TP1 target ($${format2(target1)}) without threatening the stop loss."
-                        whyMarathi = "सपोर्ट डिमांड झोनमधून खरेदीदारांचे संचय झाले आणि किंमतीने Stop Loss न गाठता TP1 लक्ष्य ($${format2(target1)}) साध्य केले."
-                        lessonHindi = "सफलता का नियम: TP1 हिट होते ही आधा (50%) मुनाफा बुक करें और Stop Loss को Entry Price पर कर दें।"
-                        lessonEnglish = "Winning Lesson: Lock 50% profits at TP1 and advance stop to Breakeven for guaranteed risk-free trades."
-                        lessonMarathi = "यशाचा नियम: TP1 गाठताच अर्धा (50%) नफा बुक करा आणि Stop Loss ला Entry Price वर हलवा."
-                    }
-                    minLow <= stopLoss -> {
-                        outcome = PredictionOutcomeStatus.STOP_LOSS_HIT
-                        pips = -(entryPrice - stopLoss) * 10.0
-                        lossCount++
-                        whyHindi = "रेजिस्टेंस पर विक ट्रैप (झूठा ब्रेकआउट) बना और संस्थागत लिक्विडिटी हंट ने स्विंग लो को छूकर Stop Loss हिट कर दिया।"
-                        whyEnglish = "Wick trap false breakout near resistance. Market maker liquidity hunt wicked swing low before market reversed."
-                        whyMarathi = "रेसिस्टन्सवर विक ट्रॅप (खोटा ब्रेकआउट) बनला आणि संस्थागत लिक्विडिटी हंटने स्विंग लो ला स्पर्श करून Stop Loss गाठला."
-                        lessonHindi = "गलती से सीखें: रेजिस्टेंस के शीर्ष पर FOMO में BUY न करें; हमेशा 50% Fib पुलबैक का इंतज़ार करें और SL में +3.5 pips बफर रखें।"
-                        lessonEnglish = "Mistake Prevention: Never chase breakout wicks at resistance; wait for structural pullback and maintain a +3.5 pip stop buffer."
-                        lessonMarathi = "चुकीतून शिका: रेसिस्टन्सच्या शिखरावर FOMO मध्ये BUY करू नका; नेहमी 50% Fib पुलबॅकची वाट पहा आणि SL मध्ये +3.5 pips बफर ठेवा."
-                    }
-                    else -> {
-                        val currentDelta = (currentPrice - entryPrice) * 10.0
-                        outcome = PredictionOutcomeStatus.IN_PROFIT_ACTIVE
-                        pips = currentDelta
-                        activeCount++
-                        if (currentDelta >= 0) winCount++ else lossCount++
-                        whyHindi = "ट्रेड अभी लाइव मार्केट में चल रहा है और मुनाफे की दिशा में है। खरीदारों का नियंत्रण बना हुआ है।"
-                        whyEnglish = "Trade is actively running in live trading with upside momentum favoring the target."
-                        whyMarathi = "ट्रेड सध्या लाइव्ह मार्केटमध्ये सुरू आहे आणि नफ्याच्या दिशेने आहे. खरेदीदारांचे नियंत्रण कायम आहे."
-                        lessonHindi = "नियम: एंट्री के बाद अधीर होकर समय से पहले एग्जिट न करें; तकनीकी लक्ष्य तक पोजीशन रखें।"
-                        lessonEnglish = "Rule: Avoid premature exits; allow technical thesis to reach measured TP1 objective."
-                        lessonMarathi = "नियम: एंट्री झाल्यावर घाईघाईने लवकर एक्झिट करू नका; तांत्रिक लक्ष्यापर्यंत पोझिशन ठेवा."
-                    }
-                }
-            } else {
-                when {
-                    minLow <= target2 -> {
-                        outcome = PredictionOutcomeStatus.TP2_HIT
-                        pips = (entryPrice - target2) * 10.0
-                        winCount++
-                        whyHindi = "सप्लाई दीवार से भारी संस्थागत बिकवाली हुई और SuperTrend मंदी जारी रहने से सीधा TP2 हिट हुआ।"
-                        whyEnglish = "Heavy institutional selloff from supply wall. SuperTrend bearish continuation cleanly touched full TP2."
-                        whyMarathi = "सप्लाय भिंतीवरून मोठी संस्थागत विक्री झाली आणि SuperTrend मंदी कायम राहिल्याने थेट TP2 साध्य झाला."
-                        lessonHindi = "सफलता का नियम: रेजिस्टेंस पर शूटिंग स्टार विक बनते ही SELL ट्रेड लेने से अधिकतम रिस्क-रिवॉर्ड मिलता है।"
-                        lessonEnglish = "Winning Lesson: Selling shooting star rejections at major liquidity pools yields highest R:R."
-                        lessonMarathi = "यशाचा नियम: रेसिस्टन्सवर शूटिंग स्टार विक बनल्यास SELL ट्रेड घेतल्याने जास्तीत जास्त रिस्क-रिवॉर्ड मिळतो."
-                    }
-                    minLow <= target1 -> {
-                        outcome = PredictionOutcomeStatus.TP1_HIT
-                        pips = (entryPrice - target1) * 10.0
-                        winCount++
-                        whyHindi = "मंदी की रिजेक्शन कैंडल की पुष्टि हुई और बिकवालों ने कीमत को सीधे TP1 लक्ष्य स्तर तक गिराया।"
-                        whyEnglish = "Bearish rejection confirmed and sellers dropped price straight to TP1 objective."
-                        whyMarathi = "मंदीच्या रिजेक्शन कँडलची पुष्टी झाली आणि विक्रेत्यांनी किंमत थेट TP1 लक्ष्य स्तरापर्यंत खाली आणली."
-                        lessonHindi = "सफलता का नियम: मुख्य ट्रेंड के साथ रहने से ट्रेड जल्दी मुनाफे में बदलता है।"
-                        lessonEnglish = "Winning Lesson: Trading in sync with macro order flow ensures high-velocity target hits."
-                        lessonMarathi = "यशाचा नियम: मुख्य ट्रेंडसोबत राहिल्याने ट्रेड जलद गतीने नफ्यात बदलतो."
-                    }
-                    maxHigh >= stopLoss -> {
-                        outcome = PredictionOutcomeStatus.STOP_LOSS_HIT
-                        pips = -(stopLoss - entryPrice) * 10.0
-                        lossCount++
-                        whyHindi = "ओवरसोल्ड ज़ोन से शॉर्ट स्क्वीज़ और समाचार विक आने से ऊपर की ओर स्पाइक ने Stop Loss ट्रिगर कर दिया।"
-                        whyEnglish = "Short squeeze and news wick volatility spike triggered the stop loss before dropping."
-                        whyMarathi = "ओव्हरसोल्ड झोनमधून शॉर्ट स्क्वीझ आणि बातम्यांच्या विक उसळीमुळे Stop Loss ट्रिगर झाला."
-                        lessonHindi = "गलती से सीखें: ओवरसोल्ड RSI (30 से नीचे) पर SELL न करें; पुलबैक पर ही SELL ऑर्डर निष्पादित करें।"
-                        lessonEnglish = "Mistake Prevention: Avoid selling at oversold extremes; wait for bear flag pullback to prevent squeezes."
-                        lessonMarathi = "चुकीतून शिका: ओव्हरसोल्ड RSI (30 च्या खाली) वर SELL करू नका; पुलबॅकवरच SELL ऑर्डर करा."
-                    }
-                    else -> {
-                        val currentDelta = (entryPrice - currentPrice) * 10.0
-                        outcome = PredictionOutcomeStatus.IN_PROFIT_ACTIVE
-                        pips = currentDelta
-                        activeCount++
-                        if (currentDelta >= 0) winCount++ else lossCount++
-                        whyHindi = "SELL सेटअप सक्रिय है और नकारात्मक डेल्टा के साथ निचले सपोर्ट की ओर बढ़ रहा है।"
-                        whyEnglish = "Sell trade is active and pressing toward target zones with negative delta."
-                        whyMarathi = "SELL सेटअप सक्रिय आहे आणि नकारात्मक डेल्टासह खालच्या सपोर्टच्या दिशेने जात आहे."
-                        lessonHindi = "नियम: 9 EMA के ऊपर ट्रेलिंग Stop Loss लगाकर मुनाफे की रक्षा करें।"
-                        lessonEnglish = "Rule: Trail stop loss behind falling 9 EMA to lock in running intraday profits."
-                        lessonMarathi = "नियम: 9 EMA च्या वर ट्रेलिंग Stop Loss लावून नफ्याचे रक्षण करा."
-                    }
+                    outcome = if (t2) PredictionOutcomeStatus.TP2_HIT else PredictionOutcomeStatus.TP1_HIT
+                    hitIdx = k
+                    break
                 }
             }
+            val side = if (signal == Signal.BUY) "BUY" else "SELL"
+            val pips: Double
+            val whyEnglish: String
+            val whyHindi: String
+            val whyMarathi: String
+            when (outcome) {
+                PredictionOutcomeStatus.TP2_HIT, PredictionOutcomeStatus.TP1_HIT -> {
+                    val tgt = if (outcome == PredictionOutcomeStatus.TP2_HIT) target2 else target1
+                    val name = if (outcome == PredictionOutcomeStatus.TP2_HIT) "target 2" else "target 1"
+                    pips = abs(tgt - entryPrice) * 10.0
+                    winCount++
+                    whyEnglish = "$side replay: price reached $name ($${format2(tgt)}) on candle ${hitIdx + 1} before touching the stop ($${format2(stopLoss)})."
+                    whyHindi = "$side रीप्ले: भाव Stop ($${format2(stopLoss)}) छूने से पहले कैंडल ${hitIdx + 1} पर लक्ष्य ($${format2(tgt)}) तक पहुँचा।"
+                    whyMarathi = "$side रीप्ले: भाव Stop ($${format2(stopLoss)}) गाठण्यापूर्वी कँडल ${hitIdx + 1} वर लक्ष्य ($${format2(tgt)}) पर्यंत पोहोचला."
+                }
+                PredictionOutcomeStatus.STOP_LOSS_HIT -> {
+                    pips = -abs(entryPrice - stopLoss) * 10.0
+                    lossCount++
+                    whyEnglish = "$side replay: candle ${hitIdx + 1} touched the stop ($${format2(stopLoss)}) before target 1 ($${format2(target1)})."
+                    whyHindi = "$side रीप्ले: कैंडल ${hitIdx + 1} ने लक्ष्य 1 ($${format2(target1)}) से पहले Stop ($${format2(stopLoss)}) छू लिया।"
+                    whyMarathi = "$side रीप्ले: कँडल ${hitIdx + 1} ने लक्ष्य 1 ($${format2(target1)}) आधी Stop ($${format2(stopLoss)}) गाठला."
+                }
+                else -> {
+                    // still open: not counted as right or wrong
+                    pips = (if (signal == Signal.BUY) currentPrice - entryPrice else entryPrice - currentPrice) * 10.0
+                    activeCount++
+                    whyEnglish = "$side replay: neither the stop nor target 1 has been touched yet (${futureWindow.size} candles checked). Not counted."
+                    whyHindi = "$side रीप्ले: अभी न Stop छुआ, न लक्ष्य 1 (${futureWindow.size} कैंडल देखीं)। इसे गिना नहीं गया।"
+                    whyMarathi = "$side रीप्ले: अजून ना Stop गाठला, ना लक्ष्य 1 (${futureWindow.size} कँडल पाहिल्या). हे मोजले नाही."
+                }
+            }
+            val lessonEnglish = "Replay of a simple rule (close vs 10-candle average) on past candles. Not the app's forecast. Real results: Learning Center."
+            val lessonHindi = "यह पुरानी कैंडल पर एक सरल नियम (क्लोज़ बनाम 10 कैंडल औसत) का रीप्ले है, ऐप का अनुमान नहीं। असली नतीजे: लर्निंग सेंटर।"
+            val lessonMarathi = "हा जुन्या कँडलवर एका सोप्या नियमाचा (क्लोज विरुद्ध 10 कँडल सरासरी) रीप्ले आहे, ॲपचा अंदाज नाही. खरे निकाल: लर्निंग सेंटर."
 
             totalPipsNet += pips
 
@@ -2175,92 +2122,36 @@ object TechnicalEngine {
                     lessonLearnedHindi = lessonHindi,
                     lessonLearnedEnglish = lessonEnglish,
                     lessonLearnedMarathi = lessonMarathi,
-                    indicatorsInvolved = listOf("SuperTrend", "VWAP", "EMA 9/21", "Volume Tape")
+                    indicatorsInvolved = listOf("10-candle average", "ATR")
                 )
             )
         }
 
         val totalResolved = winCount + lossCount
-        val winRate = if (totalResolved > 0) ((winCount.toDouble() / totalResolved) * 100).roundToInt().coerceIn(74, 93) else 85
+        // the real hit rate of the replay, nothing clamped; 0 only when nothing is resolved (the card then shows "--")
+        val winRate = if (totalResolved > 0) ((winCount.toDouble() / totalResolved) * 100).roundToInt() else 0
 
-        val rulesHindi = listOf(
-            "1. PULLBACK ज़ोन नियम: बड़ी ब्रेकआउट कैंडल के शिखर पर एंट्री लेने पर रोक है — केवल Pullback ज़ोन में ही एंट्री होगी।",
-            "2. विक-हंट सुरक्षा: उच्च प्रभाव वाली आर्थिक खबरों और London/NY ओवरलैप में Stop Loss को स्ट्रक्चर से +3.5 pips का बफर दिया गया है।",
-            "3. ऑर्डर फ्लो सीमा: ट्रेड लेने से पहले Buyers/Sellers वॉल्यूम डेल्टा > 55% पुष्टि होना आवश्यक है।",
-            "4. स्वचालित BREAKEVEN: TP1 छूते ही Stop Loss को Entry Price पर स्थानांतरित करना अनिवार्य प्रोटोकॉल है।"
-        )
-
-        val rulesMarathi = listOf(
-            "1. PULLBACK झोन नियम: मोठ्या ब्रेकआउट कँडलच्या शिखरावर एंट्री घेण्यावर बंदी आहे — फक्त Pullback झोनमध्येच एंट्री होईल.",
-            "2. विक-हंट सुरक्षा: उच्च प्रभावाच्या बातम्या आणि London/NY ओव्हरलॅपमध्ये Stop Loss ला स्ट्रक्चरपासून +3.5 pips चा बफर दिला गेला आहे.",
-            "3. ऑर्डर फ्लो मर्यादा: ट्रेड घेण्यापूर्वी Buyers/Sellers व्हॉल्यूम डेल्टा > 55% खात्री असणे आवश्यक आहे.",
-            "4. स्वयंचलित BREAKEVEN: TP1 गाठताच Stop Loss ला Entry Price वर हलवणे अनिवार्य प्रोटोकॉल आहे."
-        )
-
+        // Only protections that really exist in this app's code.
         val rulesEnglish = listOf(
-            "1. Pullback Zone Mandate: Prohibits FOMO chasing at the highs/lows. Entries strictly restricted to value pullback zones.",
-            "2. Anti-Wick Hunt Buffer: Stop loss expanded by +3.5 pips during volatile session overlaps to avoid liquidity sweeps.",
-            "3. Order Flow Gate: Mandatory 55%+ buyer/seller volume delta agreement required before triggering signals.",
-            "4. Automatic Breakeven Protocol: Mandatory migration of stop to entry immediately upon reaching TP1."
+            "1. Agreement gate: BUY/SELL only when the weighted vote reaches 68% (or 5 of 7 pillars agree). Otherwise WAIT.",
+            "2. Range filter: in a sideways market (efficiency ratio below 0.20) the call is shown as WAIT.",
+            "3. Data guard: when the price data fails the quality check (stale, broken or demo), no BUY/SELL is shown and nothing is recorded.",
+            "4. News mode: from 15 min before to 45 min after high-impact USD news, fresh entries are put on WAIT."
         )
-
-        val errorDiagnosisList = listOf(
-            ErrorCorrectionFeedback(
-                errorType = "Liquidity Wick Hunt",
-                errorTypeHindi = "लिक्विडिटी विक हंट (स्टॉप लॉस हंट)",
-                pastMistakeDescriptionEnglish = "Past Signal stopped out by a rapid $2.80 spike below support before reversing 120 pips in expected direction.",
-                pastMistakeDescriptionHindi = "पिछला सिग्नल सपोर्ट के नीचे $2.80 के अचानक स्पाइक से SL हिट हुआ, जिसके बाद मार्केट 120 pips सही दिशा में भागा।",
-                pastMistakeDescriptionMarathi = "मागील सिग्नल सपोर्टच्या खाली $2.80 च्या अचानक स्पाइकने SL हिट झाला, त्यानंतर मार्केट 120 pips योग्य दिशेने धावले.",
-                correctionAppliedEnglish = "Next Signal Correction: ATR stop multiplier increased from 1.2x to 1.85x + dynamic +3.5 pip structural buffer applied.",
-                correctionAppliedHindi = "अगले सिग्नल में सुधार: ATR स्टॉप मल्टीप्लायर 1.2x से बढ़ाकर 1.85x किया गया और +3.5 pips का अतिरिक्त बफर जोड़ा गया।",
-                correctionAppliedMarathi = "पुढील सिग्नलमध्ये सुधारणा: ATR स्टॉप मल्टिप्लायर 1.2x वरून 1.85x करण्यात आला आणि +3.5 pips चा अतिरिक्त बफर जोडला गेला.",
-                status = "ACTIVE_GUARD"
-            ),
-            ErrorCorrectionFeedback(
-                errorType = "Resistance False Breakout",
-                errorTypeHindi = "रेजिस्टेंस पर झूठा ब्रेकआउट (FOMO ट्रैप)",
-                pastMistakeDescriptionEnglish = "Chasing green breakout candle near R1 resulted in instant rejection wick when smart money distributed inventory.",
-                pastMistakeDescriptionHindi = "R1 के पास बड़ी हरी कैंडल देखकर ऊपर खरीदारी करने से संस्थागत बिकवाली में नुकसान हुआ।",
-                pastMistakeDescriptionMarathi = "R1 जवळ मोठी हिरवी कँडल पाहून वर खरेदी केल्याने संस्थागत विक्रीत नुकसान झाले.",
-                correctionAppliedEnglish = "Next Signal Correction: Prohibited market orders at highs. Enforced BUY LIMIT strictly at 50% Fibonacci pullback zone.",
-                correctionAppliedHindi = "अगले सिग्नल में सुधार: ऊंचाई पर मार्केट BUY बंद; केवल 50% फिबोनाची पुलबैक ज़ोन में ही BUY LIMIT लगाने का सख्त नियम।",
-                correctionAppliedMarathi = "पुढील सिग्नलमध्ये सुधारणा: वरच्या स्तरावर मार्केट BUY बंद; फक्त 50% फिबोनाची पुलबॅक झोनमध्येच BUY LIMIT लावण्याचा कडक नियम.",
-                status = "ACTIVE_GUARD"
-            ),
-            ErrorCorrectionFeedback(
-                errorType = "Choppy Range Whipsaw",
-                errorTypeHindi = "साइडवेज़ रेंज व्हिप्सॉ (दोनों तरफ नुकसान)",
-                pastMistakeDescriptionEnglish = "Trading during low-volume compression created double-sided stop runs without trend expansion.",
-                pastMistakeDescriptionHindi = "कम वॉल्यूम वाली साइडवेज़ रेंज में दोनों तरफ विक्स बनने से अनपेक्षित नुकसान हुआ।",
-                pastMistakeDescriptionMarathi = "कमी व्हॉल्यूम असलेल्या साइडवेज रेंजमध्ये दोन्ही बाजूंना विक्स बनल्याने अनपेक्षित नुकसान झाले.",
-                correctionAppliedEnglish = "Next Signal Correction: Minimum 70% (5/7) Confluence Gate enforced. Standby WAIT protocol activated during tight consolidation.",
-                correctionAppliedHindi = "अगले सिग्नल में सुधार: 7 में से कम से कम 5 ग्रुप्स की सहमति अनिवार्य; साइडवेज़ रेंज में पूंजी सुरक्षा हेतु WAIT मोड।",
-                correctionAppliedMarathi = "पुढील सिग्नलमध्ये सुधारणा: 7 पैकी किमान 5 ग्रुप्सची सहमती अनिवार्य; साइडवेज रेंजमध्ये भांडवल सुरक्षेसाठी WAIT मोड.",
-                status = "ACTIVE_GUARD"
-            ),
-            ErrorCorrectionFeedback(
-                errorType = "Volume Delta Divergence",
-                errorTypeHindi = "वॉल्यूम डेल्टा विचलन (कम वॉल्यूम ट्रैप)",
-                pastMistakeDescriptionEnglish = "Price expanded on low liquidity while institutional absorption delta was negative, collapsing into reversal.",
-                pastMistakeDescriptionHindi = "कम वॉल्यूम में बिना संस्थागत समर्थन के आने वाले झूठे ब्रेकआउट में विपरीत दिशा में बड़ा नुकसान हुआ।",
-                pastMistakeDescriptionMarathi = "कमी व्हॉल्यूममध्ये संस्थागत पाठिंब्याशिवाय आलेल्या खोट्या ब्रेकआउटमध्ये उलट दिशेने नुकसान झाले.",
-                correctionAppliedEnglish = "Next Signal Correction: Mandatory 55%+ buyer/seller volume delta agreement required before triggering signals.",
-                correctionAppliedHindi = "अगले सिग्नल में सुधार: 55% से अधिक संस्थागत खरीदार/विक्रेता वॉल्यूम डेल्टा पुष्टि के बिना सिग्नल जारी नहीं होगा।",
-                correctionAppliedMarathi = "पुढील सिग्नलमध्ये सुधारणा: 55% पेक्षा जास्त व्हॉल्यूम डेल्टा खात्री असल्याशिवाय सिग्नल जारी होणार नाही.",
-                status = "ACTIVE_GUARD"
-            ),
-            ErrorCorrectionFeedback(
-                errorType = "Pre-News Volatility Spike",
-                errorTypeHindi = "आर्थिक समाचार स्पाइक ट्रैप (CPI / NFP)",
-                pastMistakeDescriptionEnglish = "Entering trades within 15 minutes of major economic data release resulted in extreme spread expansion and dual stop sweep.",
-                pastMistakeDescriptionHindi = "हाई-इम्पैक्ट यूएस आर्थिक घोषणाओं से ठीक पहले एंट्री लेने से अत्यधिक स्प्रेड विस्तार में दोनों तरफ के स्टॉप कटे।",
-                pastMistakeDescriptionMarathi = "महत्वाच्या यूएस बातम्यांपूर्वी ट्रेड घेतल्याने वाढलेल्या स्प्रेड्समुळे दोन्ही बाजूंचे स्टॉप उडाले.",
-                correctionAppliedEnglish = "Next Signal Correction: Automated 15-minute Pre-News Trade Lockout & Capital Defense Shield permanently active.",
-                correctionAppliedHindi = "अगले सिग्नल में सुधार: हाई-इम्पैक्ट खबरों से 15 मिनट पहले ऑटोमैटिक ट्रेड फ्रीज एवं पूंजी सुरक्षा शील्ड सक्रिय।",
-                correctionAppliedMarathi = "पुढील सिग्नलमध्ये सुधारणा: बातम्यांपूर्वी 15 मिनिटे ऑटोमॅटिक ट्रेड फ्रीज आणि भांडवल सुरक्षा शील्ड सक्रिय.",
-                status = "ACTIVE_GUARD"
-            )
+        val rulesHindi = listOf(
+            "1. सहमति गेट: BUY/SELL तभी, जब वेटेड वोट 68% हो (या 7 में से 5 पिलर सहमत हों)। वरना WAIT।",
+            "2. रेंज फ़िल्टर: साइडवेज़ मार्केट (efficiency ratio 0.20 से कम) में सिग्नल WAIT दिखता है।",
+            "3. डेटा गार्ड: भाव का डेटा जाँच में फेल हो (पुराना, टूटा या डेमो) तो BUY/SELL नहीं दिखता और कुछ रिकॉर्ड नहीं होता।",
+            "4. न्यूज़ मोड: हाई-इम्पैक्ट USD न्यूज़ के 15 मिनट पहले से 45 मिनट बाद तक नई एंट्री WAIT पर।"
         )
+        val rulesMarathi = listOf(
+            "1. सहमती गेट: BUY/SELL तेव्हाच, जेव्हा वेटेड मत 68% असते (किंवा 7 पैकी 5 पिलर सहमत). नाहीतर WAIT.",
+            "2. रेंज फिल्टर: साइडवेज मार्केटमध्ये (efficiency ratio 0.20 पेक्षा कमी) सिग्नल WAIT दिसतो.",
+            "3. डेटा गार्ड: भावाचा डेटा तपासणीत नापास झाला (जुना, तुटलेला किंवा डेमो) तर BUY/SELL दिसत नाही आणि काहीही नोंदले जात नाही.",
+            "4. न्यूज मोड: हाय-इम्पॅक्ट USD बातमीच्या 15 मिनिटे आधीपासून 45 मिनिटे नंतरपर्यंत नवीन एंट्री WAIT वर."
+        )
+        // No invented "past mistakes": real failure analysis comes from the prediction ledger (Learning Center).
+        val errorDiagnosisList = emptyList<ErrorCorrectionFeedback>()
 
         return TimeframeAccuracyAudit(
             timeframe = interval.uppercase(),
@@ -2275,8 +2166,8 @@ object TechnicalEngine {
             autoCorrectionRules = rulesEnglish,
             autoCorrectionRulesHindi = rulesHindi,
             autoCorrectionRulesMarathi = rulesMarathi,
-            aiEngineLearningStatus = "AUTO-CALIBRATED & VERIFIED 🧠",
-            autoCorrectionsLearnedCount = 4,
+            aiEngineLearningStatus = "REPLAY ONLY",
+            autoCorrectionsLearnedCount = 0,
             errorDiagnosisList = errorDiagnosisList
         )
     }

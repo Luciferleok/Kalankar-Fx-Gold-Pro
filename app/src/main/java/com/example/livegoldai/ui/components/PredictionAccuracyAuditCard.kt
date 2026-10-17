@@ -107,7 +107,7 @@ fun PredictionAccuracyAuditCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "REAL ACCURACY & LEARNING",
+                                text = "PAST-CANDLE REPLAY",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight,
@@ -116,9 +116,9 @@ fun PredictionAccuracyAuditCard(
                         }
                         Text(
                             text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "${audit.timeframe} Timeframe Accuracy & Self-Correction"
-                                AppLanguage.HINDI -> "${audit.timeframe} टाइमफ्रेम का रिजल्ट और गलती सुधार"
-                                AppLanguage.MARATHI -> "${audit.timeframe} टाइमफ्रेमचा निकाल आणि चूक सुधारणा"
+                                AppLanguage.ENGLISH -> "${audit.timeframe}: simple rule tested on these candles, not the app's forecast"
+                                AppLanguage.HINDI -> "${audit.timeframe}: इन कैंडल पर एक सरल नियम की जाँच, ऐप का अनुमान नहीं"
+                                AppLanguage.MARATHI -> "${audit.timeframe}: या कँडलवर एका सोप्या नियमाची तपासणी, ॲपचा अंदाज नाही"
                             },
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             color = TextSecondary
@@ -175,14 +175,14 @@ fun PredictionAccuracyAuditCard(
                     // Win Rate Metric
                     Column {
                         Text(
-                            text = "ACCURACY RATE",
+                            text = "REPLAY HIT RATE",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextMuted,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (audit.totalSignalsTested == 0) "--" else "${audit.winRatePercent}%",
+                            text = if (audit.winCount + audit.lossCount == 0) "--" else "${audit.winRatePercent}% (${audit.winCount}/${audit.winCount + audit.lossCount})",
                             style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                             fontWeight = FontWeight.Black,
                             color = SignalBuy
@@ -252,7 +252,7 @@ fun PredictionAccuracyAuditCard(
                     // Net Pips PnL
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "NET PIPS GAINED",
+                            text = "REPLAY NET PIPS",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextMuted,
                             fontWeight = FontWeight.Bold
@@ -265,7 +265,7 @@ fun PredictionAccuracyAuditCard(
                             color = if (audit.netPipsGained >= 0) GoldLight else SignalSell
                         )
                         Text(
-                            text = "Pips Munafa",
+                            text = "replay only",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )
@@ -290,7 +290,7 @@ fun PredictionAccuracyAuditCard(
                 border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.7f))
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "🔬", fontSize = 13.sp)
+                    Text(text = "→", fontSize = 13.sp, color = GoldLight)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = when (currentLanguage) {
@@ -314,12 +314,12 @@ fun PredictionAccuracyAuditCard(
                         last.outcomeStatus == PredictionOutcomeStatus.ALL_TARGETS_HIT
                 val statusColor = if (isWin) SignalBuy else if (last.outcomeStatus == PredictionOutcomeStatus.IN_PROFIT_ACTIVE) GoldPrimary else SignalSell
                 val statusTitle = when (last.outcomeStatus) {
-                    PredictionOutcomeStatus.TP2_HIT -> "✅ LAST PREDICTION: CORRECT, BIG MOVE (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.TP1_HIT -> "✅ LAST PREDICTION: CORRECT (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.ALL_TARGETS_HIT -> "✅ LAST PREDICTION: CORRECT (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.STOP_LOSS_HIT -> "❌ LAST PREDICTION: WRONG (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "⚪ LAST PREDICTION: NO RESULT / SIDEWAYS (${last.pipsResult} Pips)"
-                    PredictionOutcomeStatus.PENDING_ENTRY -> "⏳ LAST PREDICTION: WAITING FOR EXPIRY"
+                    PredictionOutcomeStatus.TP2_HIT -> "LAST REPLAY: TARGET 2 FIRST (${last.pipsResult} pips)"
+                    PredictionOutcomeStatus.TP1_HIT -> "LAST REPLAY: TARGET 1 FIRST (${last.pipsResult} pips)"
+                    PredictionOutcomeStatus.ALL_TARGETS_HIT -> "LAST REPLAY: TARGETS FIRST (${last.pipsResult} pips)"
+                    PredictionOutcomeStatus.STOP_LOSS_HIT -> "LAST REPLAY: STOP FIRST (${last.pipsResult} pips)"
+                    PredictionOutcomeStatus.IN_PROFIT_ACTIVE -> "LAST REPLAY: STILL OPEN, NOT COUNTED"
+                    PredictionOutcomeStatus.PENDING_ENTRY -> "LAST REPLAY: WAITING"
                 }
 
                 Surface(
@@ -449,9 +449,9 @@ fun PredictionAccuracyAuditCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "AI SAFEGUARDS & ERROR PREVENTION (4 ACTIVE)"
-                                    AppLanguage.HINDI -> "गलती रोकथाम के 4 AI सुरक्षा नियम"
-                                    AppLanguage.MARATHI -> "चूक प्रतिबंधाचे 4 AI सुरक्षा नियम"
+                                    AppLanguage.ENGLISH -> "BUILT-IN SAFETY RULES (4)"
+                                    AppLanguage.HINDI -> "4 बिल्ट-इन सुरक्षा नियम"
+                                    AppLanguage.MARATHI -> "4 बिल्ट-इन सुरक्षा नियम"
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
