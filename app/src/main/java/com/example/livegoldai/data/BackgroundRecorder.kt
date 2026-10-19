@@ -28,6 +28,8 @@ object AppEngine {
         }
     }
     val featureStore: FeatureStore by lazy { FeatureStore(ledgerStore) }
+    // ---- V28.1 live shadow: lab model run on every closed candle, checked later (never changes the live signal)
+    val shadow: ShadowLive by lazy { ShadowLive({ dir ?: File(".") }) { iv -> api.fetchHistory(iv) } }
     // ---- ledger integrity (reads the raw file: background thread only, at most every 10 minutes)
     @Volatile private var integrityCache: LedgerIntegrity.Report? = null
     fun integrity(now: Long = System.currentTimeMillis(), force: Boolean = false): LedgerIntegrity.Report? {
@@ -41,6 +43,7 @@ object AppEngine {
             learning = learning,
             fetchAnalysis = { iv -> api.fetchAnalysis(interval = iv).getOrNull() },
             fetchMtf = { api.fetchMtfCandles() },
+            onAnalysis = { a, iv, now -> shadow.observe(a, iv, now) },
             onRecorded = { a, rec, now ->
                 // same feature snapshot the screen would store
                 val full = a.copy(insights = CockpitInsightsBuilder.build(a))
@@ -62,7 +65,8 @@ class BackgroundRecorder(
     private val learning: LearningCoordinator,
     private val fetchAnalysis: suspend (String) -> GoldAnalysisResult?,
     private val fetchMtf: suspend () -> Map<String, List<PathBar>>,
-    private val onRecorded: (GoldAnalysisResult, LedgerRecord, Long) -> Unit = { _, _, _ -> }
+    private val onRecorded: (GoldAnalysisResult, LedgerRecord, Long) -> Unit = { _, _, _ -> },
+    private val onAnalysis: suspend (GoldAnalysisResult, String, Long) -> List<String> = { _, _, _ -> emptyList() }
 ) {
     data class Problem(val code: String, val title: String, val text: String)
 
@@ -83,7 +87,8 @@ class BackgroundRecorder(
         val avgDurationMs: Long = 0,        // average of the last runs
         val waitingToCheck: Int = 0,        // predictions whose time is over but are not checked yet
         val providerFailuresToday: Int = 0, // price requests that returned no live data today
-        val runsToday: Int = 0
+        val runsToday: Int = 0,
+        val provenCalls: List<String> = emptyList()   // live shadow calls on timeframes that passed every test (V28.1)
     )
 
     @Volatile var lastReport: TickReport? = null; private set
@@ -99,6 +104,7 @@ class BackgroundRecorder(
         val closed = PredictionLedger.isMarketClosed(now)
         val before = learning.currentState()
         val recordedNow = ArrayList<String>()
+        val proven = ArrayList<String>()
         var attempted = 0
         var failed = 0
 
@@ -121,6 +127,7 @@ class BackgroundRecorder(
                 val n0 = learning.currentState().records.size
                 val learned = try { learning.process(a, iv, mtf ?: emptyMap(), now) } catch (_: Exception) { null }
                 val st = learning.currentState()
+                try { proven.addAll(onAnalysis(a, iv, now)) } catch (_: Exception) { }
                 if (learned != null && st.records.size > n0) {
                     val rec = st.records.last()
                     recordedNow.add("${rec.interval} ${rec.finalSignal.name}")
@@ -176,7 +183,8 @@ class BackgroundRecorder(
             avgDurationMs = durations.average().toLong(),
             waitingToCheck = st.records.count { st.resultOf(it.id) == null && now >= it.expiresAt + LearningCoordinator.SETTLE_MS },
             providerFailuresToday = failuresToday,
-            runsToday = runsToday
+            runsToday = runsToday,
+            provenCalls = proven
         )
         lastReport = report
         return report

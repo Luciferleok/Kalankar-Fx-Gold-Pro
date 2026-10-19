@@ -76,6 +76,7 @@ class RecorderService : Service() {
                 val r = AppEngine.recorder.tick(System.currentTimeMillis())
                 show(r)
                 alerts(r)
+                provenAlerts(r)
             } catch (e: Exception) {
                 notifySafely(STATUS_ID, statusNotification("Recorder error", e.javaClass.simpleName + ": " + (e.message ?: ""), null))
             } finally {
@@ -128,6 +129,23 @@ class RecorderService : Service() {
         activeAlerts = codes
     }
 
+    /** V28.1: only timeframes whose shadow model passed the lab AND 100+ live checks may alert. Nothing else ever does. */
+    private fun provenAlerts(r: BackgroundRecorder.TickReport) {
+        r.provenCalls.forEachIndexed { i, line ->
+            val text = "Shadow model (proven on 100+ live checks): $line. Not financial advice, check the chart first."
+            val n = NotificationCompat.Builder(this, ALERT_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_kalankar)
+                .setContentTitle("Kalankar FX: proven-edge call")
+                .setContentText(line)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(openApp())
+                .build()
+            notifySafely(PROVEN_BASE_ID + (line.hashCode() and 0x0f) + i, n)
+        }
+    }
+
     private fun alertIndex(code: String) = when (code) { "NO_LIVE_DATA" -> 1; "LEDGER_WRITE" -> 2; "VERIFY_FAIL" -> 3; else -> 9 }
 
     private fun openApp(): PendingIntent = PendingIntent.getActivity(
@@ -173,6 +191,7 @@ class RecorderService : Service() {
         const val ALERT_CHANNEL = "kfx_recorder_alerts"
         const val STATUS_ID = 7100
         const val ALERT_BASE_ID = 7110
+        const val PROVEN_BASE_ID = 7130
         const val TICK_MS = 60_000L
         const val ALERT_REPEAT_MS = 60 * 60_000L
         const val PREFS = "kalankar_gold_prefs"

@@ -109,7 +109,11 @@ data class GoldUiState(
     // ---- V28 Shadow Lab (walk-forward tournament on real history; never changes the live signal)
     val shadowReport: com.example.livegoldai.data.ShadowLab.Report? = null,
     val shadowRunning: Boolean = false,
-    val shadowError: String? = null
+    val shadowError: String? = null,
+    val shadowAll: Map<String, com.example.livegoldai.data.ShadowLab.Report> = emptyMap(),
+    val shadowAllProgress: String? = null,         // "3/5 • 1h" while TEST ALL runs
+    val shadowLive: List<com.example.livegoldai.data.ShadowLive.Stats> = emptyList(),
+    val exportNote: String? = null
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -234,6 +238,7 @@ class GoldViewModel @JvmOverloads constructor(
                     withContext(Dispatchers.IO) {
                         val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
                         val learned = learning.process(rawAnalysis, currentInterval, mtfCandles)
+                        try { shadowLive.observe(rawAnalysis, currentInterval) } catch (_: Exception) { }
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
                         // keep showing the last AI council for this timeframe until the next run finishes
@@ -294,7 +299,7 @@ class GoldViewModel @JvmOverloads constructor(
     fun setInterval(interval: String) {
         if (_uiState.value.selectedInterval == interval) return
         prefs.edit().putString("selected_interval", interval).apply()
-        _uiState.update { it.copy(selectedInterval = interval, isLoading = true, shadowReport = shadowCache[interval], shadowError = null) }
+        _uiState.update { it.copy(selectedInterval = interval, isLoading = true, shadowReport = it.shadowAll[interval], shadowError = null) }
         loadData(isInitial = true)
     }
 
@@ -556,34 +561,76 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(showPredictionErrorAnalyzerDialog = false) }
     }
 
-    private val shadowCache = HashMap<String, com.example.livegoldai.data.ShadowLab.Report>()
+    private val shadowLive get() = com.example.livegoldai.data.AppEngine.shadow
 
-    /** Runs the Shadow Lab for the selected timeframe. Cached 6 hours per timeframe (one Twelve Data credit per run). */
+    /** Runs the Shadow Lab for the selected timeframe. Reused for 6 hours per timeframe (one Twelve Data credit per run). */
     fun runShadowLab(force: Boolean = false) {
         if (_uiState.value.shadowRunning) return
         val iv = _uiState.value.selectedInterval
-        val cached = shadowCache[iv]
-        if (!force && cached != null && System.currentTimeMillis() - cached.createdAtMs < 6 * 3600_000L) {
-            _uiState.update { it.copy(shadowReport = cached, shadowError = null) }
-            return
-        }
         _uiState.update { it.copy(shadowRunning = true, shadowError = null) }
         viewModelScope.launch {
-            val res = apiService.fetchHistory(iv)
-            val bars = res.getOrNull()
-            if (bars == null) {
-                _uiState.update { it.copy(shadowRunning = false, shadowError = res.exceptionOrNull()?.message ?: "History download failed") }
-                return@launch
+            val cached = withContext(Dispatchers.IO) { try { shadowLive.report(iv) } catch (_: Exception) { null } }
+            val res = if (!force && cached != null && System.currentTimeMillis() - cached.createdAtMs < 6 * 3600_000L) Result.success(cached)
+            else withContext(Dispatchers.IO) { shadowLive.train(iv) }
+            val live = withContext(Dispatchers.IO) { try { shadowLive.allStats() } catch (_: Exception) { emptyList() } }
+            val all = withContext(Dispatchers.IO) { try { shadowLive.allReports() } catch (_: Exception) { emptyMap() } }
+            _uiState.update {
+                it.copy(
+                    shadowRunning = false,
+                    shadowReport = res.getOrNull()?.takeIf { r -> r.interval == it.selectedInterval } ?: it.shadowReport,
+                    shadowError = res.exceptionOrNull()?.message,
+                    shadowLive = live,
+                    shadowAll = all
+                )
             }
-            val rep = try {
-                withContext(Dispatchers.Default) { com.example.livegoldai.data.ShadowLab.run(iv, bars) }
-            } catch (e: Exception) { null }
-            if (rep == null) {
-                _uiState.update { it.copy(shadowRunning = false, shadowError = "Shadow test failed") }
-                return@launch
+        }
+    }
+
+    /** Tests 5m, 15m, 1h, 4h and 1d one after another (5 Twelve Data credits, ~10 s apart to respect the per-minute limit). */
+    fun runShadowAll() {
+        if (_uiState.value.shadowRunning || _uiState.value.shadowAllProgress != null) return
+        val list = listOf("5m", "15m", "1h", "4h", "1d")
+        viewModelScope.launch {
+            val errors = ArrayList<String>()
+            list.forEachIndexed { i, iv ->
+                _uiState.update { it.copy(shadowAllProgress = "${i + 1}/${list.size} • $iv") }
+                if (i > 0) kotlinx.coroutines.delay(10_000L)
+                val r = withContext(Dispatchers.IO) { shadowLive.train(iv) }
+                r.exceptionOrNull()?.let { errors.add("$iv: ${it.message}") }
+                val all = withContext(Dispatchers.IO) { try { shadowLive.allReports() } catch (_: Exception) { emptyMap() } }
+                _uiState.update { it.copy(shadowAll = all, shadowReport = all[it.selectedInterval] ?: it.shadowReport) }
             }
-            shadowCache[iv] = rep
-            _uiState.update { it.copy(shadowRunning = false, shadowReport = if (it.selectedInterval == iv) rep else it.shadowReport) }
+            val live = withContext(Dispatchers.IO) { try { shadowLive.allStats() } catch (_: Exception) { emptyList() } }
+            _uiState.update { it.copy(shadowAllProgress = null, shadowLive = live, shadowError = errors.takeIf { e -> e.isNotEmpty() }?.joinToString(" • ")) }
+        }
+    }
+
+    fun refreshShadowLive() {
+        viewModelScope.launch {
+            val live = withContext(Dispatchers.IO) { try { shadowLive.allStats() } catch (_: Exception) { emptyList() } }
+            val all = withContext(Dispatchers.IO) { try { shadowLive.allReports() } catch (_: Exception) { emptyMap() } }
+            _uiState.update { it.copy(shadowLive = live, shadowAll = all, shadowReport = it.shadowReport ?: all[it.selectedInterval]) }
+        }
+    }
+
+    /** Writes every prediction + its result (and the live shadow calls) as CSV to a file the user picked. */
+    fun exportCsv(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val note = withContext(Dispatchers.IO) {
+                try {
+                    val main = com.example.livegoldai.data.LedgerCsv.build(learning.currentState())
+                    val sh = shadowLive.csv()
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(main.toByteArray())
+                        out.write("\n# LIVE SHADOW CALLS\n".toByteArray())
+                        out.write(sh.toByteArray())
+                    } ?: throw IllegalStateException("file could not be opened")
+                    "Saved: ${main.lines().size - 2} predictions + ${sh.lines().size - 2} shadow calls"
+                } catch (e: Exception) {
+                    "Export failed: ${e.message}"
+                }
+            }
+            _uiState.update { it.copy(exportNote = note) }
         }
     }
 

@@ -38,9 +38,11 @@ object ResearchLab {
     private fun pct(c: Int, n: Int) = if (n == 0) "--" else String.format(Locale.US, "%.0f%% (N=%d)", 100.0 * c / n, n)
 
     /** 95% Wilson range in percent, null below 10 samples. */
-    fun wilson(c: Int, n: Int): Pair<Double, Double>? {
+    fun wilson(c: Int, n: Int): Pair<Double, Double>? = wilsonZ(c, n, 1.96)
+
+    /** Wilson range in percent for any z (a larger z = stricter, used when several models are tried). */
+    fun wilsonZ(c: Int, n: Int, z: Double): Pair<Double, Double>? {
         if (n < 10) return null
-        val z = 1.96
         val p = c.toDouble() / n
         val den = 1 + z * z / n
         val centre = (p + z * z / (2 * n)) / den

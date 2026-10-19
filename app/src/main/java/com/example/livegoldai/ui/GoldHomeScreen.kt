@@ -389,7 +389,14 @@ fun GoldHomeScreen(
                         shadowRunning = uiState.shadowRunning,
                         shadowError = uiState.shadowError,
                         shadowInterval = uiState.selectedInterval,
-                        onRunShadow = { viewModel.runShadowLab(it) }
+                        onRunShadow = { viewModel.runShadowLab(it) },
+                        shadowAll = uiState.shadowAll,
+                        shadowAllProgress = uiState.shadowAllProgress,
+                        shadowLive = uiState.shadowLive,
+                        exportNote = uiState.exportNote,
+                        onRunShadowAll = { viewModel.runShadowAll() },
+                        onRefreshShadowLive = { viewModel.refreshShadowLive() },
+                        onExportCsv = { viewModel.exportCsv(it) }
                     )
                     else -> {
                     // MORE: the full classic dashboard (all original cards, news, SMC, bots, tricks)
