@@ -687,36 +687,15 @@ class GoldApiService(
         .build()
 
     /**
-     * V28 Shadow Lab: long real XAU/USD history from Twelve Data (up to 5000 base candles, one API credit).
-     * Returns CLOSED candles only: the newest candle (still forming) is always dropped.
+     * V28 Shadow Lab: real XAU/USD history from Twelve Data (up to 5000 base candles per call, one API credit).
+     * endDate = null: the newest candles; the newest one (still forming) is always dropped.
+     * endDate = "yyyy-MM-dd HH:mm:ss": the 5000 candles before that time (used to deepen the stored history).
      */
-    suspend fun fetchHistory(interval: String): Result<List<ShadowLab.Bar>> = withContext(Dispatchers.IO) {
+    suspend fun fetchHistoryBase(tdInterval: String, endDate: String? = null): Result<List<ShadowLab.Bar>> = withContext(Dispatchers.IO) {
         try {
             if (apiKey.isBlank()) return@withContext Result.failure(IllegalStateException("No Twelve Data key saved"))
-            val (tdInterval, group) = when (interval.lowercase().trim()) {
-                "1m", "1min" -> "1min" to 1
-                "2m" -> "1min" to 2
-                "3m" -> "1min" to 3
-                "4m" -> "1min" to 4
-                "5m" -> "5min" to 1
-                "10m" -> "5min" to 2
-                "15m", "15min" -> "15min" to 1
-                "30m" -> "30min" to 1
-                "45m" -> "45min" to 1
-                "1h" -> "1h" to 1
-                "2h" -> "2h" to 1
-                "3h" -> "1h" to 3
-                "4h" -> "4h" to 1
-                "5h" -> "1h" to 5
-                "6h" -> "2h" to 3
-                "1d", "1day" -> "1day" to 1
-                "1w", "1week" -> "1week" to 1
-                "2w" -> "1week" to 2
-                "3w" -> "1week" to 3
-                "1mo", "1month" -> "1month" to 1
-                else -> "4h" to 1
-            }
-            val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=$tdInterval&outputsize=5000&timezone=UTC&order=ASC&apikey=$apiKey"
+            val end = if (endDate == null) "" else "&end_date=" + java.net.URLEncoder.encode(endDate, "UTF-8")
+            val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=$tdInterval&outputsize=5000&timezone=UTC&order=ASC$end&apikey=$apiKey"
             val response = historyClient.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
             val body = response.body?.string()
             if (!response.isSuccessful || body.isNullOrBlank()) return@withContext Result.failure(IllegalStateException("Twelve Data HTTP ${response.code}"))
@@ -736,8 +715,8 @@ class GoldApiService(
                 base.add(ShadowLab.Bar(o["datetime"]?.jsonPrimitive?.content ?: "", op, h, l, c))
             }
             if (base.size < 2) return@withContext Result.failure(IllegalStateException("Too few candles"))
-            val closedBase = base.dropLast(1)               // newest base candle may still be forming
-            Result.success(ShadowLab.group(closedBase, group))
+            // the newest base candle may still be forming; with end_date the last one can be the candle AT end_date (already stored)
+            Result.success(base.dropLast(1))
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -129,13 +129,13 @@ class RecorderService : Service() {
         activeAlerts = codes
     }
 
-    /** V28.1: only timeframes whose shadow model passed the lab AND 100+ live checks may alert. Nothing else ever does. */
+    /** V28.4: only LIVE QUALIFIED timeframes (lab edge + dependence-aware live proof vs live baselines) may alert. */
     private fun provenAlerts(r: BackgroundRecorder.TickReport) {
         r.provenCalls.forEachIndexed { i, line ->
-            val text = "Shadow model (proven on 100+ live checks): $line. Not financial advice, check the chart first."
+            val text = "Shadow model, LIVE QUALIFIED timeframe: $line. A model score is not a guarantee. Not financial advice, check the chart first."
             val n = NotificationCompat.Builder(this, ALERT_CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_kalankar)
-                .setContentTitle("Kalankar FX: proven-edge call")
+                .setContentTitle("Kalankar FX: live-qualified shadow call")
                 .setContentText(line)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

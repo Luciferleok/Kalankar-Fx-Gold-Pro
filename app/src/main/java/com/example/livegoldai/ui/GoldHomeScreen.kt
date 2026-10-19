@@ -396,6 +396,7 @@ fun GoldHomeScreen(
                         exportNote = uiState.exportNote,
                         onRunShadowAll = { viewModel.runShadowAll() },
                         onRefreshShadowLive = { viewModel.refreshShadowLive() },
+                        onDeepenHistory = { viewModel.deepenShadowHistory() },
                         onExportCsv = { viewModel.exportCsv(it) }
                     )
                     else -> {

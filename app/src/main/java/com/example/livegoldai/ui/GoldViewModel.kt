@@ -605,6 +605,18 @@ class GoldViewModel @JvmOverloads constructor(
         }
     }
 
+    /** Downloads the 5000 candles BEFORE the oldest stored one (1 credit) and re-runs the lab on the deeper history. */
+    fun deepenShadowHistory() {
+        if (_uiState.value.shadowRunning) return
+        val iv = _uiState.value.selectedInterval
+        _uiState.update { it.copy(shadowRunning = true, shadowError = null) }
+        viewModelScope.launch {
+            val res = withContext(Dispatchers.IO) { shadowLive.train(iv, deepen = true) }
+            val all = withContext(Dispatchers.IO) { try { shadowLive.allReports() } catch (_: Exception) { emptyMap() } }
+            _uiState.update { it.copy(shadowRunning = false, shadowReport = res.getOrNull() ?: it.shadowReport, shadowAll = all, shadowError = res.exceptionOrNull()?.message) }
+        }
+    }
+
     fun refreshShadowLive() {
         viewModelScope.launch {
             val live = withContext(Dispatchers.IO) { try { shadowLive.allStats() } catch (_: Exception) { emptyList() } }

@@ -29,7 +29,7 @@ object AppEngine {
     }
     val featureStore: FeatureStore by lazy { FeatureStore(ledgerStore) }
     // ---- V28.1 live shadow: lab model run on every closed candle, checked later (never changes the live signal)
-    val shadow: ShadowLive by lazy { ShadowLive({ dir ?: File(".") }) { iv -> api.fetchHistory(iv) } }
+    val shadow: ShadowLive by lazy { ShadowLive({ dir ?: File(".") }) { td, end -> api.fetchHistoryBase(td, end) } }
     // ---- ledger integrity (reads the raw file: background thread only, at most every 10 minutes)
     @Volatile private var integrityCache: LedgerIntegrity.Report? = null
     fun integrity(now: Long = System.currentTimeMillis(), force: Boolean = false): LedgerIntegrity.Report? {
@@ -88,7 +88,7 @@ class BackgroundRecorder(
         val waitingToCheck: Int = 0,        // predictions whose time is over but are not checked yet
         val providerFailuresToday: Int = 0, // price requests that returned no live data today
         val runsToday: Int = 0,
-        val provenCalls: List<String> = emptyList()   // live shadow calls on timeframes that passed every test (V28.1)
+        val provenCalls: List<String> = emptyList()   // live shadow calls on LIVE QUALIFIED timeframes only (V28.4)
     )
 
     @Volatile var lastReport: TickReport? = null; private set
