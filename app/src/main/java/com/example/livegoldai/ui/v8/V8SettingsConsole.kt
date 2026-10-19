@@ -120,7 +120,7 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
                     }
                 }
                 if (show("timeframe", "chart", "interval", "default")) Row1(tr(lang, "Default timeframe", "डिफ़ॉल्ट टाइमफ्रेम", "डिफॉल्ट टाइमफ्रेम"), s.interval.uppercase(), stacked = true) {
-                    val ivs = listOf("5m", "15m", "30m", "1h", "4h", "1d")
+                    val ivs = listOf("1m", "5m", "15m", "30m", "1h", "4h", "1d")
                     Segmented(ivs.map { it.uppercase() }, ivs.indexOf(s.interval)) { i -> a.onInterval(ivs[i]) }
                 }
             }

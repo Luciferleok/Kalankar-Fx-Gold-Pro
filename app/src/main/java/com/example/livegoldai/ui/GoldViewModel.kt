@@ -105,7 +105,11 @@ data class GoldUiState(
     val aiRunning: Boolean = false,
     val bgRecording: Boolean = true,  // 24/7 background prediction recorder (foreground service)
     val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
-    val feedKeySaved: Boolean = false              // true when the user saved their own Twelve Data key
+    val feedKeySaved: Boolean = false,             // true when the user saved their own Twelve Data key
+    // ---- V28 Shadow Lab (walk-forward tournament on real history; never changes the live signal)
+    val shadowReport: com.example.livegoldai.data.ShadowLab.Report? = null,
+    val shadowRunning: Boolean = false,
+    val shadowError: String? = null
 ) {
     val isNewsModeActive: Boolean
         get() = isManualNewsMode ||
@@ -129,7 +133,7 @@ class GoldViewModel @JvmOverloads constructor(
             language = AppLanguage.fromCode(prefs.getString("selected_app_language", "hi")),
             amoled = prefs.getBoolean("amoled_black", false),
             // last used timeframe is remembered, so the app does not jump back to a default
-            selectedInterval = prefs.getString("selected_interval", null)?.takeIf { it in setOf("5m", "15m", "30m", "1h", "4h", "1d") } ?: "4h",
+            selectedInterval = prefs.getString("selected_interval", null)?.takeIf { it in setOf("1m", "5m", "15m", "30m", "1h", "4h", "1d") } ?: "4h",
             // restored before the first frame, so there is no flash of the default theme
             themeMode = prefs.getString("selected_theme_mode", null)?.let { n -> ThemeMode.values().firstOrNull { it.name == n } } ?: ThemeMode.ROYAL_OBSIDIAN
         )
@@ -290,7 +294,7 @@ class GoldViewModel @JvmOverloads constructor(
     fun setInterval(interval: String) {
         if (_uiState.value.selectedInterval == interval) return
         prefs.edit().putString("selected_interval", interval).apply()
-        _uiState.update { it.copy(selectedInterval = interval, isLoading = true) }
+        _uiState.update { it.copy(selectedInterval = interval, isLoading = true, shadowReport = shadowCache[interval], shadowError = null) }
         loadData(isInitial = true)
     }
 
@@ -550,6 +554,37 @@ class GoldViewModel @JvmOverloads constructor(
 
     fun closePredictionErrorAnalyzer() {
         _uiState.update { it.copy(showPredictionErrorAnalyzerDialog = false) }
+    }
+
+    private val shadowCache = HashMap<String, com.example.livegoldai.data.ShadowLab.Report>()
+
+    /** Runs the Shadow Lab for the selected timeframe. Cached 6 hours per timeframe (one Twelve Data credit per run). */
+    fun runShadowLab(force: Boolean = false) {
+        if (_uiState.value.shadowRunning) return
+        val iv = _uiState.value.selectedInterval
+        val cached = shadowCache[iv]
+        if (!force && cached != null && System.currentTimeMillis() - cached.createdAtMs < 6 * 3600_000L) {
+            _uiState.update { it.copy(shadowReport = cached, shadowError = null) }
+            return
+        }
+        _uiState.update { it.copy(shadowRunning = true, shadowError = null) }
+        viewModelScope.launch {
+            val res = apiService.fetchHistory(iv)
+            val bars = res.getOrNull()
+            if (bars == null) {
+                _uiState.update { it.copy(shadowRunning = false, shadowError = res.exceptionOrNull()?.message ?: "History download failed") }
+                return@launch
+            }
+            val rep = try {
+                withContext(Dispatchers.Default) { com.example.livegoldai.data.ShadowLab.run(iv, bars) }
+            } catch (e: Exception) { null }
+            if (rep == null) {
+                _uiState.update { it.copy(shadowRunning = false, shadowError = "Shadow test failed") }
+                return@launch
+            }
+            shadowCache[iv] = rep
+            _uiState.update { it.copy(shadowRunning = false, shadowReport = if (it.selectedInterval == iv) rep else it.shadowReport) }
+        }
     }
 
     fun recalibratePredictionEngine() {

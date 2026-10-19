@@ -259,7 +259,7 @@ fun SimpleEasyTradingView(
                         border = BorderStroke(1.dp, signalColor.copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = "${analysis.agreementPercent.toInt()}% CONFIDENCE",
+                            text = "${analysis.agreementPercent.toInt()}% AGREEMENT",
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
@@ -355,6 +355,18 @@ fun SimpleEasyTradingView(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Trade levels only when there is a BUY/SELL call. On WAIT there is no trade, so no entry/stop/targets.
+                if (analysis.overallSignal == Signal.WAIT) {
+                    Text(
+                        text = when (currentLanguage) {
+                            AppLanguage.ENGLISH -> "No trade levels while the call is WAIT."
+                            AppLanguage.HINDI -> "WAIT के समय कोई ट्रेड लेवल नहीं।"
+                            AppLanguage.MARATHI -> "WAIT असताना कोणतेही ट्रेड लेव्हल नाहीत."
+                        },
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                } else {
                 // 4 KEY LEVELS IN CLEAN 2x2 GRID
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -370,9 +382,9 @@ fun SimpleEasyTradingView(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🎯 ENTRY PRICE"
-                                    AppLanguage.HINDI -> "🎯 एंट्री प्राइस"
-                                    AppLanguage.MARATHI -> "🎯 एन्ट्री प्राइस"
+                                    AppLanguage.ENGLISH -> "ENTRY PRICE"
+                                    AppLanguage.HINDI -> "एंट्री प्राइस"
+                                    AppLanguage.MARATHI -> "एन्ट्री प्राइस"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -399,9 +411,9 @@ fun SimpleEasyTradingView(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🛑 STOP LOSS"
-                                    AppLanguage.HINDI -> "🛑 स्टॉप लॉस"
-                                    AppLanguage.MARATHI -> "🛑 स्टॉप लॉस"
+                                    AppLanguage.ENGLISH -> "STOP LOSS"
+                                    AppLanguage.HINDI -> "स्टॉप लॉस"
+                                    AppLanguage.MARATHI -> "स्टॉप लॉस"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -435,9 +447,9 @@ fun SimpleEasyTradingView(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🚀 TARGET 1"
-                                    AppLanguage.HINDI -> "🚀 टारगेट 1"
-                                    AppLanguage.MARATHI -> "🚀 टार्गेट 1"
+                                    AppLanguage.ENGLISH -> "TARGET 1"
+                                    AppLanguage.HINDI -> "टारगेट 1"
+                                    AppLanguage.MARATHI -> "टार्गेट 1"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -464,9 +476,9 @@ fun SimpleEasyTradingView(
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🏆 TARGET 2"
-                                    AppLanguage.HINDI -> "🏆 टारगेट 2"
-                                    AppLanguage.MARATHI -> "🏆 टार्गेट 2"
+                                    AppLanguage.ENGLISH -> "TARGET 2"
+                                    AppLanguage.HINDI -> "टारगेट 2"
+                                    AppLanguage.MARATHI -> "टार्गेट 2"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -482,6 +494,7 @@ fun SimpleEasyTradingView(
                             )
                         }
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -594,9 +607,9 @@ fun SimpleEasyTradingView(
                                 )
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "Tap to view Stop-Hunt traps & 1-Click Recalibrate"
-                                        AppLanguage.HINDI -> "स्टॉप-हंट ट्रैप्स देखें और 1-क्लिक में इंजन सुधारें"
-                                        AppLanguage.MARATHI -> "स्टॉप-हंट ट्रॅप्स पहा आणि 1-क्लिकमध्ये इंजिन सुधारा"
+                                        AppLanguage.ENGLISH -> "Open the Learning Center: real failed predictions"
+                                        AppLanguage.HINDI -> "लर्निंग सेंटर खोलें: असली गलत प्रेडिक्शन"
+                                        AppLanguage.MARATHI -> "लर्निंग सेंटर उघडा: खरे चुकलेले अंदाज"
                                     },
                                     fontSize = 9.sp,
                                     color = GoldLight

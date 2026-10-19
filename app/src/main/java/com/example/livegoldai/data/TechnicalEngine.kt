@@ -764,15 +764,9 @@ object TechnicalEngine {
         )
 
         // Next Prediction Playbook (Explicit, actionable, profit-maximizing guidance)
-        val confluenceWinRate = when {
-            buyCount >= 6 -> 93
-            buyCount == 5 -> 89
-            buyCount == 4 -> 81
-            sellCount >= 6 -> 93
-            sellCount == 5 -> 89
-            sellCount == 4 -> 81
-            else -> 52
-        }
+        // No invented win rate: share of the 7 pillars that agree with the call (a vote count, not a probability).
+        // The Learning Center replaces it with a calibrated value only when enough real results exist.
+        val confluenceWinRate = ((maxOf(buyCount, sellCount) * 100.0) / groups.size.coerceAtLeast(1)).roundToInt().coerceIn(0, 100)
 
         val nextPrediction = when {
             buyCount >= 4 -> {
@@ -1891,9 +1885,9 @@ object TechnicalEngine {
                 orderBookAskCount = 1500,
                 retailSentimentBias = Signal.WAIT,
                 institutionalSentimentBias = Signal.WAIT,
-                liveActionHindi = "Market me buyers aur sellers barabar hain.",
-                liveActionEnglish = "Order flow in balance at 50/50.",
-                strengthLevel = "NEUTRAL CONSOLIDATION ⚖️"
+                liveActionHindi = "पर्याप्त कैंडल नहीं हैं।",
+                liveActionEnglish = "Not enough candles to measure.",
+                strengthLevel = "BUY-SIDE SHARE: --"
             )
         }
 
@@ -1929,7 +1923,7 @@ object TechnicalEngine {
             rawBuyerPct = (rawBuyerPct * 0.60) + (l3Pct * 0.40)
         }
 
-        val buyersPercent = rawBuyerPct.roundToInt().coerceIn(18, 86)
+        val buyersPercent = rawBuyerPct.roundToInt().coerceIn(0, 100)
         val sellersPercent = 100 - buyersPercent
         val netVolumeDelta = totalBuyVol - totalSellVol
 
@@ -1942,43 +1936,19 @@ object TechnicalEngine {
             else -> Signal.WAIT
         }
 
-        val instBias = when (overallSignal) {
-            Signal.BUY -> Signal.BUY
-            Signal.SELL -> Signal.SELL
-            else -> if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
-        }
+        // money flow index only (a real formula over price and volume); not "smart money"
+        val instBias = if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
 
-        val strength = when {
-            buyersPercent >= 68 -> "EXTREME BUYING PRESSURE (AGGRESSIVE BULLS) 🟢"
-            buyersPercent >= 56 -> "MODERATE BUY CONTROL (BULLISH ACCUMULATION) 🟢"
-            sellersPercent >= 68 -> "EXTREME SELLING PRESSURE (AGGRESSIVE BEARS) 🔴"
-            sellersPercent >= 56 -> "MODERATE SELL CONTROL (BEARISH DISTRIBUTION) 🔴"
-            else -> "BALANCED ORDER FLOW (TUG-OF-WAR RANGE) ⚖️"
-        }
+        // what the share is built from: real traded volume when the feed has it, otherwise candle shapes
+        val realVol = candles.mapNotNull { it.volume }.distinct().size >= 3
+        val basisEn = if (realVol) "from traded volume" else "estimated from candle shapes (no real volume on this feed)"
+        val basisHi = if (realVol) "असली ट्रेड वॉल्यूम से" else "कैंडल के आकार से अनुमान (इस फ़ीड में असली वॉल्यूम नहीं)"
+        val basisMr = if (realVol) "खऱ्या ट्रेड व्हॉल्यूमवरून" else "कँडलच्या आकारावरून अंदाज (या फीडमध्ये खरा व्हॉल्यूम नाही)"
 
-        val hindi = when {
-            buyersPercent >= 65 -> "बाज़ार में खरीदारों (Buyers) का भारी दबदबा है ($buyersPercent% Buyers)! बड़े बैंक सपोर्ट डिप्स पर खरीदारी कर रहे हैं। SELL करने की गलती न करें, डिप्स पर BUY सेटअप देखें।"
-            buyersPercent >= 54 -> "खरीदार (Buyers) बिकवालों से आगे हैं ($buyersPercent% Buyers बनाम $sellersPercent% Sellers)। ऊपर की ओर दबाव बना हुआ है। Long ट्रेड्स अधिक लाभदायक हैं।"
-            sellersPercent >= 65 -> "बाज़ार में बिकवालों (Sellers) का भारी दबदबा है ($sellersPercent% Sellers)! आक्रामक बिकवाली चल रही है। किसी भी नकली उछाल में फंसने से बचें और SELL में मुनाफा बनाएं।"
-            sellersPercent >= 54 -> "बिकवाल (Sellers) नियंत्रण ले रहे हैं ($sellersPercent% Sellers बनाम $buyersPercent% Buyers)। रेजिस्टेंस स्तरों पर भारी सप्लाई मौजूद है।"
-            else -> "मार्केट में खरीदार ($buyersPercent%) और बिकवाल ($sellersPercent%) दोनों बराबर हैं! स्पष्ट दिशा मिलने तक सख्त Stop Loss रखें।"
-        }
-
-        val marathi = when {
-            buyersPercent >= 65 -> "बाजारात खरेदीदारांचे (Buyers) मोठे वर्चस्व आहे ($buyersPercent% Buyers)! मोठ्या बँका सपोर्ट डिप्सवर खरेदी करत आहेत. SELL करण्याची चूक करू नका, डिप्सवर BUY सेटअप पहा."
-            buyersPercent >= 54 -> "खरेदीदार (Buyers) विक्रेत्यांपेक्षा पुढे आहेत ($buyersPercent% Buyers विरुद्ध $sellersPercent% Sellers). वरच्या दिशेने दबाव आहे. Long ट्रेड्स अधिक फायदेशीर आहेत."
-            sellersPercent >= 65 -> "बाजारात विक्रेत्यांचे (Sellers) मोठे वर्चस्व आहे ($sellersPercent% Sellers)! आक्रमक विक्री सुरू आहे. कोणत्याही खोट्या उसळीत अडकणे टाळा आणि SELL मध्ये नफा मिळवा."
-            sellersPercent >= 54 -> "विक्रेते (Sellers) नियंत्रण मिळवत आहेत ($sellersPercent% Sellers विरुद्ध $buyersPercent% Buyers). रेसिस्टन्स स्तरांवर मोठा पुरवठा आहे."
-            else -> "मार्केटमध्ये खरेदीदार ($buyersPercent%) आणि विक्रेते ($sellersPercent%) दोन्ही समान आहेत! स्पष्ट दिशा मिळेपर्यंत कडक Stop Loss ठेवा."
-        }
-
-        val english = when {
-            buyersPercent >= 65 -> "Heavy Buyer Dominance ($buyersPercent% vs $sellersPercent%). Strong bid absorption at support (estimated from candle shapes)."
-            buyersPercent >= 54 -> "Bullish Edge: Buyers controlling order flow ($buyersPercent%). Tape prints favor aggressive market asks clearing."
-            sellersPercent >= 65 -> "Heavy Seller Dominance ($sellersPercent% vs $buyersPercent%). Aggressive market sell executions hitting bids. Cumulative volume delta is deep negative."
-            sellersPercent >= 54 -> "Bearish Edge: Sellers controlling order flow ($sellersPercent%). Supply wall active at immediate resistance."
-            else -> "Equilibrium state: Order book bids and asks are matched ($buyersPercent% vs $sellersPercent%). CVD moving sideways."
-        }
+        val strength = "BUY-SIDE SHARE $buyersPercent% • SELL-SIDE $sellersPercent%"
+        val english = "Last 30 candles: buy-side $buyersPercent% vs sell-side $sellersPercent%, $basisEn. This describes recent candles; it is not a forecast and not an order book."
+        val hindi = "पिछली 30 कैंडल: खरीद-पक्ष $buyersPercent% बनाम बिक्री-पक्ष $sellersPercent%, $basisHi। यह हाल की कैंडल का हाल है, अनुमान या ऑर्डर बुक नहीं।"
+        val marathi = "मागील 30 कँडल: खरेदी-बाजू $buyersPercent% विरुद्ध विक्री-बाजू $sellersPercent%, $basisMr. हे अलीकडच्या कँडलचे वर्णन आहे, अंदाज किंवा ऑर्डर बुक नाही."
 
         return BuyerSellerSentiment(
             buyersPercent = buyersPercent,

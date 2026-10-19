@@ -99,7 +99,7 @@ fun CandleMtfOracleCard(
                     )
                 ) {
                     Text(
-                        text = "${candleInsight.confidencePercent}% CONFIDENCE",
+                        text = "${candleInsight.confidencePercent}% AGREEMENT",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = NeonGreen,

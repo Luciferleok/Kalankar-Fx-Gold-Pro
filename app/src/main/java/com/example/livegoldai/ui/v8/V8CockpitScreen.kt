@@ -144,7 +144,9 @@ fun V8CockpitScreen(
         // ---------------- LEVEL 1: next move (accent turns amber while a risk is active)
         V8Card(level = 1, accent = (if (topRisk != null) V8.Amber else signalColor(sig)).copy(alpha = 0.28f), onClick = onOpenForecast) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("5m", "15m", "30m", "1h", "4h", "1d").forEach { iv ->
+                // the selected timeframe is always visible and highlighted, also when it was chosen elsewhere (e.g. 1M in Tools)
+                val base = listOf("5m", "15m", "30m", "1h", "4h", "1d")
+                (if (base.any { it.equals(selectedInterval, ignoreCase = true) }) base else listOf(selectedInterval.lowercase()) + base).forEach { iv ->
                     V8Chip(text = iv.uppercase(), selected = iv.equals(selectedInterval, ignoreCase = true)) { onIntervalChange(iv) }
                 }
             }
@@ -204,13 +206,13 @@ fun V8CockpitScreen(
                 val p = analysis.pulse
                 listOf(
                     Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "last calls", "पिछले कॉल", "मागील कॉल")),
-                    Triple(tr(lang, "EXPECTED MOVE", "अनुमानित चाल", "अपेक्षित हालचाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
+                    Triple(tr(lang, "EXP. MOVE", "अनुमानित चाल", "अपेक्षित चाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
                     Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL"),
                     Triple(tr(lang, "DATA", "डेटा", "डेटा"), p?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"))
                 ).forEach { (k, v, sub) ->
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-                        Text(text = v, color = V8.Text1, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(text = v, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                         Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
                     }
                 }

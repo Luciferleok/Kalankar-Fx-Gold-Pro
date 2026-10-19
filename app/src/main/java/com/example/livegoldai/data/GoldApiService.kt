@@ -681,6 +681,68 @@ class GoldApiService(
         }
     }
 
+    private val historyClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    /**
+     * V28 Shadow Lab: long real XAU/USD history from Twelve Data (up to 5000 base candles, one API credit).
+     * Returns CLOSED candles only: the newest candle (still forming) is always dropped.
+     */
+    suspend fun fetchHistory(interval: String): Result<List<ShadowLab.Bar>> = withContext(Dispatchers.IO) {
+        try {
+            if (apiKey.isBlank()) return@withContext Result.failure(IllegalStateException("No Twelve Data key saved"))
+            val (tdInterval, group) = when (interval.lowercase().trim()) {
+                "1m", "1min" -> "1min" to 1
+                "2m" -> "1min" to 2
+                "3m" -> "1min" to 3
+                "4m" -> "1min" to 4
+                "5m" -> "5min" to 1
+                "10m" -> "5min" to 2
+                "15m", "15min" -> "15min" to 1
+                "30m" -> "30min" to 1
+                "45m" -> "45min" to 1
+                "1h" -> "1h" to 1
+                "2h" -> "2h" to 1
+                "3h" -> "1h" to 3
+                "4h" -> "4h" to 1
+                "5h" -> "1h" to 5
+                "6h" -> "2h" to 3
+                "1d", "1day" -> "1day" to 1
+                "1w", "1week" -> "1week" to 1
+                "2w" -> "1week" to 2
+                "3w" -> "1week" to 3
+                "1mo", "1month" -> "1month" to 1
+                else -> "4h" to 1
+            }
+            val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=$tdInterval&outputsize=5000&timezone=UTC&order=ASC&apikey=$apiKey"
+            val response = historyClient.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
+            val body = response.body?.string()
+            if (!response.isSuccessful || body.isNullOrBlank()) return@withContext Result.failure(IllegalStateException("Twelve Data HTTP ${response.code}"))
+            val root = json.parseToJsonElement(body).jsonObject
+            if (root["status"]?.jsonPrimitive?.content == "error") {
+                return@withContext Result.failure(IllegalStateException(root["message"]?.jsonPrimitive?.content ?: "Twelve Data error"))
+            }
+            val values = root["values"]?.jsonArray ?: return@withContext Result.failure(IllegalStateException("No candles returned"))
+            val base = ArrayList<ShadowLab.Bar>(values.size)
+            for (item in values) {
+                val o = item.jsonObject
+                val c = o["close"]?.jsonPrimitive?.double ?: continue
+                val h = o["high"]?.jsonPrimitive?.double ?: continue
+                val l = o["low"]?.jsonPrimitive?.double ?: continue
+                val op = o["open"]?.jsonPrimitive?.double ?: continue
+                if (c <= 0 || h < l) continue
+                base.add(ShadowLab.Bar(o["datetime"]?.jsonPrimitive?.content ?: "", op, h, l, c))
+            }
+            if (base.size < 2) return@withContext Result.failure(IllegalStateException("Too few candles"))
+            val closedBase = base.dropLast(1)               // newest base candle may still be forming
+            Result.success(ShadowLab.group(closedBase, group))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private var mtfCache: Pair<Long, Map<String, List<PathBar>>>? = null
 
     /** Real candles for 5m / 15m / 1h / 4h / 1d (PAXG/USDT). Cached for 60 seconds. */

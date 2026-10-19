@@ -319,16 +319,16 @@ fun BuyerSellerDepthCard(
             ) {
                 // Metric 1: Retail Crowd Bias
                 MetricPill(
-                    title = "RETAIL CROWD",
-                    value = "${sentiment.retailSentimentBias.name} (${sentiment.buyersPercent}%)",
+                    title = "BUY-SIDE SHARE",
+                    value = "${sentiment.buyersPercent}%",
                     badgeColor = if (sentiment.retailSentimentBias == Signal.BUY) SignalBuy else SignalSell,
                     modifier = Modifier.weight(1f)
                 )
 
                 // Metric 2: Institutional Order Flow
                 MetricPill(
-                    title = "SMART MONEY",
-                    value = if (sentiment.institutionalSentimentBias == Signal.BUY) "ACCUMULATING" else "DISTRIBUTING",
+                    title = "MONEY FLOW (MFI)",
+                    value = if (sentiment.institutionalSentimentBias == Signal.BUY) "INFLOW" else "OUTFLOW",
                     badgeColor = if (sentiment.institutionalSentimentBias == Signal.BUY) SignalBuy else SignalSell,
                     modifier = Modifier.weight(1f)
                 )
@@ -365,7 +365,7 @@ fun BuyerSellerDepthCard(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "🇮🇳 HINDI INSIGHT: ${sentiment.liveActionHindi}",
+                        text = sentiment.liveActionHindi,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
                         fontWeight = FontWeight.Medium,
                         color = TextPrimary
@@ -374,7 +374,7 @@ fun BuyerSellerDepthCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "🌐 ENGLISH TACTIC: ${sentiment.liveActionEnglish}",
+                        text = sentiment.liveActionEnglish,
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                         color = TextSecondary
                     )

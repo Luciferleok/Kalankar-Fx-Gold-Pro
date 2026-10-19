@@ -384,7 +384,12 @@ fun GoldHomeScreen(
                     )
                     4 -> LearningCenterContent(
                         analysis = analysis,
-                        onRecalibrate = { viewModel.recalibratePredictionEngine() }
+                        onRecalibrate = { viewModel.recalibratePredictionEngine() },
+                        shadow = uiState.shadowReport,
+                        shadowRunning = uiState.shadowRunning,
+                        shadowError = uiState.shadowError,
+                        shadowInterval = uiState.selectedInterval,
+                        onRunShadow = { viewModel.runShadowLab(it) }
                     )
                     else -> {
                     // MORE: the full classic dashboard (all original cards, news, SMC, bots, tricks)

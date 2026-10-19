@@ -91,7 +91,12 @@ fun LearningCenterContent(
     analysis: GoldAnalysisResult,
     onRecalibrate: () -> Unit,
     onDismiss: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shadow: com.example.livegoldai.data.ShadowLab.Report? = null,
+    shadowRunning: Boolean = false,
+    shadowError: String? = null,
+    shadowInterval: String = analysis.interval,
+    onRunShadow: ((Boolean) -> Unit)? = null
 ) {
     val lang = LocalAppLanguage.current
     var tab by remember { mutableIntStateOf(0) }
@@ -105,17 +110,15 @@ fun LearningCenterContent(
         t(lang, "CORRECTIONS", "सुधार", "सुधारणा"),
         t(lang, "LIVE LEARNING", "लाइव लर्निंग", "लाइव्ह लर्निंग"),
         t(lang, "MODEL HISTORY", "मॉडल इतिहास", "मॉडेल इतिहास")
-    )
+    ) + (if (onRunShadow != null) listOf(t(lang, "SHADOW LAB", "शैडो लैब", "शॅडो लॅब")) else emptyList())
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         // header
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "🧠", fontSize = 22.sp)
-            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = t(lang, "PREDICTION LEARNING CENTER", "प्रेडिक्शन लर्निंग सेंटर", "प्रेडिक्शन लर्निंग सेंटर"),
-                    color = GoldLight, fontSize = 15.sp, fontWeight = FontWeight.Black
+                    color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp
                 )
                 Text(
                     text = t(lang, "Real results only • nothing typed in by hand", "सिर्फ असली नतीजे • कोई नंबर हाथ से नहीं", "फक्त खरे निकाल • कोणताही आकडा हाताने नाही"),
@@ -151,7 +154,9 @@ fun LearningCenterContent(
         Spacer(modifier = Modifier.height(10.dp))
 
         Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-            if (s == null) {
+            if (tab == 6 && onRunShadow != null) {
+                ShadowLabTab(shadow, shadowRunning, shadowError, shadowInterval, s, lang, onRunShadow)
+            } else if (s == null) {
                 Note(t(lang,
                     "The learning engine is starting. Predictions are recorded from the next refresh and checked when their validity time ends.",
                     "लर्निंग इंजन शुरू हो रहा है। अगले रिफ्रेश से प्रेडिक्शन रिकॉर्ड होंगी और उनका समय खत्म होने पर जाँची जाएँगी।",
@@ -174,11 +179,13 @@ fun LearningCenterContent(
             onClick = { recalPressed = true; onRecalibrate() },
             modifier = Modifier.fillMaxWidth().height(46.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary, contentColor = OnAccent)
+            // dark premium button, gold only as the accent (not a big yellow block)
+            colors = ButtonDefaults.buttonColors(containerColor = ObsidianSurfaceElevated, contentColor = GoldLight),
+            border = BorderStroke(0.75.dp, GoldPrimary.copy(alpha = 0.6f))
         ) {
             Text(
-                text = t(lang, "🔄 RUN SAFE RECALIBRATION", "🔄 सुरक्षित री-कैलिब्रेशन चलाएँ", "🔄 सुरक्षित री-कॅलिब्रेशन चालवा"),
-                fontWeight = FontWeight.Black, fontSize = 12.sp
+                text = t(lang, "RUN SAFE RECALIBRATION", "सुरक्षित री-कैलिब्रेशन चलाएँ", "सुरक्षित री-कॅलिब्रेशन चालवा"),
+                fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.sp
             )
         }
         Text(
@@ -201,6 +208,123 @@ fun LearningCenterContent(
 }
 
 // ------------------------------------------------------------------ tabs
+
+/** V28 Shadow Lab: walk-forward tournament on real history. Shadow only, never a trade signal. */
+@Composable
+private fun ShadowLabTab(
+    r: com.example.livegoldai.data.ShadowLab.Report?,
+    running: Boolean,
+    error: String?,
+    interval: String,
+    s: LearningSnapshot?,
+    lang: AppLanguage,
+    onRun: (Boolean) -> Unit
+) {
+    androidx.compose.runtime.LaunchedEffect(interval) { onRun(false) }
+    Note(t(lang,
+        "Tests simple models on up to 5000 real past XAU/USD candles they have never seen (walk-forward), against plain baselines, on the same candles. SHADOW ONLY: nothing here changes the live BUY/SELL/WAIT.",
+        "सरल मॉडल को 5000 तक असली पुरानी XAU/USD कैंडल पर टेस्ट करता है जो उन्होंने पहले नहीं देखीं (walk-forward), और उन्हीं कैंडल पर साधारण baseline से तुलना करता है। सिर्फ शैडो: लाइव BUY/SELL/WAIT कभी नहीं बदलता।",
+        "सोपे मॉडेल 5000 पर्यंत खऱ्या जुन्या XAU/USD कँडलवर तपासते जे त्यांनी आधी पाहिले नाहीत (walk-forward), आणि त्याच कँडलवर साध्या baseline शी तुलना करते. फक्त शॅडो: लाइव्ह BUY/SELL/WAIT कधीच बदलत नाही."))
+    Spacer(modifier = Modifier.height(8.dp))
+    if (running) {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = GoldPrimary, trackColor = ObsidianSurfaceElevated)
+        Text(text = t(lang, "Downloading history and testing… ($interval)", "हिस्ट्री डाउनलोड और टेस्ट हो रहा है… ($interval)", "हिस्ट्री डाउनलोड व चाचणी सुरू… ($interval)"), color = TextMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+    }
+    if (error != null && !running) {
+        Text(text = t(lang, "Could not run: ", "नहीं चला: ", "चालले नाही: ") + error, color = SignalSell, fontSize = 10.sp, modifier = Modifier.padding(vertical = 4.dp))
+    }
+    if (r == null || r.interval != interval) {
+        if (!running) Text(
+            text = t(lang, "No test for $interval yet.", "$interval का टेस्ट अभी नहीं हुआ।", "$interval ची चाचणी अजून नाही."),
+            color = TextSecondary, fontSize = 10.sp
+        )
+    } else {
+        val vColor = when (r.verdict) { "EDGE CANDIDATE" -> SignalBuy; "NO EDGE" -> SignalSell; else -> TextSecondary }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Tile(t(lang, "VERDICT", "नतीजा", "निकाल"), r.verdict, vColor, Modifier.weight(1.4f))
+            Tile(t(lang, "TEST SAMPLES", "टेस्ट सैंपल", "चाचणी नमुने"), "${r.models.firstOrNull()?.samples ?: 0}", GoldLight, Modifier.weight(1f))
+            Tile(t(lang, "FOLDS", "फोल्ड", "फोल्ड"), "${r.folds}", GoldLight, Modifier.weight(0.7f))
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Note(r.verdictDetail)
+
+        Section(t(lang, "TOURNAMENT (same unseen candles)", "मुकाबला (वही अनदेखी कैंडल)", "स्पर्धा (त्याच न पाहिलेल्या कँडल)"))
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            Text("MODEL", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.34f))
+            Text(t(lang, "RIGHT", "सही", "बरोबर"), color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
+            Text("95%", color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.18f))
+            Text(t(lang, "CALLS", "कॉल", "कॉल"), color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.12f))
+            Text(t(lang, "NET/CALL", "नेट", "नेट"), color = TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.12f))
+        }
+        r.models.sortedWith(compareBy<com.example.livegoldai.data.ShadowLab.ModelScore> { if (it.kind == "CHALLENGER") 0 else 1 }.thenByDescending { it.accuracy ?: 0.0 }).forEach { m ->
+            val isBest = m.name == r.bestBaseline
+            val c = if (m.kind == "CHALLENGER") GoldLight else if (isBest) TextPrimary else TextSecondary
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(0.34f)) {
+                    Text(m.name + if (isBest) " ★" else "", color = c, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(m.note, color = TextMuted, fontSize = 7.sp, lineHeight = 9.sp)
+                }
+                Text(m.accuracy?.let { String.format(Locale.US, "%.1f%%", it) } ?: "--", color = c, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
+                Text(if (m.wilsonLow == null) "--" else String.format(Locale.US, "%.0f-%.0f", m.wilsonLow, m.wilsonHigh ?: 0.0), color = TextSecondary, fontSize = 9.sp, modifier = Modifier.weight(0.18f))
+                Text(String.format(Locale.US, "%d%%", (m.coverage * 100).toInt()), color = TextSecondary, fontSize = 9.sp, modifier = Modifier.weight(0.12f))
+                Text(m.avgNetUsd?.let { String.format(Locale.US, "%+.2f", it) } ?: "--", color = if ((m.avgNetUsd ?: 0.0) > 0) SignalBuy else SignalSell, fontSize = 9.sp, modifier = Modifier.weight(0.12f))
+            }
+        }
+        s?.let { ls ->
+            val d = ls.correct + ls.wrong
+            if (d > 0) InfoRow(t(lang, "Live engine (real ledger)", "लाइव इंजन (असली लेजर)", "लाइव्ह इंजिन (खरा लेजर)"),
+                String.format(Locale.US, "%.1f%% (N=%d, all timeframes)", 100.0 * ls.correct / d, d))
+        }
+        Note(t(lang,
+            "RIGHT = share of calls where price moved at least 0.25×ATR the called way within ${com.example.livegoldai.data.ShadowLab.HORIZON} candles (flat outcomes not counted). CALLS = share of candles where the model made a call. NET/CALL = average move in USD per ounce after an assumed \$${com.example.livegoldai.data.ShadowLab.COST_USD} cost. ★ = best baseline.",
+            "सही = जिन कॉल में भाव ${com.example.livegoldai.data.ShadowLab.HORIZON} कैंडल में बताई दिशा में कम से कम 0.25×ATR चला (सपाट गिने नहीं)। कॉल = कितनी कैंडल पर मॉडल ने कॉल दी। नेट = \$${com.example.livegoldai.data.ShadowLab.COST_USD} खर्च घटाकर प्रति कॉल औसत चाल (USD/औंस)। ★ = सबसे अच्छा baseline।",
+            "बरोबर = ज्या कॉलमध्ये भाव ${com.example.livegoldai.data.ShadowLab.HORIZON} कँडलमध्ये सांगितलेल्या दिशेने किमान 0.25×ATR गेला (सपाट मोजले नाही). कॉल = किती कँडलवर मॉडेलने कॉल दिला. नेट = \$${com.example.livegoldai.data.ShadowLab.COST_USD} खर्च वजा करून प्रति कॉल सरासरी चाल (USD/औंस). ★ = सर्वोत्तम baseline."))
+
+        if (r.regimes.isNotEmpty()) {
+            Section(t(lang, "FACTOR GATED BY MARKET TYPE", "मार्केट प्रकार के हिसाब से", "मार्केट प्रकारानुसार"))
+            r.regimes.forEach { g ->
+                val dec = g.right + g.wrong
+                InfoRow(g.regime + " (${g.samples})", if (dec == 0) t(lang, "no calls", "कोई कॉल नहीं", "कॉल नाही") else String.format(Locale.US, "%.1f%% right • %d calls", 100.0 * g.right / dec, g.calls))
+            }
+        }
+
+        r.current?.let { c ->
+            Section(t(lang, "SHADOW READ NOW (not a trade signal)", "अभी का शैडो अनुमान (ट्रेड सिग्नल नहीं)", "आत्ताचा शॅडो अंदाज (ट्रेड सिग्नल नाही)"))
+            InfoRow(t(lang, "Last closed candle", "आखिरी बंद कैंडल", "शेवटची बंद कँडल"), c.barTime + " UTC")
+            InfoRow(t(lang, "Market type", "मार्केट प्रकार", "मार्केट प्रकार"), c.regime)
+            InfoRow(t(lang, "Shadow call", "शैडो कॉल", "शॅडो कॉल"), c.call + (c.probUp?.let { String.format(Locale.US, "  •  P(up) %.0f%%", it * 100) } ?: ""))
+            Note(c.reason)
+            Note(c.factorsText)
+            if (r.verdict != "EDGE CANDIDATE") Note(t(lang,
+                "This model has not shown an edge on past data, so this read means nothing for trading.",
+                "इस मॉडल ने पुराने डेटा पर बढ़त नहीं दिखाई, इसलिए ट्रेडिंग के लिए इस अनुमान का कोई मतलब नहीं।",
+                "या मॉडेलने जुन्या डेटावर आघाडी दाखवली नाही, म्हणून ट्रेडिंगसाठी या अंदाजाला अर्थ नाही."))
+        }
+
+        Section(t(lang, "TEST DATA", "टेस्ट डेटा", "चाचणी डेटा"))
+        InfoRow("Snapshot", r.snapshotId)
+        InfoRow(t(lang, "Timeframe", "टाइमफ्रेम", "टाइमफ्रेम"), r.interval + "  •  XAU/USD (Twelve Data)")
+        InfoRow(t(lang, "Closed candles", "बंद कैंडल", "बंद कँडल"), "${r.bars}  •  ${r.firstBar} → ${r.lastClosedBar}")
+        InfoRow(t(lang, "Outcomes in test", "टेस्ट के नतीजे", "चाचणीचे निकाल"), String.format(Locale.US, "UP %.0f%% of moves • FLAT %.0f%%", r.upShare * 100, r.flatShare * 100))
+        InfoRow(t(lang, "Label / lab", "लेबल / लैब", "लेबल / लॅब"), r.labelVersion + " (" + com.example.livegoldai.data.ShadowLab.HORIZON + " candles, 0.25×ATR)  •  " + r.labVersion)
+        InfoRow(t(lang, "Tested", "टेस्ट समय", "चाचणी वेळ"), java.text.SimpleDateFormat("dd MMM HH:mm", Locale.US).format(java.util.Date(r.createdAtMs)))
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Button(
+        onClick = { onRun(true) },
+        enabled = !running,
+        modifier = Modifier.fillMaxWidth().height(42.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = ObsidianSurfaceElevated, contentColor = GoldLight),
+        border = BorderStroke(0.75.dp, GoldPrimary.copy(alpha = 0.6f))
+    ) {
+        Text(t(lang, "RUN AGAIN ($interval)", "फिर से चलाएँ ($interval)", "पुन्हा चालवा ($interval)"), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+    }
+    Text(
+        text = t(lang, "Uses 1 Twelve Data credit per run. Results are kept 6 hours per timeframe.", "हर रन में 1 Twelve Data क्रेडिट। नतीजा हर टाइमफ्रेम के लिए 6 घंटे रखा जाता है।", "प्रत्येक रनला 1 Twelve Data क्रेडिट. निकाल प्रत्येक टाइमफ्रेमसाठी 6 तास ठेवला जातो."),
+        color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
+    )
+}
 
 @Composable
 private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.example.livegoldai.model.LedgerPulse? = null) {
