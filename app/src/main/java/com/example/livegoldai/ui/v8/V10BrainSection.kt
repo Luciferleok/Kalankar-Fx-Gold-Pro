@@ -87,7 +87,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         Spacer(modifier = Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = tr(lang, "QUANT SIGNAL  ", "क्वांट सिग्नल  ", "क्वांट सिग्नल  "), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(text = arrowOf(b.quantSignal) + " " + b.quantSignal.name + " ${b.baseConfidence}%", color = signalColor(b.quantSignal), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = arrowOf(b.quantSignal) + " " + b.quantSignal.name + (if (b.quantSignal == com.example.livegoldai.model.Signal.WAIT) "" else " ${b.baseConfidence}%"), color = signalColor(b.quantSignal), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(text = b.baseLabel + tr(lang, " • the brain describes the market, it does not change the signal", " • ब्रेन मार्केट बताता है, सिग्नल नहीं बदलता", " • ब्रेन मार्केट सांगतो, सिग्नल बदलत नाही"), color = V8.Text3, fontSize = 9.sp)
     }
@@ -259,6 +259,11 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         }
         V8KeyValue(tr(lang, "Coverage", "कवरेज", "कव्हरेज"), b.coverage)
         b.strongSignal.forEach { V8KeyValue(it.label + tr(lang, " → really right", " → सच में सही", " → खरेच बरोबर"), it.value) }
+        if (com.example.livegoldai.data.brain.ResearchStats.confidenceInverted(b.strongSignal)) Text(
+            text = tr(lang, "Warning: calls shown with a HIGHER % were right LESS often. The shown % is over-confident; do not trust a high % more.",
+                "चेतावनी: ज़्यादा % वाली कॉल्स कम बार सही निकलीं। दिखाया गया % ज़रूरत से ज़्यादा भरोसा दिखाता है; ऊँचे % पर ज़्यादा भरोसा मत करो।",
+                "इशारा: जास्त % दाखवलेल्या कॉल्स कमी वेळा बरोबर ठरल्या. दाखवलेला % जास्त आत्मविश्वास दाखवतो; जास्त % वर जास्त विश्वास ठेवू नका."),
+            color = V8.Amber, fontSize = 10.sp)
         if (showResearch) {
             Spacer(modifier = Modifier.height(6.dp))
             V8Label(tr(lang, "By day (UTC)", "दिन के हिसाब से (UTC)", "दिवसानुसार (UTC)"))

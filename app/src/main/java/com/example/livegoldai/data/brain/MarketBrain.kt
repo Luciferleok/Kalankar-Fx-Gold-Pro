@@ -47,6 +47,13 @@ object ResearchStats {
         LabelStat("Shown $thr%+", label(h, n))
     }
 
+    /** V29A.4: true when calls shown with higher confidence were right LESS often (confidence is over-stated). */
+    fun confidenceInverted(rows: List<LabelStat>): Boolean {
+        val pct = rows.mapNotNull { r -> Regex("^(\\d+)% \\(N=(\\d+)\\)").find(r.value)?.groupValues?.let { it[1].toInt() to it[2].toInt() } }
+        if (pct.size < 2 || pct.any { it.second < 100 }) return false
+        return pct.zipWithNext().all { (a, b) -> b.first < a.first } && pct.first().first - pct.last().first >= 3
+    }
+
     /** Share of checked predictions where the model took a side (a model cannot look good by always saying WAIT). */
     fun coverage(state: LedgerState): String {
         var edge = 0; var total = 0
@@ -228,13 +235,15 @@ object MarketBrain {
         val pUnc = (1.0 - deductions / 30.0).coerceIn(0.0, 1.0)
         val pFam = if (fam.pct < 0) 0.5 else fam.pct / 100.0
         val quality = (100.0 * (0.25 * pData + 0.25 * pEdge + 0.15 * pCal + 0.20 * pUnc + 0.15 * pFam)).roundToInt()
-        val qClass = when {
-            quality >= 90 -> "EXCELLENT CONDITIONS"
-            quality >= 75 -> "STRONG CONDITIONS"
+        // V29A.4: this index measures how clean the setup looks to the rules, not how likely it is to win
+        val qClass0 = when {
+            quality >= 90 -> "VERY CLEAN SETUP (RULES)"
+            quality >= 75 -> "CLEAN SETUP (RULES)"
             quality >= 60 -> "USABLE"
             quality >= 40 -> "LOW QUALITY"
             else -> "NO EDGE / PAUSE"
         }
+        val qClass = if (totalUnc == "HIGH" && quality >= 60) "$qClass0 • UNCERTAINTY HIGH" else qClass0
         fun pc(v: Double) = "${(v * 100).roundToInt()}/100"
         val parts = listOf(
             LabelStat("Data quality (25%)", pc(pData)),
@@ -297,7 +306,7 @@ object MarketBrain {
             familiarity = fam,
             quantSignal = sig,
             baseConfidence = base,
-            baseLabel = if (cal != null) "calibrated from real results" else "pillar agreement (uncalibrated)",
+            baseLabel = RealityEngine.bandRecord(a.learning, raw)?.let { "past hit-rate of similar calls, N=${it.decided}, not a guarantee" } ?: "pillar agreement (uncalibrated)",
             budget = budget,
             adjustedConfidence = adjusted,
             uncertainty = unc,

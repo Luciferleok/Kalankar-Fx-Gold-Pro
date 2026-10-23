@@ -184,14 +184,19 @@ fun V8CockpitScreen(
                 }
                 // the ring shows exactly one real number: calibrated confidence if measured, else raw pillar agreement
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // V29A.5: a WAIT is not a call, so no hit-rate or confidence belongs to it
+                    val isWait = sig == Signal.WAIT
                     V8Ring(
-                        percent = calibrated ?: rawConf,
+                        percent = if (isWait) -1 else calibrated ?: rawConf,
                         color = signalColor(sig),
-                        label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
+                        label = if (isWait) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else if (calibrated != null) tr(lang, "past hit-rate", "पिछला हिट-रेट", "मागील हिट-रेट") else tr(lang, "agreement", "सहमति", "सहमती")
                     )
                     // V29A: agreement of indicators is not a probability of winning
-                    if (calibrated == null) Text(
-                        text = tr(lang, "evidence agreement\nnot a win probability", "संकेतों की सहमति\nजीत की संभावना नहीं", "संकेतांची सहमती\nजिंकण्याची शक्यता नाही"),
+                    val band = RealityEngine.bandRecord(analysis.learning, rawConf)
+                    Text(
+                        text = if (isWait) tr(lang, "WAIT has no\nwin chance to show", "WAIT की कोई\nजीत-संभावना नहीं", "WAIT ला\nजिंकण्याची शक्यता नाही")
+                        else if (band != null) tr(lang, "similar past calls\nN=${band.decided} • not a guarantee", "मिलती-जुलती पिछली कॉल्स\nN=${band.decided} • गारंटी नहीं", "सारख्या मागील कॉल्स\nN=${band.decided} • हमी नाही")
+                        else tr(lang, "evidence agreement\nnot a win probability", "संकेतों की सहमति\nजीत की संभावना नहीं", "संकेतांची सहमती\nजिंकण्याची शक्यता नाही"),
                         color = V8.Text3, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp
                     )
                 }

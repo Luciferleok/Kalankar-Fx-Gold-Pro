@@ -116,12 +116,27 @@ object RealityEngine {
     // ------------------------------------------------------------------ calibration
 
     /** Real hit-rate for this confidence band if there are >= 20 checked predictions in it, else null. */
-    fun calibratedConfidence(snapshot: LearningSnapshot?, rawConfidence: Int): Int? {
+    fun calibratedConfidence(snapshot: LearningSnapshot?, rawConfidence: Int): Int? =
+        bandRecord(snapshot, rawConfidence)?.accuracyPercent?.roundToInt()
+
+    /**
+     * V29A.4: the past record of the confidence band this call falls in (>= 20 decided calls), else null.
+     * It is a past hit-rate of similar-looking calls (sideways results excluded), NOT a calibrated win probability:
+     * the band is small and the screen must show its N.
+     */
+    fun bandRecord(snapshot: LearningSnapshot?, rawConfidence: Int): com.example.livegoldai.model.BucketStat? {
         val b = snapshot?.calibration?.firstOrNull {
             val (lo, hi) = it.key.split("-").map { p -> p.toInt() }
             rawConfidence in lo..hi
         } ?: return null
-        return if (b.decided >= 20) b.accuracyPercent.roundToInt() else null
+        return if (b.decided >= 20) b else null
+    }
+
+    /** Short label for a band record: "past hit-rate • N=34". */
+    fun bandLabel(snapshot: LearningSnapshot?, rawConfidence: Int, lang: com.example.livegoldai.localization.AppLanguage): String? {
+        val b = bandRecord(snapshot, rawConfidence) ?: return null
+        val word = when (lang.name) { "HINDI" -> "पिछला हिट-रेट"; "MARATHI" -> "मागील हिट-रेट"; else -> "past hit-rate" }
+        return "$word • N=${b.decided}"
     }
 
     /**

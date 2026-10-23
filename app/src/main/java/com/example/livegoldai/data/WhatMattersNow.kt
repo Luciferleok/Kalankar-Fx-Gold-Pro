@@ -1,6 +1,7 @@
 package com.example.livegoldai.data
 
 import com.example.livegoldai.model.GoldAnalysisResult
+import com.example.livegoldai.model.Signal
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -105,10 +106,17 @@ object WhatMattersNow {
         }
 
         // 5. sideways market (the range filter turns BUY/SELL into WAIT)
-        if (b != null && b.regime.equals("RANGE", true)) out.add(Item("WATCH",
-            "Sideways market: BUY/SELL calls are held as WAIT by the range filter.",
-            "साइडवेज़ मार्केट: रेंज फ़िल्टर BUY/SELL को WAIT रख रहा है।",
-            "साइडवेज मार्केट: रेंज फिल्टर BUY/SELL ला WAIT ठेवत आहे."))
+        // V29A.4: say "held as WAIT" only when the shown call really is WAIT
+        if (b != null && b.regime.equals("RANGE", true)) {
+            if (a.overallSignal == Signal.WAIT) out.add(Item("WATCH",
+                "Sideways market: no BUY/SELL now; trend rules are unreliable in a range.",
+                "साइडवेज़ मार्केट: अभी BUY/SELL नहीं; रेंज में ट्रेंड के नियम भरोसेमंद नहीं।",
+                "साइडवेज मार्केट: आत्ता BUY/SELL नाही; रेंजमध्ये ट्रेंडचे नियम विश्वासार्ह नाहीत."))
+            else out.add(Item("RISK",
+                "Sideways market, yet a ${a.overallSignal.name} is shown: the range filter did not trigger (its trend-efficiency test passed). Trend rules are less reliable here.",
+                "साइडवेज़ मार्केट, फिर भी ${a.overallSignal.name} दिख रहा है: रेंज फ़िल्टर नहीं लगा। यहाँ ट्रेंड के नियम कम भरोसेमंद हैं।",
+                "साइडवेज मार्केट, तरीही ${a.overallSignal.name} दिसत आहे: रेंज फिल्टर लागला नाही. इथे ट्रेंडचे नियम कमी विश्वासार्ह आहेत."))
+        }
 
         // 6. broken cross-market relation
         b?.crossMarket?.divergences?.firstOrNull()?.let { d ->

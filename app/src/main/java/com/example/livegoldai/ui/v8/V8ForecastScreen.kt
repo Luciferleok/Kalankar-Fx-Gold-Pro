@@ -69,9 +69,10 @@ fun V8ForecastScreen(
                     Text(text = arrowOf(sig) + " " + sig.name, color = signalColor(sig), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(text = "${calibrated ?: rawConf}%", color = V8.Text1, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                    Text(text = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "uncalibrated", "अनकैलिब्रेटेड", "अनकॅलिब्रेटेड"),
-                        color = if (calibrated != null) V8.Green else V8.Amber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(text = if (sig == Signal.WAIT) "--" else "${calibrated ?: rawConf}%", color = V8.Text1, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    // V29A.4: a small band's past hit-rate, shown with its N; never called "calibrated"
+                    Text(text = (if (sig == Signal.WAIT) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else RealityEngine.bandLabel(analysis.learning, rawConf, lang)) ?: tr(lang, "agreement, not a probability", "सहमति, संभावना नहीं", "सहमती, शक्यता नाही"),
+                        color = V8.Amber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(modifier = Modifier.height(10.dp))
@@ -82,7 +83,12 @@ fun V8ForecastScreen(
             }
             V8ThreeWayBar(split.bullish, split.sideways, split.bearish)
             Text(
-                text = if (split.fromHistory) tr(lang, "From real results of past BUY/SELL calls", "पिछली BUY/SELL कॉल्स के असली नतीजों से", "मागील BUY/SELL कॉल्सच्या खऱ्या निकालांवरून")
+                text = if (split.fromHistory) {
+                    val n = analysis.learning?.let { it.correct + it.wrong + it.sideways } ?: 0
+                    tr(lang, "What happened after ALL past BUY/SELL calls (N=$n), not a forecast of this one",
+                        "पिछली सभी BUY/SELL कॉल्स के बाद क्या हुआ (N=$n), इस कॉल का अनुमान नहीं",
+                        "मागील सर्व BUY/SELL कॉल्सनंतर काय झाले (N=$n), या कॉलचा अंदाज नाही")
+                }
                 else tr(lang, "Not enough history yet: these are today's pillar votes, not probabilities", "अभी इतिहास कम है: ये आज के पिलर वोट हैं, संभावना नहीं", "अजून इतिहास कमी: ही आजची पिलर मते आहेत, शक्यता नाही"),
                 color = V8.Text3, fontSize = 9.sp
             )

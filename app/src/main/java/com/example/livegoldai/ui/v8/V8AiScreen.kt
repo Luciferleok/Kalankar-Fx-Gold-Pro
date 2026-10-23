@@ -176,7 +176,7 @@ fun V8AiScreen(
             V8Label(tr(lang, "Intelligence check", "इंटेलिजेंस जाँच", "इंटेलिजन्स तपासणी"))
             Spacer(modifier = Modifier.height(6.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Node("QUANT", analysis.overallSignal, "${cal ?: rawConf}%")
+                Node("QUANT", analysis.overallSignal, if (analysis.overallSignal == com.example.livegoldai.model.Signal.WAIT) "--" else "${cal ?: rawConf}%")
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Node(tr(lang, "BOTS", "बॉट", "बॉट"), analysis.multiBotEnsemble?.ensembleSignal,
