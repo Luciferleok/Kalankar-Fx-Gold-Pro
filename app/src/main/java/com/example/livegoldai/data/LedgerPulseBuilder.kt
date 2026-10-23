@@ -152,8 +152,9 @@ object LedgerPulseBuilder {
             com.example.livegoldai.model.LabelStat(
                 PredictionLedger.utcLabel(r.createdAt, true),
                 // V29A.6: a WAIT carries no %; a filtered WAIT shows what the engine wanted and its agreement
-                (if (r.finalSignal != Signal.WAIT) "${r.finalSignal.name} ${r.confidence}%"
-                 else if (r.appliedFilter.isNotEmpty() && r.rawSignal != Signal.WAIT) "WAIT (engine said ${r.rawSignal.name} ${r.confidence}%)"
+                // the stored % is pillar agreement, not a win chance
+                (if (r.finalSignal != Signal.WAIT) "${r.finalSignal.name} • agr ${r.confidence}%"
+                 else if (r.appliedFilter.isNotEmpty() && r.rawSignal != Signal.WAIT) "WAIT (engine said ${r.rawSignal.name}, agr ${r.confidence}%)"
                  else "WAIT") + "  •  " +
                     if (res == null) "running" else BackgroundRecorder.mark(res.outcome) + " " + String.format(Locale.US, "%+.2f", res.move)
             )

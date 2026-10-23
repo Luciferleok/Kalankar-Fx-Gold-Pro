@@ -260,9 +260,9 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         V8KeyValue(tr(lang, "Coverage", "कवरेज", "कव्हरेज"), b.coverage)
         b.strongSignal.forEach { V8KeyValue(it.label + tr(lang, " → really right", " → सच में सही", " → खरेच बरोबर"), it.value) }
         if (com.example.livegoldai.data.brain.ResearchStats.confidenceInverted(b.strongSignal)) Text(
-            text = tr(lang, "Warning: calls shown with a HIGHER % were right LESS often. The shown % is over-confident; do not trust a high % more.",
-                "चेतावनी: ज़्यादा % वाली कॉल्स कम बार सही निकलीं। दिखाया गया % ज़रूरत से ज़्यादा भरोसा दिखाता है; ऊँचे % पर ज़्यादा भरोसा मत करो।",
-                "इशारा: जास्त % दाखवलेल्या कॉल्स कमी वेळा बरोबर ठरल्या. दाखवलेला % जास्त आत्मविश्वास दाखवतो; जास्त % वर जास्त विश्वास ठेवू नका."),
+            text = tr(lang, "Warning: calls with HIGHER pillar agreement were right LESS often. High agreement is not more reliable; do not trust it more.",
+                "चेतावनी: ज़्यादा पिलर-सहमति वाली कॉल्स कम बार सही निकलीं। ऊँची सहमति ज़्यादा भरोसेमंद नहीं; उस पर ज़्यादा भरोसा मत करो।",
+                "इशारा: जास्त पिलर-सहमती असलेल्या कॉल्स कमी वेळा बरोबर ठरल्या. जास्त सहमती जास्त विश्वासार्ह नाही; तिच्यावर जास्त विश्वास ठेवू नका."),
             color = V8.Amber, fontSize = 10.sp)
         if (showResearch) {
             Spacer(modifier = Modifier.height(6.dp))

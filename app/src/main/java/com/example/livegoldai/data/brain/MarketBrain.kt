@@ -44,7 +44,7 @@ object ResearchStats {
             val s = score(state.resultOf(r.id)?.outcome ?: continue) ?: continue
             n++; h += s
         }
-        LabelStat("Shown $thr%+", label(h, n))
+        LabelStat("Agreement $thr%+", label(h, n))
     }
 
     /** V29A.4: true when calls shown with higher confidence were right LESS often (confidence is over-stated). */
@@ -165,7 +165,7 @@ object MarketBrain {
         val base = cal ?: raw
         val budget = ArrayList<BudgetLine>()
         val htf = RealityEngine.higherTimeframeSignal(a.mtfMatrix, RealityEngine.intervalMinutes(a.interval))
-        if (sig != Signal.WAIT && htf != null && PredictionLedger.opposite(htf, sig)) budget.add(BudgetLine("Higher timeframe points the other way", -5))
+        if (sig != Signal.WAIT && htf != null && PredictionLedger.opposite(htf, sig)) budget.add(BudgetLine("Higher timeframe (PAXG/USDT proxy) points the other way", -5))
         when (anomaly.level) {
             "MODERATE" -> budget.add(BudgetLine("Anomaly risk moderate", -3))
             "HIGH" -> budget.add(BudgetLine("Anomaly risk high", -6))
@@ -276,7 +276,7 @@ object MarketBrain {
             LabelStat("Engine / features / model", "${PredictionLedger.ENGINE_VERSION} • ${FeatureCatalog.VERSION} • ${a.learning?.modelVersion ?: "--"}"),
             LabelStat("Prediction instrument", a.feed?.source ?: "--"),
             LabelStat("Will be checked on", when (instrument) {
-                "XAU" -> "Twelve Data XAU/USD 1-minute history (same instrument); proxy only if an hour overdue"
+                "XAU" -> "Twelve Data XAU/USD 1-minute history only (same instrument, never a proxy); if it cannot be checked within 72h it is marked DATA FAILURE and not counted"
                 "PAXG" -> "Binance PAXG/USDT (same instrument)"
                 "GC" -> "Yahoo GC=F (same instrument)"
                 else -> "--"

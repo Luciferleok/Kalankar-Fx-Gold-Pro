@@ -230,7 +230,7 @@ object CockpitInsightsBuilder {
         if (a.quantBotSignal?.statusText?.contains("FILTER") == true) warnings.add(if (a.quantBotSignal?.statusText?.contains("DATA FILTER") == true) "Forecast paused: market data integrity issue" else if (a.quantBotSignal?.statusText?.contains("RANGE FILTER") == true) "Sideways market: BUY/SELL is shown as WAIT (range filter)" else "A learned filter changed this signal to WAIT")
         val ivMin = RealityEngine.intervalMinutes(a.interval)
         val htf = RealityEngine.higherTimeframeSignal(a.mtfMatrix, ivMin)
-        if (htf != null && PredictionLedger.opposite(htf, a.overallSignal)) warnings.add("Higher timeframe points ${htf.name}, against this ${a.overallSignal.name}")
+        if (htf != null && PredictionLedger.opposite(htf, a.overallSignal)) warnings.add("Higher timeframe (PAXG/USDT proxy, context only) points ${htf.name}, against this ${a.overallSignal.name}")
         if (newsActive) warnings.add("High-impact news window: spreads and spikes likely")
         if (rangeVsAtr > 1.5) warnings.add(String.format(Locale.US, "Volatility rising: last candle %.1f× ATR", rangeVsAtr))
         rsiValue(a)?.let { r ->
