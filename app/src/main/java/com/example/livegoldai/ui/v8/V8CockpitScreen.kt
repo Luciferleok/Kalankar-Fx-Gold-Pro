@@ -205,7 +205,8 @@ fun V8CockpitScreen(
                 listOf(
                     Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
                     Triple(tr(lang, "QUALITY", "क्वालिटी", "गुणवत्ता"), b?.qualityIndex?.toString() ?: "--", tr(lang, "of data", "डेटा की", "डेटाची")),
-                    Triple("EDGE", b?.edge ?: "--", tr(lang, "measured", "मापा हुआ", "मोजलेले")),
+                    // V29A.1: this is the indicator split, not a measured edge (the measured edge lives in Learn → Shadow Lab)
+                    Triple(tr(lang, "SPLIT", "बँटवारा", "विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
                     Triple(
                         tr(lang, "ACCURACY", "सटीकता", "अचूकता"),
                         if (p == null || p.directionN < p.directionMinN) "--" else "${p.directionPct}%",

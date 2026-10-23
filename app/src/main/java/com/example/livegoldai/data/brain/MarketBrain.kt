@@ -252,7 +252,8 @@ object MarketBrain {
             sepAdj < 40 -> "MODERATE"
             else -> "STRONG"
         }
-        val edgeNote = if (sig == Signal.WAIT) "Quant engine sees no side" else String.format(Locale.US, "pillar separation %.0f pts × quality %d%%", sep, quality)
+        val edgeNote = (if (sig == Signal.WAIT) "Quant engine sees no side" else String.format(Locale.US, "pillar separation %.0f pts × quality %d%%", sep, quality)) +
+            ". This is how strongly the indicators agree, not a measured edge: the measured result is in Learn → Shadow Lab."
 
         // ---- lineage
         val indicators = a.groups.sumOf { it.indicators.size }

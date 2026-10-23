@@ -46,7 +46,7 @@ fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit) {
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
             MiniStat(tr(lang, "QUALITY", "क्वालिटी", "क्वालिटी"), "${b.qualityIndex}", qualityColor(b.qualityIndex), Modifier.weight(1f))
-            MiniStat("EDGE", b.edge, levelColor(b.edge), Modifier.weight(1.2f))
+            MiniStat("SPLIT", b.edge, levelColor(b.edge), Modifier.weight(1.2f))
             MiniStat(tr(lang, "ANOMALY", "गड़बड़ी", "विसंगती"), b.anomaly.level, levelColor(b.anomaly.level), Modifier.weight(1.2f))
             MiniStat(tr(lang, "UNCERTAINTY", "अनिश्चितता", "अनिश्चितता"), b.totalUncertainty, levelColor(b.totalUncertainty), Modifier.weight(1.4f))
         }
@@ -119,7 +119,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                V8Label("EDGE")
+                V8Label("SPLIT (NOT PROVEN)")
                 Text(text = b.edge, color = levelColor(b.edge), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }
