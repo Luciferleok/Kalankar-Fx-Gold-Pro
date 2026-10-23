@@ -169,12 +169,16 @@ fun V8CockpitScreen(
                         Signal.WAIT -> "WAIT"
                     }, color = signalColor(sig), fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                     if (sig == Signal.WAIT) Text(
-                        text = when (analysis.gateReason) {
-                            "" -> tr(lang, "NO MEASURED EDGE", "कोई मापी हुई बढ़त नहीं", "मोजलेली आघाडी नाही")
-                            "WAIT_DATA_DEGRADED" -> tr(lang, "DATA CHECK FAILED", "डेटा जाँच फेल", "डेटा तपासणी नापास")
-                            "WAIT_NO_DATA_KEY" -> tr(lang, "NO DATA KEY", "डेटा key नहीं", "डेटा key नाही")
-                            else -> tr(lang, "SOURCE SWITCH", "स्रोत बदला", "स्रोत बदलला")
-                        },
+                        // V29A.7: the real reason for this WAIT
+                        text = RealityEngine.waitReason(analysis).let { (code, en) -> when (code) {
+                            "DATA" -> tr(lang, en, "डेटा जाँच फेल", "डेटा तपासणी नापास")
+                            "NO_KEY" -> tr(lang, en, "डेटा key नहीं", "डेटा key नाही")
+                            "SOURCE" -> tr(lang, en, "स्रोत बदला", "स्रोत बदलला")
+                            "RANGE" -> tr(lang, en, "रेंज फ़िल्टर • साइडवेज़ मार्केट", "रेंज फिल्टर • साइडवेज मार्केट")
+                            "LEARNED" -> tr(lang, en, "सीखा हुआ फ़िल्टर", "शिकलेला फिल्टर")
+                            "BELOW_GATE" -> tr(lang, en, en.replace("PILLARS", "पिलर"), en.replace("PILLARS", "पिलर"))
+                            else -> tr(lang, en, "इंजन सुरक्षा नियम • क्यों? देखें", "इंजिन सुरक्षा नियम • का? पहा")
+                        } },
                         color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp
                     )
                     if (until > now) {

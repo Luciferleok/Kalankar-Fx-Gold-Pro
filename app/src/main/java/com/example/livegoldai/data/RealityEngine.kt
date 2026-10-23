@@ -132,6 +132,31 @@ object RealityEngine {
         return if (b.decided >= 20) b else null
     }
 
+    /**
+     * V29A.7: the real reason the shown signal is WAIT, as a code + English text.
+     * Codes: SOURCE, DATA, NO_KEY, RANGE, LEARNED, BELOW_GATE, ENGINE_RULE ("" when not WAIT).
+     */
+    fun waitReason(a: GoldAnalysisResult): Pair<String, String> {
+        if (a.overallSignal != Signal.WAIT) return "" to ""
+        when (a.gateReason) {
+            "WAIT_DATA_DEGRADED" -> return "DATA" to "DATA CHECK FAILED"
+            "WAIT_NO_DATA_KEY" -> return "NO_KEY" to "NO DATA KEY"
+            "" -> {}
+            else -> return "SOURCE" to "SOURCE SWITCH"
+        }
+        val tag = a.nextPrediction?.urgencyTag ?: ""
+        if (tag.startsWith("FORECAST PAUSED")) return "DATA" to "DATA CHECK FAILED"
+        if (tag.startsWith("WAIT • SOURCE")) return "SOURCE" to "SOURCE SWITCH"
+        if (tag.startsWith("WAIT • RANGE")) return "RANGE" to "RANGE FILTER • SIDEWAYS MARKET"
+        if (tag.startsWith("WAIT • LEARNED FILTER")) return "LEARNED" to tag.removePrefix("WAIT • ").uppercase()
+        val ins = a.insights
+        if (ins != null) {
+            val top = maxOf(ins.bullishPoints, kotlin.math.abs(ins.bearishPoints))
+            if (top < ins.gatePercent) return "BELOW_GATE" to String.format(java.util.Locale.US, "PILLARS %.0f%% • GATE %.0f%%", top, ins.gatePercent)
+        }
+        return "ENGINE_RULE" to "ENGINE SAFETY RULE • SEE WHY?"
+    }
+
     /** Short label for a band record: "past hit-rate • N=34". */
     fun bandLabel(snapshot: LearningSnapshot?, rawConfidence: Int, lang: com.example.livegoldai.localization.AppLanguage): String? {
         val b = bandRecord(snapshot, rawConfidence) ?: return null
