@@ -155,7 +155,8 @@ object ResearchLab {
 
         // ---- forecast stability (current timeframe)
         val mine = state.records.filter { it.interval.equals(interval, ignoreCase = true) }.sortedBy { it.createdAt }
-        val (stab, stabDetail) = stability(mine.map { it.finalSignal })
+        // V29A.6: measured on what the engine said, so a SELL -> BUY reversal hidden behind a WAIT filter still counts
+        val (stab, stabDetail) = stability(mine.map { it.rawSignal })
         lines.add(LabelStat("Forecast stability (${interval.uppercase(Locale.US)})", if (stab == "--") stabDetail else "$stab • $stabDetail"))
 
         // ---- expected move: what past calls on this timeframe actually did, measured in the call's direction

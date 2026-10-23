@@ -209,7 +209,7 @@ fun V8CockpitScreen(
                 val b = analysis.brain
                 listOf(
                     Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
-                    Triple(tr(lang, "QUALITY", "क्वालिटी", "गुणवत्ता"), b?.qualityIndex?.toString() ?: "--", tr(lang, "of data", "डेटा की", "डेटाची")),
+                    Triple(tr(lang, "QUALITY", "क्वालिटी", "गुणवत्ता"), b?.qualityIndex?.toString() ?: "--", tr(lang, "setup (rules)", "सेटअप (नियम)", "सेटअप (नियम)")),
                     // V29A.1: this is the indicator split, not a measured edge (the measured edge lives in Learn → Shadow Lab)
                     Triple(tr(lang, "SPLIT", "बँटवारा", "विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
                     Triple(
@@ -230,7 +230,7 @@ fun V8CockpitScreen(
             Row(modifier = Modifier.fillMaxWidth()) {
                 val p = analysis.pulse
                 listOf(
-                    Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "last calls", "पिछले कॉल", "मागील कॉल")),
+                    Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "engine flips", "इंजन बदलाव", "इंजिन बदल")),
                     Triple(tr(lang, "EXP. MOVE", "अनुमानित चाल", "अपेक्षित चाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
                     Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL"),
                     Triple(tr(lang, "DATA", "डेटा", "डेटा"), p?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"))

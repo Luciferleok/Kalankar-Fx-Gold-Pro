@@ -2,6 +2,7 @@ package com.example.livegoldai.data
 
 import com.example.livegoldai.model.GoldAnalysisResult
 import com.example.livegoldai.model.LedgerPulse
+import com.example.livegoldai.model.Signal
 import java.util.Locale
 
 /** Turns the real ledger state into a plain "is it running?" summary. */
@@ -150,7 +151,10 @@ object LedgerPulseBuilder {
             val res = state.resultOf(r.id)
             com.example.livegoldai.model.LabelStat(
                 PredictionLedger.utcLabel(r.createdAt, true),
-                "${r.finalSignal.name} ${r.confidence}%" + (if (r.appliedFilter.isNotEmpty()) " (engine said ${r.rawSignal.name})" else "") + "  •  " +
+                // V29A.6: a WAIT carries no %; a filtered WAIT shows what the engine wanted and its agreement
+                (if (r.finalSignal != Signal.WAIT) "${r.finalSignal.name} ${r.confidence}%"
+                 else if (r.appliedFilter.isNotEmpty() && r.rawSignal != Signal.WAIT) "WAIT (engine said ${r.rawSignal.name} ${r.confidence}%)"
+                 else "WAIT") + "  •  " +
                     if (res == null) "running" else BackgroundRecorder.mark(res.outcome) + " " + String.format(Locale.US, "%+.2f", res.move)
             )
         }

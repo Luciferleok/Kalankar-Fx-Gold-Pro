@@ -221,7 +221,7 @@ object MarketBrain {
         unc.add(UncertaintyItem("AI disagreement", aiLevel,
             if (council == null || council.eligible == 0) "no eligible AI vote" else "${council.consensus}, dispersion ${council.dispersionLevel}, ${council.conflictLevel}"))
         val regLevel = when (fam.status) { "NORMAL" -> "LOW"; "UNUSUAL" -> "MODERATE"; "OUT_OF_DISTRIBUTION" -> "HIGH"; else -> "UNKNOWN" }
-        unc.add(UncertaintyItem("Regime familiarity", regLevel,
+        unc.add(UncertaintyItem("Unfamiliar market", regLevel,
             if (fam.pct < 0) "history too short (${fam.historySize}/${AnalogEngine.MIN_HISTORY})" else "${fam.pct}% of features inside the usual range"))
         val worst = unc.maxOf { rank(it.level) }
         val totalUnc = when { worst >= 3 -> "HIGH"; worst == 2 -> "MODERATE"; worst == RANK_LOW -> "LOW"; else -> "UNKNOWN" }

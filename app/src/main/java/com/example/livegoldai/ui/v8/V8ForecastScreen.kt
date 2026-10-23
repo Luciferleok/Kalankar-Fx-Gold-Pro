@@ -102,7 +102,7 @@ fun V8ForecastScreen(
             V8Card(level = 2) {
                 V8Label(tr(lang, "Why this forecast?", "यह अनुमान क्यों?", "हा अंदाज का?"))
                 Text(
-                    text = String.format(Locale.US, "Bullish %.1f%%  •  Bearish %.1f%%  •  gate %.0f%%", ins.bullishPoints, ins.bearishPoints, ins.gatePercent),
+                    text = String.format(Locale.US, "Bullish %.1f%%  •  Bearish %.1f%%  •  gate %.0f%%", ins.bullishPoints + 0.0, kotlin.math.abs(ins.bearishPoints) + 0.0, ins.gatePercent),
                     color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
