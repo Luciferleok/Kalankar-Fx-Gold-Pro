@@ -113,9 +113,9 @@ object WhatMattersNow {
                 "साइडवेज़ मार्केट: अभी BUY/SELL नहीं; रेंज में ट्रेंड के नियम भरोसेमंद नहीं।",
                 "साइडवेज मार्केट: आत्ता BUY/SELL नाही; रेंजमध्ये ट्रेंडचे नियम विश्वासार्ह नाहीत."))
             else out.add(Item("RISK",
-                "Sideways market, yet a ${a.overallSignal.name} is shown: the range filter did not trigger (its trend-efficiency test passed). Trend rules are less reliable here.",
-                "साइडवेज़ मार्केट, फिर भी ${a.overallSignal.name} दिख रहा है: रेंज फ़िल्टर नहीं लगा। यहाँ ट्रेंड के नियम कम भरोसेमंद हैं।",
-                "साइडवेज मार्केट, तरीही ${a.overallSignal.name} दिसत आहे: रेंज फिल्टर लागला नाही. इथे ट्रेंडचे नियम कमी विश्वासार्ह आहेत."))
+                "Sideways market now, yet a ${a.overallSignal.name} is shown: the range filter did not block this candle's call (the filter is checked once, when the candle's call is recorded). Trend rules are less reliable here.",
+                "अभी साइडवेज़ मार्केट, फिर भी ${a.overallSignal.name} दिख रहा है: इस कैंडल की कॉल पर रेंज फ़िल्टर नहीं लगा (फ़िल्टर कैंडल की कॉल दर्ज होते समय एक बार जाँचा जाता है)। यहाँ ट्रेंड के नियम कम भरोसेमंद हैं।",
+                "आत्ता साइडवेज मार्केट, तरीही ${a.overallSignal.name} दिसत आहे: या कँडलच्या कॉलवर रेंज फिल्टर लागला नाही (फिल्टर कँडलची कॉल नोंदवताना एकदाच तपासला जातो). इथे ट्रेंडचे नियम कमी विश्वासार्ह आहेत."))
         }
 
         // 6. broken cross-market relation

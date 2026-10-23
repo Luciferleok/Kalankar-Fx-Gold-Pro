@@ -284,7 +284,7 @@ object MarketBrain {
             LabelStat("Final signal", "${sig.name} ← quant engine (7 pillars, 68% gate" + (if (a.quantBotSignal?.statusText?.contains("FILTER") == true) ", learned filter applied)" else ")")),
             LabelStat("Candles", "${a.recentCandles.size} × ${a.interval} • ${a.feed?.source ?: "--"} • last ${a.lastUpdated}"),
             LabelStat("Indicators", if (usable != null) "$usable/$indicators usable" else "$indicators"),
-            LabelStat("Timeframes", if (mtf.isEmpty()) "not loaded" else "${mtf.size} real (PAXG/USDT)"),
+            LabelStat("Timeframes", if (mtf.isEmpty()) "not loaded" else "${mtf.size} proxy (PAXG/USDT) • context only, not in the decision"),
             LabelStat("Rule bots", bots?.let { "${it.totalBots} evaluated" } ?: "none"),
             LabelStat("External AI", if (council == null) "none connected" else "${council.eligible} voting / ${council.configured} connected (advisory)"),
             LabelStat("Cross-market", if (xm.available) "$xmOk/${xm.assets.size} assets • Yahoo Finance" else "CROSS-MARKET DATA UNAVAILABLE"),
