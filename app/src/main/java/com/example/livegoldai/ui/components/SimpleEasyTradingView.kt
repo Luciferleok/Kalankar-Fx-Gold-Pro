@@ -311,14 +311,14 @@ fun SimpleEasyTradingView(
                             Text(
                                 text = when (analysis.overallSignal) {
                                     Signal.BUY -> when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "High probability upside continuation from support."
-                                        AppLanguage.HINDI -> "सपोर्ट ज़ोन से ऊपर जाने की बहुत अधिक संभावना।"
-                                        AppLanguage.MARATHI -> "सपोर्ट झोनमधून वर जाण्याची उच्च शक्यता."
+                                        AppLanguage.ENGLISH -> "Rules lean up from support (not a proven edge)."
+                                        AppLanguage.HINDI -> "नियम सपोर्ट से ऊपर की ओर इशारा करते हैं (साबित बढ़त नहीं)।"
+                                        AppLanguage.MARATHI -> "नियम सपोर्टपासून वरच्या दिशेने दाखवतात (सिद्ध आघाडी नाही)."
                                     }
                                     Signal.SELL -> when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "Strong downward pressure from resistance."
-                                        AppLanguage.HINDI -> "रेजिस्टेंस ज़ोन से भारी गिरावट का दबाव।"
-                                        AppLanguage.MARATHI -> "रेझिस्टन्स झोनमधून मोठ्या घसरणीचा दबाव."
+                                        AppLanguage.ENGLISH -> "Rules lean down from resistance (not a proven edge)."
+                                        AppLanguage.HINDI -> "नियम रेजिस्टेंस से नीचे की ओर इशारा करते हैं (साबित बढ़त नहीं)।"
+                                        AppLanguage.MARATHI -> "नियम रेझिस्टन्सपासून खालच्या दिशेने दाखवतात (सिद्ध आघाडी नाही)."
                                     }
                                     Signal.WAIT -> when (currentLanguage) {
                                         AppLanguage.ENGLISH -> "Market is in range. Wait for breakout."

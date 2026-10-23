@@ -609,9 +609,9 @@ fun KyaHogaPredictionDialog(
                                         Column {
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "AI SELF-CORRECTION GUARDS"
-                                                    AppLanguage.HINDI -> "AI स्वचालित गलती सुधार (सक्रिय)"
-                                                    AppLanguage.MARATHI -> "AI स्वयंचलित चूक सुधारणा (सक्रिय)"
+                                                    AppLanguage.ENGLISH -> "RULE GUARDS (NOT AI)"
+                                                    AppLanguage.HINDI -> "नियम सुरक्षा (AI नहीं)"
+                                                    AppLanguage.MARATHI -> "नियम सुरक्षा (AI नाही)"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Black,
@@ -854,9 +854,9 @@ fun KyaHogaPredictionDialog(
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "POSSIBILITY METER (SCENARIO BREAKDOWN)"
-                                            AppLanguage.HINDI -> "संभावना मीटर (किसकी कितनी संभावना है)"
-                                            AppLanguage.MARATHI -> "शक्यता मीटर (परिस्थितीनुसार संभाव्यता)"
+                                            AppLanguage.ENGLISH -> "PAST RECORD (NOT A FORECAST)"
+                                            AppLanguage.HINDI -> "पिछला रिकॉर्ड (भविष्यवाणी नहीं)"
+                                            AppLanguage.MARATHI -> "मागील रेकॉर्ड (भविष्यवाणी नाही)"
                                         },
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Black,
@@ -868,7 +868,7 @@ fun KyaHogaPredictionDialog(
 
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> if (split.fromHistory) "Based on what really happened after past BUY/SELL calls (Learning Center)" else "Not enough history yet: these are today's pillar votes, not probabilities"
+                                    AppLanguage.ENGLISH -> if (split.fromHistory) "What really happened after this app's past BUY/SELL calls (all timeframes). It is a track record, not the chance of this call." else "Not enough history yet: these are today's pillar votes, not probabilities"
                                     AppLanguage.HINDI -> if (split.fromHistory) "पिछली BUY/SELL कॉल्स के बाद असल में क्या हुआ, उस पर आधारित" else "अभी इतिहास कम है: ये आज के पिलर वोट हैं, संभावना नहीं"
                                     AppLanguage.MARATHI -> if (split.fromHistory) "मागील BUY/SELL कॉल्सनंतर प्रत्यक्षात काय झाले त्यावर आधारित" else "अजून इतिहास कमी: ही आजची पिलर मते आहेत, शक्यता नाही"
                                 },
@@ -886,9 +886,9 @@ fun KyaHogaPredictionDialog(
                                     AppLanguage.MARATHI -> "🚀 Bullish Rally (वर जाणारी तेजी)"
                                 },
                                 hindiDetail = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Price likely to test higher resistance levels"
-                                    AppLanguage.HINDI -> "Price ऊपर के लेवल्स टेस्ट करेगा"
-                                    AppLanguage.MARATHI -> "किंमत वरील लेव्हल्स टेस्ट करेल"
+                                    AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.BUY) "past calls: went the called way" else "past calls: went against the call"
+                                    AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.BUY) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
+                                    AppLanguage.MARATHI -> if (!split.fromHistory) "या दिशेने मत देणारे इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.BUY) "मागील कॉल: सांगितलेल्या दिशेने गेले" else "मागील कॉल: उलट गेले"
                                 },
                                 percentage = bullishProb,
                                 barColor = SignalBuy,
@@ -905,9 +905,9 @@ fun KyaHogaPredictionDialog(
                                     AppLanguage.MARATHI -> "⏸️ Sideways Range (मर्यादित चढ-उतार)"
                                 },
                                 hindiDetail = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Price moving within a tight band"
-                                    AppLanguage.HINDI -> "Price एक तंग दायरे में घूमेगा"
-                                    AppLanguage.MARATHI -> "किंमत एका मर्यादित कक्षेत राहील"
+                                    AppLanguage.ENGLISH -> if (split.fromHistory) "past calls: no real move" else "share of pillars voting WAIT"
+                                    AppLanguage.HINDI -> if (split.fromHistory) "पिछली कॉल: कोई असली चाल नहीं" else "WAIT वोट करने वाले पिलर"
+                                    AppLanguage.MARATHI -> if (split.fromHistory) "मागील कॉल: खरी हालचाल नाही" else "WAIT मत देणारे पिलर"
                                 },
                                 percentage = sidewaysProb,
                                 barColor = SignalWait,
@@ -924,9 +924,9 @@ fun KyaHogaPredictionDialog(
                                     AppLanguage.MARATHI -> "🔻 Bearish Drop (खाली घसरण)"
                                 },
                                 hindiDetail = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Price likely to break lower support"
-                                    AppLanguage.HINDI -> "Price नीचे का सपोर्ट ब्रेक कर सकता है"
-                                    AppLanguage.MARATHI -> "किंमत खालील सपोर्ट तोडू शकते"
+                                    AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.SELL) "past calls: went the called way" else "past calls: went against the call"
+                                    AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.SELL) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
+                                    AppLanguage.MARATHI -> if (!split.fromHistory) "या दिशेने मत देणारे इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.SELL) "मागील कॉल: सांगितलेल्या दिशेने गेले" else "मागील कॉल: उलट गेले"
                                 },
                                 percentage = bearishProb,
                                 barColor = SignalSell,
@@ -1291,9 +1291,9 @@ fun KyaHogaPredictionDialog(
                             ReasonRow(
                                 number = "1",
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Smart-money pillar now: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
-                                    AppLanguage.HINDI -> "Smart-money पिलर अभी: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}।"
-                                    AppLanguage.MARATHI -> "Smart-money पिलर आता: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
+                                    AppLanguage.ENGLISH -> "SMC pillar (SuperTrend, VWAP/TWAP, structure) now: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
+                                    AppLanguage.HINDI -> "SMC पिलर (SuperTrend, VWAP/TWAP, संरचना) अभी: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}।"
+                                    AppLanguage.MARATHI -> "SMC पिलर (SuperTrend, VWAP/TWAP, रचना) आता: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
                                 }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
@@ -1385,7 +1385,7 @@ private fun ProbabilityItemRow(
                 )
             ) {
                 Text(
-                    text = "$percentage% CHANCE",
+                    text = "$percentage%",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Black,
                     color = barColor,

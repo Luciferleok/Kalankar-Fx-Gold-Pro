@@ -1237,21 +1237,21 @@ object TechnicalEngine {
 
         val forecastData = when (overallSignal) {
             Signal.BUY -> CandleForecastData(
-                forecast = "High probability of Green Bullish Expansion Candle",
+                forecast = "Rules lean: green (up) candle • not a measured probability",
                 range = "Expected Range: $${format2(currentPrice - 0.25 * atrSafe)} to $${format2(currentPrice + 0.85 * atrSafe)}",
                 tacticEng = "Scalp Strategy: Enter BUY on lower wick dip in the first 2 minutes of the candle and ride the upward expansion.",
                 tacticHin = "स्कैल्प रणनीति: कैंडल के शुरुआती 2 मिनट में निचले विक डिप पर BUY करें, और तेजी का लाभ उठाएं!",
                 tacticMar = "स्कॅल्प रणनीती: कँडलच्या सुरुवातीच्या 2 मिनिटांत खालच्या विक डिपवर BUY करा, आणि तेजीचा फायदा घ्या!"
             )
             Signal.SELL -> CandleForecastData(
-                forecast = "High probability of Red Bearish Breakdown Candle",
+                forecast = "Rules lean: red (down) candle • not a measured probability",
                 range = "Expected Range: $${format2(currentPrice + 0.25 * atrSafe)} down to $${format2(currentPrice - 0.85 * atrSafe)}",
                 tacticEng = "Scalp Strategy: Enter SELL on upper wick relief bounce in first 2 minutes and take profit on breakdown.",
                 tacticHin = "स्कैल्प रणनीति: कैंडल के शुरुआती 2 मिनट में ऊपरी विक उछाल पर SELL करें, और ब्रेकडाउन पर मुनाफा बुक करें!",
                 tacticMar = "स्कॅल्प रणनीती: कँडलच्या सुरुवातीच्या 2 मिनिटांत वरच्या विक उसळीवर SELL करा, आणि ब्रेकडाउनवर नफा बुक करा!"
             )
             Signal.WAIT -> CandleForecastData(
-                forecast = "High probability of Inside Bar / Wick Testing Candle (Indecision)",
+                forecast = "Rules: no side (indecision) • not a measured probability",
                 range = "Expected Range: $${format2(currentPrice - 0.45 * atrSafe)} to $${format2(currentPrice + 0.45 * atrSafe)}",
                 tacticEng = "Scalp Strategy: Do not trade mid-range chop; await confirmed close outside support or resistance.",
                 tacticHin = "स्कैल्प रणनीति: रेंज के बीच में ट्रेड न करें; सपोर्ट या रेजिस्टेंस के बाहर कैंडल क्लोज़ का इंतज़ार करें।",
