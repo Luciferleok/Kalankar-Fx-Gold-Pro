@@ -259,6 +259,11 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         }
         V8KeyValue(tr(lang, "Coverage", "कवरेज", "कव्हरेज"), b.coverage)
         b.strongSignal.forEach { V8KeyValue(it.label + tr(lang, " → really right", " → सच में सही", " → खरेच बरोबर"), it.value) }
+        // V29A.10: these rows use the TP/SL outcome, the Home ACCURACY tile uses the close direction: say so
+        Text(text = tr(lang, "Scored by trade outcome (target vs stop). The Home ACCURACY uses the close direction, so the numbers differ.",
+            "ट्रेड नतीजे (टारगेट बनाम स्टॉप) से गिना गया। होम की ACCURACY क्लोज़ की दिशा से गिनती है, इसलिए संख्याएँ अलग हैं।",
+            "ट्रेड निकालावरून (टार्गेट विरुद्ध स्टॉप) मोजले. होमची ACCURACY क्लोजच्या दिशेने मोजते, म्हणून आकडे वेगळे आहेत."),
+            color = V8.Text3, fontSize = 9.sp)
         if (com.example.livegoldai.data.brain.ResearchStats.confidenceInverted(b.strongSignal)) Text(
             text = tr(lang, "Warning: calls with HIGHER pillar agreement were right LESS often. High agreement is not more reliable; do not trust it more.",
                 "चेतावनी: ज़्यादा पिलर-सहमति वाली कॉल्स कम बार सही निकलीं। ऊँची सहमति ज़्यादा भरोसेमंद नहीं; उस पर ज़्यादा भरोसा मत करो।",
@@ -271,6 +276,9 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
             Spacer(modifier = Modifier.height(6.dp))
             V8Label(tr(lang, "By session (UTC)", "सेशन के हिसाब से (UTC)", "सेशननुसार (UTC)"))
             b.sessions.forEach { V8KeyValue(it.label, it.value) }
+            Text(text = tr(lang, "Many small groups: one of them looking high (or low) is often luck, and nearby calls overlap. Not a trading rule until Shadow Lab confirms it.",
+                "बहुत सारे छोटे हिस्से: इनमें से किसी एक का ऊँचा (या नीचा) दिखना अक्सर किस्मत होता है, और पास-पास की कॉल्स एक-दूसरे पर चढ़ी होती हैं। Shadow Lab पुष्टि न करे तब तक ये ट्रेडिंग नियम नहीं।",
+                "अनेक लहान गट: त्यातील एखादा जास्त (किंवा कमी) दिसणे बहुतेक नशीब असते, आणि जवळच्या कॉल्स एकमेकांवर येतात. Shadow Lab खात्री करेपर्यंत हा ट्रेडिंग नियम नाही."), color = V8.Amber, fontSize = 9.sp)
             Text(text = tr(lang, "A number is shown only after 20+ decided predictions in that bucket.", "संख्या तभी दिखती है जब उस हिस्से में 20+ तय भविष्यवाणियाँ हों।", "त्या गटात 20+ ठरलेले अंदाज झाल्यावरच आकडा दिसतो."), color = V8.Text3, fontSize = 9.sp)
         }
     }
