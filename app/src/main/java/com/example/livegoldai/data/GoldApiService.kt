@@ -124,13 +124,18 @@ class GoldApiService(
         return result
     }
 
-    suspend fun fetchAnalysis(interval: String = "4h", symbol: String = "XAU/USD"): Result<GoldAnalysisResult> = withContext(Dispatchers.IO) {
+    /**
+     * @param maxAgeMs how old a cached result may be. null (the screen): paced by the day's Twelve Data credits,
+     *        never older than one candle; the background recorder passes 15 s so it always sees the new candle.
+     */
+    suspend fun fetchAnalysis(interval: String = "4h", symbol: String = "XAU/USD", maxAgeMs: Long? = null): Result<GoldAnalysisResult> = withContext(Dispatchers.IO) {
         val normInterval = interval.lowercase().trim()
 
-        // Check 15-sec cache first to prevent rate limiting
+        // V29A.11: reuse a recent result; on the screen the reuse window grows when the day's credits run low
         val cached = memoryCache[normInterval]
         val now = System.currentTimeMillis()
-        if (cached != null && (now - cached.first) < cacheTtlMs) {
+        val ttl = maxAgeMs ?: maxOf(cacheTtlMs, minOf(creditBudget.screenPaceMs(now), RealityEngine.intervalMinutes(normInterval) * 60_000L))
+        if (cached != null && (now - cached.first) < ttl) {
             return@withContext Result.success(cached.second)
         }
 

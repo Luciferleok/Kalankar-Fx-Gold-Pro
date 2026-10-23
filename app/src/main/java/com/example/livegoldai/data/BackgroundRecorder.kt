@@ -41,7 +41,7 @@ object AppEngine {
     val recorder: BackgroundRecorder by lazy {
         BackgroundRecorder(
             learning = learning,
-            fetchAnalysis = { iv -> api.fetchAnalysis(interval = iv).getOrNull() },
+            fetchAnalysis = { iv -> api.fetchAnalysis(interval = iv, maxAgeMs = 15_000L).getOrNull() },
             fetchMtf = { api.fetchMtfCandles() },
             onAnalysis = { a, iv, now -> shadow.observe(a, iv, now) },
             onRecorded = { a, rec, now ->

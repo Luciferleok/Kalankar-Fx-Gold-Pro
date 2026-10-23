@@ -84,6 +84,24 @@ class CreditBudget(val perMinute: Int = 8, val perDay: Int = 800) {
     @Synchronized fun usedToday(now: Long): Int { if (utcDay(now) != day) return 0; return dayCount }
     @Synchronized fun usedLastMinute(now: Long): Int = stamps.count { now - it < 60_000L }
 
+    /**
+     * V29A.11 pacing: how long the SCREEN should reuse its last fetch so the day's credits last until UTC midnight.
+     * The background recorder and verification need about [reservePerHour] credits per hour; the screen gets the rest,
+     * spread evenly over the hours left. 0 = no pacing needed (plenty left).
+     */
+    @Synchronized
+    fun screenPaceMs(now: Long, reservePerHour: Int = 24): Long {
+        val used = if (utcDay(now) != day) 0 else dayCount
+        val hoursLeft = maxOf(0.25, ((utcDay(now) + 1) * 86_400_000L - now) / 3_600_000.0)
+        val spare = perDay - used - reservePerHour * hoursLeft
+        val perHour = spare / hoursLeft
+        return when {
+            perHour >= 60 -> 0L
+            perHour <= 1 -> 30 * 60_000L
+            else -> (3_600_000.0 / perHour).toLong()
+        }
+    }
+
     /** Waits (up to [maxWaitMs]) for a credit. */
     suspend fun acquire(maxWaitMs: Long, now: () -> Long = { System.currentTimeMillis() }): Boolean {
         val start = now()

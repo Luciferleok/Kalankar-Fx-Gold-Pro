@@ -32,10 +32,14 @@ class HealthMonitor {
         if (feed == null) {
             dataChecks.add(HealthCheck("Price source", "FAIL", "No feed information"))
         } else {
-            dataChecks.add(HealthCheck("Price source", if (feed.isLive) "OK" else "FAIL",
-                if (feed.isLive) feed.source else "All live sources failed: showing OFFLINE DEMO data"))
-            dataChecks.add(HealthCheck("Primary source", if (feed.sourcesTried == 1) "OK" else "WARN",
-                if (feed.sourcesTried == 1) "Twelve Data answered" else "Backup used (${feed.sourcesTried - 1} source(s) failed first)"))
+            // V29A.11: a proxy price is not a healthy XAU/USD source, and the reason the primary failed is shown
+            val proxy = SourceRegistry.identify(feed.source).type != SourceType.PRIMARY
+            dataChecks.add(HealthCheck("Price source", if (!feed.isLive) "FAIL" else if (proxy) "WARN" else "OK",
+                if (!feed.isLive) "All live sources failed: no XAU/USD data"
+                else if (proxy) "${feed.source} (proxy: XAU/USD decisions paused)" else feed.source))
+            dataChecks.add(HealthCheck("Primary source", if (feed.sourcesTried == 1 && !proxy) "OK" else "WARN",
+                (if (feed.sourcesTried == 1 && !proxy) "Twelve Data answered" else "Twelve Data failed: " + feed.primaryIssue.ifBlank { "no reason reported" }) +
+                    " • ${feed.creditsToday}/800 credits today"))
             dataChecks.add(HealthCheck("Fetch time", if (feed.latencyMs < 5000) "OK" else "WARN", "${feed.latencyMs} ms"))
         }
         val nCandles = a.recentCandles.size
