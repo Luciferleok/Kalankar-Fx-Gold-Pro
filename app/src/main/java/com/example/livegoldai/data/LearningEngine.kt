@@ -383,8 +383,8 @@ object LearningEngine {
             decidedAll.isEmpty() -> "OBSERVING"
             candidates.any { it.stage == "SHADOW" } -> "SHADOW_TESTING"
             candidates.any { it.stage == "CANDIDATE" } -> "CANDIDATE_FOUND"
-            history.firstOrNull()?.let { it.event == "PROMOTED" } == true && state.events.last().at > now - day -> "PROMOTED"
-            history.firstOrNull()?.let { it.event == "ROLLED_BACK" } == true && state.events.last().at > now - day -> "ROLLED_BACK"
+            history.firstOrNull()?.let { it.event == "PROMOTED" } == true && (state.events.lastOrNull { it.kind == "cand" }?.at ?: 0L) > now - day -> "PROMOTED"
+            history.firstOrNull()?.let { it.event == "ROLLED_BACK" } == true && (state.events.lastOrNull { it.kind == "cand" }?.at ?: 0L) > now - day -> "ROLLED_BACK"
             else -> "COLLECTING_SAMPLE"
         }
 

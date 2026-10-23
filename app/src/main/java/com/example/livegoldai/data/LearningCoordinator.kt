@@ -20,6 +20,20 @@ class LearningCoordinator(
     private val store: LedgerStore,
     private val fetchPath: suspend (Long, Long) -> PricePath?
 ) {
+    /** V29A: per-timeframe source state (primary / proxy / restoring). Shared by the screen and the recorder. */
+    val sourceGate = SourceStateMachine()
+    private val pendingEvents = java.util.concurrent.ConcurrentLinkedQueue<LedgerEvent>()
+
+    /** Call only while holding [busy]. */
+    private fun flushPendingEvents() {
+        val evs = ArrayList<LedgerEvent>()
+        while (true) evs.add(pendingEvents.poll() ?: break)
+        if (evs.isEmpty()) return
+        if (safeAppend(evs.map { PredictionLedger.encodeEvent(it) })) {
+            state = LedgerState(state.records, state.results, state.events + evs, state.skippedLines)
+        }
+    }
+
     /** Source-aware path fetch (record, now). When set it is used instead of [fetchPath]. */
     @Volatile var fetchPathFor: (suspend (LedgerRecord, Long) -> PricePath?)? = null
 
@@ -89,6 +103,7 @@ class LearningCoordinator(
 
     companion object {
         const val DATA_PAUSE = "D-UNSAFE"
+        const val SOURCE_PAUSE = "D-SOURCE"
         const val MAX_CHECKS_PER_REFRESH = 6
         const val GIVE_UP_AFTER_MS = 72 * 3_600_000L
         const val SETTLE_MS = 90_000L
@@ -107,18 +122,31 @@ class LearningCoordinator(
         now: Long = System.currentTimeMillis()
     ): GoldAnalysisResult {
         val mtf = RealityEngine.buildMtf(mtfCandles)
+        // V29A source gate: only Twelve Data XAU/USD with clean data may publish or record an XAU/USD call
+        val src = (analysis.chartCandles.ifEmpty { analysis.recentCandles }).map { SourceStateMachine.Candle(it.datetime, it.open, it.high, it.low, it.close) }
+        val gate = sourceGate.evaluate(interval, analysis.feed?.source, src, RealityEngine.intervalMinutes(interval) * 60_000L,
+            PredictionLedger.isMarketClosed(now), now, analysis.feed?.keyMissing == true, analysis.feed?.fetchedAtMs ?: now)
+        if (gate.changedFrom != null) {
+            // written inside the lock below, so the file and the in-memory ledger always hold the same events
+            pendingEvents.add(LedgerEvent(now, "SOURCE_EVENT", interval, gate.state,
+                "${gate.changedFrom.ifEmpty { "START" }} -> ${gate.state} • ${analysis.feed?.source ?: "--"} • ${gate.detail}"))
+        }
+        fun gated(a: GoldAnalysisResult) = a.copy(sourceState = gate.state, gateReason = gate.reason, gateDetail = gate.detail)
         if (!busy.compareAndSet(false, true)) {
             val snap = LearningEngine.snapshot(state, interval, now, lastReport)
-            return RealityEngine.apply(analysis, snap, state, mtf, interval, "")
+            return gated(RealityEngine.apply(analysis, snap, state, mtf, interval, if (gate.allowed) "" else SOURCE_PAUSE))
         }
         try {
+            flushPendingEvents()
             val newResults = verifyDue(now)
             if (newResults > 0) runCycle(now, newResults)
 
             // ---- draft of the prediction being shown now
             val newsActive = analysis.newsMode != null || analysis.newsTradingPlan?.isNewsActive == true || analysis.isNewsModeTriggered
             val ivMin = RealityEngine.intervalMinutes(interval)
-            val htf = RealityEngine.higherTimeframeSignal(mtf, ivMin)
+            // V29A: the multi-timeframe candles are PAXG/USDT (another instrument): shown as context only,
+            // never used inside an XAU/USD decision, filter or record
+            val htf: Signal? = null
             // one prediction per candle: same bar id, or (if the data source switched) a record younger than ~one candle
             val existing = state.records.lastOrNull {
                 it.interval == interval && (it.barId == analysis.lastUpdated || now - it.createdAt < ivMin * 60_000L * 9 / 10)
@@ -129,19 +157,23 @@ class LearningCoordinator(
             // data integrity comes first: on UNSAFE data no BUY/SELL is published, and nothing is recorded
             val dq = DataQualityEngine.assess(analysis.recentCandles, analysis.feed?.fetchedAtMs ?: 0L, !analysis.isSimulatedFallback, now, PredictionLedger.isMarketClosed(now))
             lastDataQuality = dq
-            val filter = if (dq.unsafe && !analysis.isSimulatedFallback) DATA_PAUSE else (existing?.appliedFilter ?: LearningEngine.firingFilter(state, draft))
+            val filter = when {
+                !gate.allowed -> SOURCE_PAUSE
+                dq.unsafe && !analysis.isSimulatedFallback -> DATA_PAUSE
+                else -> existing?.appliedFilter ?: LearningEngine.firingFilter(state, draft)
+            }
 
             val snap1 = LearningEngine.snapshot(state, interval, now, lastReport)
             val applied = RealityEngine.apply(analysis, snap1, state, mtf, interval, filter)
 
-            if (existing == null && canRecord && filter != DATA_PAUSE) {
+            if (existing == null && canRecord && filter != DATA_PAUSE && filter != SOURCE_PAUSE) {
                 val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter)
                 if (safeAppend(listOf(PredictionLedger.encodeRecord(rec)))) {
                     state = LedgerState(state.records + rec, state.results, state.events, state.skippedLines)
                 }
             }
             val snap2 = LearningEngine.snapshot(state, interval, now, lastReport)
-            return applied.copy(learning = snap2)
+            return gated(applied.copy(learning = snap2))
         } finally {
             busy.set(false)
         }
@@ -257,8 +289,8 @@ class LearningCoordinator(
         shown.multiBotEnsemble?.let { sources["bots:ensemble"] = it.ensembleSignal }
         raw.quantBotSignal?.let { sources["quant"] = it.signal }
         raw.nextPrediction?.let { sources["playbook"] = it.verdict }
-        shown.mtfMatrix?.timeframes?.forEach { if (!it.label.startsWith("This chart")) sources["mtf:${it.timeframe}"] = it.signal }
-        if (htf != null) sources["mtf:higher"] = htf
+        // V29A: no PAXG/USDT multi-timeframe votes in an XAU/USD record
+        if (htf != null && PredictionLedger.instrumentOf(raw.feed?.source ?: "") != "XAU") sources["mtf:higher"] = htf
 
         return LedgerRecord(
             id = "P" + java.lang.Long.toString(now, 36).uppercase() + interval.uppercase(),

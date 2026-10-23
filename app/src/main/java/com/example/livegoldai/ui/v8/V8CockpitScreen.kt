@@ -93,7 +93,10 @@ fun V8CockpitScreen(
         // ---------------- LEVEL 1: price + live feed
         V8Card(level = 1) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "XAU / USD", color = V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                // V29A: the instrument on screen is always named; a proxy is never shown as XAU/USD
+                val inst = feed?.instrumentId ?: ""
+                Text(text = when (inst) { "PAXG_USDT" -> "PAXG / USDT • PROXY"; "GC_F" -> "GC=F • BACKUP"; else -> "XAU / USD" },
+                    color = if (inst == "PAXG_USDT" || inst == "GC_F") V8.Amber else V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
                 V8Dot(liveColor)
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(text = when (liveState) { "LIVE" -> tr(lang, "LIVE", "लाइव", "लाइव्ह"); "RESTORED" -> tr(lang, "RESTORED", "फिर से जुड़ा", "पुन्हा जोडले"); "STALE" -> tr(lang, "STALE", "पुराना", "जुना"); "MARKET CLOSED" -> tr(lang, "MARKET CLOSED", "मार्केट बंद", "मार्केट बंद"); else -> tr(lang, "OFFLINE", "ऑफ़लाइन", "ऑफलाइन") }, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
@@ -107,7 +110,7 @@ fun V8CockpitScreen(
             V8Hairline()
             Row(modifier = Modifier.fillMaxWidth()) {
                 listOf(
-                    tr(lang, "FEED", "फ़ीड", "फीड") to (feed?.source?.substringBefore(" XAU")?.substringBefore(" PAXG") ?: "--"),
+                    tr(lang, "SOURCE", "स्रोत", "स्रोत") to (feed?.let { if (it.sourceType == "PRIMARY") "PRIMARY" else it.sourceType.ifBlank { "--" } } ?: "--"),
                     tr(lang, "AGE", "उम्र", "वय") to fmtAge(ageMs),
                     tr(lang, "FETCH", "लोड", "लोड") to (feed?.latencyMs?.let { "$it ms" } ?: "--")
                 ).forEach { (k, v) ->
@@ -163,19 +166,35 @@ fun V8CockpitScreen(
                     Text(text = when (sig) {
                         Signal.BUY -> tr(lang, "BULLISH", "ऊपर", "वर")
                         Signal.SELL -> tr(lang, "BEARISH", "नीचे", "खाली")
-                        Signal.WAIT -> tr(lang, "NO TRADE", "कोई ट्रेड नहीं", "ट्रेड नाही")
+                        Signal.WAIT -> "WAIT"
                     }, color = signalColor(sig), fontSize = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                    if (sig == Signal.WAIT) Text(
+                        text = when (analysis.gateReason) {
+                            "" -> tr(lang, "NO MEASURED EDGE", "कोई मापी हुई बढ़त नहीं", "मोजलेली आघाडी नाही")
+                            "WAIT_DATA_DEGRADED" -> tr(lang, "DATA CHECK FAILED", "डेटा जाँच फेल", "डेटा तपासणी नापास")
+                            "WAIT_NO_DATA_KEY" -> tr(lang, "NO DATA KEY", "डेटा key नहीं", "डेटा key नाही")
+                            else -> tr(lang, "SOURCE SWITCH", "स्रोत बदला", "स्रोत बदलला")
+                        },
+                        color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp
+                    )
                     if (until > now) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                     }
                 }
                 // the ring shows exactly one real number: calibrated confidence if measured, else raw pillar agreement
-                V8Ring(
-                    percent = calibrated ?: rawConf,
-                    color = signalColor(sig),
-                    label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    V8Ring(
+                        percent = calibrated ?: rawConf,
+                        color = signalColor(sig),
+                        label = if (calibrated != null) tr(lang, "calibrated", "कैलिब्रेटेड", "कॅलिब्रेटेड") else tr(lang, "agreement", "सहमति", "सहमती")
+                    )
+                    // V29A: agreement of indicators is not a probability of winning
+                    if (calibrated == null) Text(
+                        text = tr(lang, "evidence agreement\nnot a win probability", "संकेतों की सहमति\nजीत की संभावना नहीं", "संकेतांची सहमती\nजिंकण्याची शक्यता नाही"),
+                        color = V8.Text3, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp
+                    )
+                }
             }
             }
             // Four different things, shown side by side so they are never read as one number.

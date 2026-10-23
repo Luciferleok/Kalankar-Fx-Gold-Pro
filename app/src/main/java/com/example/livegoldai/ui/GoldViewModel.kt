@@ -78,7 +78,7 @@ data class GoldUiState(
     val selectedTab: Int = 0, // 0=All, 1=Trend, 2=Momentum, 3=Volatility, 4=S/R, 5=Candlestick
     val countdownSeconds: Int = 60,
     val errorMessage: String? = null,
-    val apiKey: String = "8e1493529b8e42d9b0a9e557c3451db0",
+    val apiKey: String = "",   // V29A: no built-in key; the user's own key is loaded from encrypted storage
     val priceAlertTarget: Double? = null,
     val isAlertTriggered: Boolean = false,
     val showLotCalculator: Boolean = false,
@@ -238,7 +238,7 @@ class GoldViewModel @JvmOverloads constructor(
                     withContext(Dispatchers.IO) {
                         val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
                         val learned = learning.process(rawAnalysis, currentInterval, mtfCandles)
-                        try { shadowLive.observe(rawAnalysis, currentInterval) } catch (_: Exception) { }
+                        try { shadowLive.observe(learned, currentInterval) } catch (_: Exception) { }
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
                         // keep showing the last AI council for this timeframe until the next run finishes

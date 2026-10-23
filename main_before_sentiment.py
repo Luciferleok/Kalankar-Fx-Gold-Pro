@@ -13,7 +13,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.clock import Clock
 
-API_KEY = "8e1493529b8e42d9b0a9e557c3451db0"
+API_KEY = ""
 SYMBOL = "XAU/USD"
 
 def fetch_data(interval="4h", size=100):

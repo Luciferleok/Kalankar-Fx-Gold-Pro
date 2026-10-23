@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 class GoldApiService(
-    private var apiKey: String = "8e1493529b8e42d9b0a9e557c3451db0"
+    private var apiKey: String = ""   // V29A: no built-in key; only the user's own key from encrypted storage
 ) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
@@ -35,6 +35,9 @@ class GoldApiService(
 
     companion object {
         const val VOLUME_SOURCE = "PAXG/USDT (Binance)"
+
+        /** One Twelve Data credit budget for the whole app (screen, recorder, verification, Shadow Lab). */
+        val creditBudget = CreditBudget()
 
         /** Twelve Data candle size -> (Binance bar size used to rebuild its volume, candle length in ms). */
         fun volumePlan(tdInterval: String): Pair<String, Long>? {
@@ -91,6 +94,10 @@ class GoldApiService(
         const val PROXY_AFTER_MS = 60 * 60_000L      // fall back to a proxy instrument only when an hour overdue
     }
 
+    /** Why the primary feed was not used on the last fetch ("" = it was used). Shown with the source badge. */
+    @Volatile var primaryIssue: String = ""
+        private set
+
     fun setApiKey(newKey: String) {
         apiKey = newKey.trim()
         memoryCache.clear()
@@ -108,8 +115,9 @@ class GoldApiService(
             val close = chunk.last().close
             val high = chunk.maxOf { it.high }
             val low = chunk.minOf { it.low }
-            val volume = chunk.sumOf { it.volume ?: 0.0 }
-            val buyVolume = chunk.sumOf { it.buyVolume ?: ((it.volume ?: 0.0) * (if (it.close >= it.open) 0.6 else 0.4)) }
+            // real volume only if every part has it; never a 60/40 split
+            val volume = if (chunk.all { it.volume != null }) chunk.sumOf { it.volume!! } else null
+            val buyVolume = if (chunk.all { it.buyVolume != null }) chunk.sumOf { it.buyVolume!! } else null
             val dt = chunk.last().datetime
             result.add(CandleBar(datetime = dt, open = open, high = high, low = low, close = close, volume = volume, buyVolume = buyVolume))
         }
@@ -132,7 +140,12 @@ class GoldApiService(
         val eventsDeferred = async { fetchLiveEconomicEvents() }
 
         // Step 1: TwelveData API (if API key is active and within limit)
-        if (apiKey.isNotBlank()) {
+        primaryIssue = when {
+            apiKey.isBlank() -> "no Twelve Data key saved"
+            else -> ""
+        }
+        if (apiKey.isNotBlank() && !creditBudget.acquire(15_000L)) primaryIssue = "Twelve Data credit limit (${creditBudget.usedToday(now)} used today)"
+        else if (apiKey.isNotBlank()) {
             try {
                 val (tdInterval, tdGroup) = when (normInterval) {
                     "1m", "1min" -> Pair("1min", 1)
@@ -165,6 +178,8 @@ class GoldApiService(
                     .build()
                 val response = client.newCall(request).execute()
                 val bodyString = response.body?.string()
+                if (response.code == 429 || bodyString?.contains("\"code\":429") == true) { creditBudget.onRateLimited(System.currentTimeMillis()); primaryIssue = "Twelve Data rate limit (429)" }
+                else if (!response.isSuccessful) primaryIssue = "Twelve Data HTTP ${response.code}"
 
                 if (response.isSuccessful && !bodyString.isNullOrBlank()) {
                     val jsonElement = json.parseToJsonElement(bodyString).jsonObject
@@ -179,20 +194,17 @@ class GoldApiService(
                             val h = obj["high"]?.jsonPrimitive?.double ?: 0.0
                             val l = obj["low"]?.jsonPrimitive?.double ?: 0.0
                             val c = obj["close"]?.jsonPrimitive?.double ?: 0.0
-                            val v = obj["volume"]?.jsonPrimitive?.double ?: 1000.0
+                            // V29A: spot XAU/USD has no central volume. Missing volume stays null: never 1000, never a shape estimate.
+                            val v = obj["volume"]?.jsonPrimitive?.content?.toDoubleOrNull()?.takeIf { it > 0.0 }
                             if (c > 0.0) {
-                                val rng = (h - l).coerceAtLeast(0.01)
-                                val buyRatio = if (c >= o) (0.52 + 0.38 * (c - o) / rng) else (0.48 - 0.38 * (o - c) / rng)
-                                val buyV = v * buyRatio.coerceIn(0.12, 0.88)
-                                rawList.add(CandleBar(datetime = dt, open = o, high = h, low = l, close = c, volume = v, buyVolume = buyV))
+                                rawList.add(CandleBar(datetime = dt, open = o, high = h, low = l, close = c, volume = v, buyVolume = null))
                             }
                         }
-                        // real traded volume (spot XAU/USD has none): taken from PAXG/USDT trades and clearly labelled
-                        val withVol = try { realVolumeFor(rawList, tdInterval) } catch (_: Exception) { null }
-                        val volSource = if (withVol != null) VOLUME_SOURCE else ""
-                        val merged = withVol ?: rawList
-                        val candleList = if (tdGroup > 1) aggregateCandles(merged, tdGroup) else merged
-                        if (candleList.size >= 10) {
+                        // V29A (choice A): PAXG/USDT volume is a different market and is no longer merged into
+                        // XAU/USD candles, so it cannot reach any XAU/USD indicator or vote.
+                        val volSource = ""
+                        val candleList = if (tdGroup > 1) aggregateCandles(rawList, tdGroup) else rawList
+                        if (candleList.size >= 30) {
                             val analysis = TechnicalEngine.analyze(
                                 candles = candleList,
                                 interval = interval,
@@ -206,13 +218,14 @@ class GoldApiService(
                         }
                     }
                 }
-            } catch (_: Exception) {
-                // TwelveData rate-limited (e.g. >8 req/min or 800/day), seamless auto-failover
+            } catch (e: Exception) {
+                primaryIssue = "Twelve Data error: ${e.javaClass.simpleName}"
             }
+            if (primaryIssue.isEmpty()) primaryIssue = "Twelve Data returned no usable candles"
         }
 
-        // Step 2: High-availability live Gold stream (Binance PAXG/USDT - 100% LBMA Gold Bullion Spot)
-        // Completely free, NO API key required, 1200 req/min limit, 24/7 second-by-second live updates
+        // Step 2: PROXY CONTEXT only - Binance PAXG/USDT (a gold-backed token on a crypto exchange, NOT XAU/USD spot).
+        // Its price may be shown, but the source gate pauses every XAU/USD decision while it is the feed.
         try {
             val (binanceInterval, binanceGroup, limit) = when (normInterval) {
                 "1m", "1min" -> Triple("1m", 1, 70)
@@ -258,8 +271,8 @@ class GoldApiService(
                         val l = arr[3].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
                         val c = arr[4].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
                         val v = arr[5].jsonPrimitive.content.toDoubleOrNull() ?: 0.0
-                        val takerBuyV = if (arr.size > 9) arr[9].jsonPrimitive.content.toDoubleOrNull() else null
-                        val buyV = takerBuyV ?: (v * (if (c >= o) 0.58 else 0.42))
+                        // real taker-buy volume when Binance sends it; otherwise null (never a 58/42 guess)
+                        val buyV = if (arr.size > 9) arr[9].jsonPrimitive.content.toDoubleOrNull() else null
                         if (c > 0.0) {
                             rawList.add(
                                 CandleBar(
@@ -275,7 +288,7 @@ class GoldApiService(
                         }
                     }
                     val candleList = if (binanceGroup > 1) aggregateCandles(rawList, binanceGroup) else rawList
-                    if (candleList.size >= 10) {
+                    if (candleList.size >= 30) {
                         val analysis = TechnicalEngine.analyze(
                             candles = candleList,
                             interval = interval,
@@ -293,7 +306,7 @@ class GoldApiService(
             // Live PAXG failover attempted
         }
 
-        // Step 2.5: Third Live Backup - Yahoo Finance (GC=F Gold Spot Futures, Zero API Key)
+        // Step 2.5: BACKUP CONTEXT only - Yahoo GC=F (COMEX gold futures, a different instrument from XAU/USD spot)
         try {
             val (yfInterval, yfRange) = when (normInterval) {
                 "1m", "1min", "2m", "3m", "4m" -> Pair("1m", "1d")
@@ -334,15 +347,12 @@ class GoldApiService(
                         val o = opens?.get(i)?.jsonPrimitive?.content?.toDoubleOrNull() ?: c
                         val h = highs?.get(i)?.jsonPrimitive?.content?.toDoubleOrNull() ?: maxOf(o, c)
                         val l = lows?.get(i)?.jsonPrimitive?.content?.toDoubleOrNull() ?: minOf(o, c)
-                        val v = volumes?.get(i)?.jsonPrimitive?.content?.toDoubleOrNull() ?: 1000.0
+                        val v = volumes?.get(i)?.jsonPrimitive?.content?.toDoubleOrNull()?.takeIf { it > 0.0 }
                         if (c > 0.0) {
-                            val rng = (h - l).coerceAtLeast(0.01)
-                            val buyRatio = if (c >= o) (0.52 + 0.38 * (c - o) / rng) else (0.48 - 0.38 * (o - c) / rng)
-                            val buyV = v * buyRatio.coerceIn(0.12, 0.88)
-                            rawList.add(CandleBar(datetime = sdf.format(Date(ts * 1000L)), open = o, high = h, low = l, close = c, volume = v, buyVolume = buyV))
+                            rawList.add(CandleBar(datetime = sdf.format(Date(ts * 1000L)), open = o, high = h, low = l, close = c, volume = v, buyVolume = null))
                         }
                     }
-                    if (rawList.size >= 10) {
+                    if (rawList.size >= 30) {
                         val analysis = TechnicalEngine.analyze(
                             candles = rawList.takeLast(70),
                             interval = interval,
@@ -358,9 +368,8 @@ class GoldApiService(
             }
         } catch (_: Exception) {}
 
-        // Step 3: Offline cached fallback engine (updated to current market prices)
-        val fallback = TechnicalEngine.fallbackAnalysis(interval)
-        Result.success(withFeed(fallback.copy(isSimulatedFallback = true), "OFFLINE DEMO", now, 4, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size))
+        // Step 3 (V29A): no simulated "demo" market any more. Without a live feed the app says so.
+        Result.failure(IllegalStateException(if (apiKey.isBlank()) "NO LIVE DATA • add your Twelve Data key in Settings" else "NO LIVE DATA • no gold feed answered"))
     }
 
     /**
@@ -474,7 +483,11 @@ class GoldApiService(
 
     private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int, volumeSource: String = ""): GoldAnalysisResult {
         val end = System.currentTimeMillis()
-        return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried, volumeSource))
+        val id = SourceRegistry.identify(source)
+        return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried, volumeSource,
+            instrumentId = id.instrument.name, providerId = id.provider.name, providerSymbol = id.symbol, sourceType = id.type.name,
+            keyMissing = apiKey.isBlank(), creditsToday = creditBudget.usedToday(end),
+            primaryIssue = if (id.type == SourceType.PRIMARY) "" else primaryIssue))
     }
 
     // ---------------- REAL VOLUME FOR THE SPOT FEED ----------------
@@ -620,10 +633,17 @@ class GoldApiService(
             lastSpotFetchAt = now
         }
         val minutes = ((now - startMs) / 60_000L + 5).coerceIn(10, 5000)
+        if (apiKey.isBlank()) return PricePath("WAIT", emptyList(), waiting = true)
+        // verification never waits for credits: if the budget is busy it simply tries again later
+        if (creditBudget.tryAcquire(System.currentTimeMillis()) != 0L) {
+            synchronized(spotBars) { lastSpotFetchAt = 0L }
+            return PricePath("WAIT", emptyList(), waiting = true)
+        }
         val fetched = try {
             val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1min&outputsize=$minutes&timezone=UTC&order=ASC&apikey=$apiKey"
             val resp = client.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
             val body = resp.body?.string()
+            if (resp.code == 429) creditBudget.onRateLimited(System.currentTimeMillis())
             if (!resp.isSuccessful || body.isNullOrBlank()) null else parseSpotBars(body)
         } catch (_: Exception) {
             null
@@ -667,8 +687,9 @@ class GoldApiService(
                 when {
                     same != null && !same.waiting && same.bars.isNotEmpty() -> same
                     same?.waiting == true && now - endMs < PROXY_AFTER_MS -> same
-                    now - endMs < PROXY_AFTER_MS -> PricePath("WAIT", emptyList(), waiting = true)   // spot history failed: retry before using a proxy
-                    else -> fetchPricePath(startMs, endMs)
+                    // V29A: an XAU/USD prediction is verified on XAU/USD only. No PAXG/GC=F fallback: keep waiting;
+                    // the coordinator gives up after GIVE_UP_AFTER_MS and records DATA_FAILURE (not counted).
+                    else -> PricePath("WAIT", emptyList(), waiting = true)
                 }
             }
             "GC" -> {
@@ -696,8 +717,19 @@ class GoldApiService(
             if (apiKey.isBlank()) return@withContext Result.failure(IllegalStateException("No Twelve Data key saved"))
             val end = if (endDate == null) "" else "&end_date=" + java.net.URLEncoder.encode(endDate, "UTF-8")
             val url = "https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=$tdInterval&outputsize=5000&timezone=UTC&order=ASC$end&apikey=$apiKey"
-            val response = historyClient.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
-            val body = response.body?.string()
+            // waits in line for a credit (never collides with the live feed); one retry after a 429
+            var response: okhttp3.Response? = null
+            var body: String? = null
+            for (attempt in 0..1) {
+                if (!creditBudget.acquire(75_000L)) return@withContext Result.failure(IllegalStateException("Twelve Data credit limit reached (${creditBudget.usedToday(System.currentTimeMillis())} used today). Try later."))
+                response = historyClient.newCall(Request.Builder().url(url).header("User-Agent", "KalankarFXGoldPro/1.0").build()).execute()
+                body = response.body?.string()
+                val limited = response.code == 429 || body?.contains("\"code\":429") == true
+                if (!limited) break
+                creditBudget.onRateLimited(System.currentTimeMillis())
+                if (attempt == 1) return@withContext Result.failure(IllegalStateException("Twelve Data rate limit (429), try again in a minute"))
+            }
+            if (response == null) return@withContext Result.failure(IllegalStateException("No response"))
             if (!response.isSuccessful || body.isNullOrBlank()) return@withContext Result.failure(IllegalStateException("Twelve Data HTTP ${response.code}"))
             val root = json.parseToJsonElement(body).jsonObject
             if (root["status"]?.jsonPrimitive?.content == "error") {

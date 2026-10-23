@@ -42,6 +42,25 @@ fun BuyerSellerDepthCard(
     modifier: Modifier = Modifier
 ) {
     if (sentiment == null) return
+    if (!sentiment.available) {
+        // V29A: no real traded volume on this feed: say so, never show an estimated split
+        val lang = LocalAppLanguage.current
+        androidx.compose.material3.Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            color = ObsidianSurfaceCard,
+            border = androidx.compose.foundation.BorderStroke(0.75.dp, ObsidianBorder)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(text = "BUY / SELL FLOW", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = sentiment.strengthLevel, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = sentiment.getLiveAction(lang), color = TextSecondary, fontSize = 11.sp)
+            }
+        }
+        return
+    }
 
     val currentLanguage = LocalAppLanguage.current
     val isBullsDominant = sentiment.buyersPercent >= sentiment.sellersPercent

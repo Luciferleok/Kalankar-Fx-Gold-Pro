@@ -236,13 +236,13 @@ fun SmartMoneySmcCard(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${String.format(Locale.US, "%.1f", smc.mfi14)} / 100",
+                            text = if (smc.mfi14 < 0) "—" else "${String.format(Locale.US, "%.1f", smc.mfi14)} / 100",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Black,
-                            color = if (smc.mfi14 >= 50) NeonGreen else NeonRed
+                            color = if (smc.mfi14 < 0) TextMuted else if (smc.mfi14 >= 50) NeonGreen else NeonRed
                         )
                         Text(
-                            text = if (smc.mfi14 >= 50) "Smart Money Inflow" else "Smart Money Outflow",
+                            text = if (smc.mfi14 < 0) "Unavailable (no real volume)" else if (smc.mfi14 >= 50) "Money flow above 50" else "Money flow below 50",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary
                         )

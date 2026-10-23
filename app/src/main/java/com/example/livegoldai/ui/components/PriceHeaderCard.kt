@@ -322,7 +322,7 @@ fun PriceHeaderCard(
             }
 
             // Real-Time Buy vs Sell Ratio Live Snapshot (Kitna Buy ho raha hai vs Kitna Sell)
-            analysis.buyerSellerRatio?.let { bs ->
+            analysis.buyerSellerRatio?.takeIf { it.available }?.let { bs ->
                 Spacer(modifier = Modifier.height(14.dp))
                 Surface(
                     shape = RoundedCornerShape(14.dp),

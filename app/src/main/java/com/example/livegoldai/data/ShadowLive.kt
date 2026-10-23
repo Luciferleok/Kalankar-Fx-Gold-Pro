@@ -217,6 +217,8 @@ class ShadowLive(
     suspend fun observe(a: GoldAnalysisResult, interval: String, now: Long = System.currentTimeMillis()): List<String> {
         if (interval !in LIVE_INTERVALS || a.isSimulatedFallback) return emptyList()
         if (a.feed?.source?.contains(TWELVE) != true) return emptyList()      // DATA source must match the lab
+        // V29A: shadow calls only on clean primary data (same gate as production; degraded / restoring = no record)
+        if (a.sourceState.isNotEmpty() && a.sourceState != SourceStateMachine.PRIMARY_ACTIVE) return emptyList()
         val src = a.chartCandles.ifEmpty { a.recentCandles }
         if (src.size < ShadowLab.WARMUP + 6) return emptyList()
         val bars = src.dropLast(1).map { ShadowLab.Bar(it.datetime, it.open, it.high, it.low, it.close) }

@@ -73,7 +73,7 @@ object RealityEngine {
             val r = rsi(closes)
             TimeframeStatus(
                 timeframe = tf.uppercase(),
-                label = "PAXG/USDT ${bars.size} candles",
+                label = "PROXY CONTEXT • PAXG/USDT ${bars.size} candles",
                 signal = sig,
                 keyLevel = "EMA21 $${f2(e21)}",
                 momentumPercent = r.roundToInt(),
@@ -93,7 +93,7 @@ object RealityEngine {
             if (list.isEmpty()) "no data" else list.joinToString(" • ") { "${it.timeframe} ${it.signal.name}" }
         return MultiTimeframeMatrix(
             timeframes = rows,
-            alignmentSummary = "$up of ${rows.size} timeframes UP, $down DOWN (real PAXG/USDT candles, EMA9/21/50 rule)",
+            alignmentSummary = "PROXY CONTEXT: $up of ${rows.size} timeframes UP, $down DOWN on PAXG/USDT (a different instrument; not used in the XAU/USD decision)",
             scalpRecommendation = "Short timeframes: ${describe(small)}",
             swingRecommendation = "Higher timeframes: ${describe(big)}"
         )
@@ -166,25 +166,29 @@ object RealityEngine {
         if (appliedFilter.isNotEmpty()) {
             val cand = snapshot.candidates.firstOrNull { it.id == appliedFilter }
             val owner = LearningEngine.isOwnerFilter(appliedFilter)
-            val dataPause = appliedFilter == LearningCoordinator.DATA_PAUSE
+            val sourcePause = appliedFilter == LearningCoordinator.SOURCE_PAUSE
+            val dataPause = appliedFilter == LearningCoordinator.DATA_PAUSE || sourcePause
             a = a.copy(
                 overallSignal = Signal.WAIT,
                 quantBotSignal = a.quantBotSignal?.copy(
                     signal = Signal.WAIT, isTradeActive = false, orderType = "STANDBY",
-                    statusText = if (dataPause) "DATA FILTER: FORECAST PAUSED" else if (owner) "RANGE FILTER $appliedFilter: WAIT" else "🧠 LEARNED FILTER $appliedFilter: WAIT",
-                    botReasoningEnglish = if (dataPause) "Forecast paused: market data integrity issue. No BUY/SELL is shown or recorded until the data is clean."
+                    statusText = if (sourcePause) "SOURCE SWITCH: XAU/USD DECISION PAUSED" else if (dataPause) "DATA FILTER: FORECAST PAUSED" else if (owner) "RANGE FILTER $appliedFilter: WAIT" else "🧠 LEARNED FILTER $appliedFilter: WAIT",
+                    botReasoningEnglish = if (sourcePause) "Decision paused: the price shown is not from Twelve Data XAU/USD (or the primary feed is not clean yet). No BUY/SELL is shown or recorded until it is back."
+                        else if (dataPause) "Forecast paused: market data integrity issue. No BUY/SELL is shown or recorded until the data is clean."
                         else if (owner) "Sideways market (trend efficiency below 20%): the trend rules are unreliable here, so this ${analysis.overallSignal.name} is shown as WAIT."
                         else "Learned filter ${cand?.titleEnglish ?: appliedFilter} blocked this ${analysis.overallSignal.name}. ${cand?.note ?: ""}",
-                    botReasoningHindi = if (dataPause) "फोरकास्ट रुका है: मार्केट डेटा में गड़बड़ी है। डेटा साफ़ होने तक BUY/SELL न दिखेगा, न रिकॉर्ड होगा।"
+                    botReasoningHindi = if (sourcePause) "फैसला रुका है: दिखाया गया भाव Twelve Data XAU/USD का नहीं है (या मुख्य फ़ीड अभी साफ़ नहीं)। उसके लौटने तक BUY/SELL न दिखेगा, न रिकॉर्ड होगा।"
+                        else if (dataPause) "फोरकास्ट रुका है: मार्केट डेटा में गड़बड़ी है। डेटा साफ़ होने तक BUY/SELL न दिखेगा, न रिकॉर्ड होगा।"
                         else if (owner) "मार्केट साइडवेज़ है (ट्रेंड एफिशिएंसी 20% से कम): यहाँ ट्रेंड के नियम भरोसेमंद नहीं, इसलिए यह ${analysis.overallSignal.name} WAIT दिखाया गया।"
                         else "सीखे गए फ़िल्टर ${cand?.titleHindi ?: appliedFilter} ने यह ${analysis.overallSignal.name} रोका।",
-                    botReasoningMarathi = if (dataPause) "फोरकास्ट थांबवला आहे: मार्केट डेटामध्ये त्रुटी आहे. डेटा स्वच्छ होईपर्यंत BUY/SELL दाखवला किंवा नोंदवला जाणार नाही."
+                    botReasoningMarathi = if (sourcePause) "निर्णय थांबवला आहे: दाखवलेला भाव Twelve Data XAU/USD चा नाही (किंवा मुख्य फीड अजून स्वच्छ नाही). तो परत येईपर्यंत BUY/SELL दाखवला किंवा नोंदवला जाणार नाही."
+                        else if (dataPause) "फोरकास्ट थांबवला आहे: मार्केट डेटामध्ये त्रुटी आहे. डेटा स्वच्छ होईपर्यंत BUY/SELL दाखवला किंवा नोंदवला जाणार नाही."
                         else if (owner) "मार्केट साइडवेज आहे (ट्रेंड एफिशियन्सी 20% पेक्षा कमी): इथे ट्रेंडचे नियम विश्वासार्ह नाहीत, म्हणून हा ${analysis.overallSignal.name} WAIT दाखवला आहे."
                         else "शिकलेल्या फिल्टर ${cand?.titleMarathi ?: appliedFilter} ने हा ${analysis.overallSignal.name} थांबवला."
                 ),
                 nextPrediction = a.nextPrediction?.copy(
                     verdict = Signal.WAIT,
-                    urgencyTag = if (dataPause) "FORECAST PAUSED • DATA" else if (owner) "WAIT • RANGE MARKET" else "WAIT • LEARNED FILTER $appliedFilter"
+                    urgencyTag = if (sourcePause) "WAIT • SOURCE SWITCH" else if (dataPause) "FORECAST PAUSED • DATA" else if (owner) "WAIT • RANGE MARKET" else "WAIT • LEARNED FILTER $appliedFilter"
                 )
             )
         }

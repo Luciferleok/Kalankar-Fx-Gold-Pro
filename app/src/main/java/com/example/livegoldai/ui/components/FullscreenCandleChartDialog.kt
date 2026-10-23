@@ -564,7 +564,7 @@ fun FullscreenCandleChartDialog(
                         if (showVolume && hasRealVolume) {
                             val volH = h * 0.18f
                             displayCandles.forEachIndexed { i, c ->
-                                val v = (c.volume ?: 1000.0).toFloat()
+                                val v = (c.volume ?: 0.0).toFloat()
                                 val barH = (v / maxVolume.toFloat()) * volH
                                 val cx = i * slotW + (slotW - candleW) / 2
                                 val isBull = c.close >= c.open

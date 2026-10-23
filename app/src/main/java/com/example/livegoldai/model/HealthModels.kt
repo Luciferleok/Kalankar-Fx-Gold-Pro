@@ -13,7 +13,15 @@ data class FeedStatus(
     val us10yAvailable: Boolean,
     val calendarEvents: Int,
     val sourcesTried: Int,       // 1 = primary worked, 2+ = backup was used
-    val volumeSource: String = "" // where the candle volume comes from ("" = this feed has no real volume)
+    val volumeSource: String = "", // where the candle volume comes from ("" = this feed has no real volume)
+    // ---- V29A identity (explicit, never inferred later)
+    val instrumentId: String = "LEGACY_UNKNOWN",   // XAU_USD_SPOT / PAXG_USDT / GC_F / SIMULATED
+    val providerId: String = "NONE",               // TWELVE_DATA / BINANCE / YAHOO
+    val providerSymbol: String = "",
+    val sourceType: String = "",                   // PRIMARY / BACKUP / PROXY / SIMULATED
+    val keyMissing: Boolean = false,               // no Twelve Data key saved on this phone
+    val creditsToday: Int = 0,                     // Twelve Data calls used today by this app
+    val primaryIssue: String = ""                  // why the primary feed was not used ("" when it was)
 )
 
 @Serializable

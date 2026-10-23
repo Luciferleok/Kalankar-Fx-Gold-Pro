@@ -83,7 +83,8 @@ fun GoldHomeScreen(
         val feedLine = if (f == null) "--" else {
             val age = (now - f.fetchedAtMs) / 1000
             val st = if (!f.isLive) "OFFLINE" else if (age > 180) "STALE" else "LIVE"
-            "${f.source} • $st • ${age}s" + if (f.volumeSource.isNotBlank()) " • volume: ${f.volumeSource}" else ""
+            com.example.livegoldai.data.SourceRegistry.badge(f.source) + " • $st • ${age}s • ${f.creditsToday} credits today" +
+                (if (f.primaryIssue.isNotBlank()) " • primary: ${f.primaryIssue}" else "")
         }
         val keys = uiState.aiProviders
         val consoleState = com.example.livegoldai.ui.v8.SettingsConsoleState(
@@ -93,7 +94,7 @@ fun GoldHomeScreen(
             depth = uiState.backgroundDepth,
             interval = uiState.selectedInterval,
             feedLine = feedLine,
-            feedKeyLine = if (uiState.feedKeySaved) "Your own key (…${uiState.apiKey.takeLast(4)}), encrypted on this phone" else "Built-in shared key. Add your own for reliable quota.",
+            feedKeyLine = if (uiState.feedKeySaved) "Your own key (…${uiState.apiKey.takeLast(4)}), encrypted on this phone" else "NO KEY SAVED: XAU/USD cannot load. Add your own Twelve Data key here.",
             aiLine = "${keys.count { it.hasKey }} of ${keys.size} keys saved • mode ${uiState.aiMode}",
             learnLine = uiState.data?.pulse?.let { "${it.checked} checked • ${it.active} waiting • ${it.modelHealth}" } ?: "--",
             alertLine = uiState.priceAlertTarget?.let { String.format(java.util.Locale.US, "Alert at %,.2f", it) } ?: "Off",

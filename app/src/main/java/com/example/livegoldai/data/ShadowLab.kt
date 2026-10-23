@@ -33,7 +33,7 @@ import kotlin.math.sqrt
  */
 object ShadowLab {
 
-    const val LAB_VERSION = "SL1.4"
+    const val LAB_VERSION = "SL1.5"
     const val LABEL_VERSION = "L1"
     const val FEATURE_SCHEMA = "F2"     // 5 directional factors + context (vol, efficiency, time of day, squeeze)
     const val RECIPE_VERSION = "R2"     // FACTOR GATED: logistic, L2=2, rolling 1500, gate at 30% train coverage, OOD wait
@@ -68,6 +68,8 @@ object ShadowLab {
         const val GATE_RANGE = "Gate fixed at 30% training coverage; 10/20/30/50/100% shown as a curve only (not used to pick a winner)."
         const val CORRECTION = "Bonferroni over the number of challengers in this run; horizon sweep has its own family of 3."
         const val ATTEMPTS = "Max 3 pre-registered one-change attempts per timeframe; after 3 failures: architecture review."
+        /** Attempt #1, registered 2026-10-23 after run 1 showed FACTOR GATED made 91% UP calls on 4h (drift-following). */
+        const val ATTEMPT_1 = "A1 (2026-10-23): ONE change - FACTOR BALANCED = FACTOR GATED fitted with UP and DOWN weighted equally, so the model cannot win by copying gold's drift. Same factors, gate, label, checks; family grows to 5 challengers."
     }
 
     data class Bar(val time: String, val open: Double, val high: Double, val low: Double, val close: Double)
@@ -110,6 +112,7 @@ object ShadowLab {
         val netByCost: List<Double?>,   // per COSTS scenario, USD per call
         val matchedBaseline: String = "--",
         val matchedBaselineAcc: Double? = null,
+        val matchedBaselineNet: Double? = null,   // the matched baseline's net per call at reference cost, on the same call candles
         val pairedDiff: Double? = null, // challenger minus best matched baseline, percentage points
         val pairedDiffLow: Double? = null
     ) {
@@ -324,6 +327,7 @@ object ShadowLab {
         val cR = track("REGIME FIRST", "CHALLENGER", "separate model for TREND and RANGE, WAIT in HIGH VOL / UNCLEAR")
         val cP = track("FACTOR+", "CHALLENGER", "adds time of day and volatility squeeze")
         val cM = track("META FILTER", "CHALLENGER", "FACTOR GATED, but skips conditions where its earlier calls failed")
+        val cB = track("FACTOR BALANCED", "CHALLENGER", "attempt #1: FACTOR GATED with UP and DOWN weighted equally (cannot win by copying drift)")
         val nRand = track("RANDOM FEATURE", "CONTROL", "same model on pure noise: must show no edge")
         val nShuf = track("SHUFFLED FEATURE", "CONTROL", "real factors from the wrong candles: must show no edge")
         val waitReason = Array(nT) { "" }
@@ -346,6 +350,9 @@ object ShadowLab {
             val gate = trainP?.let { gateFor(it, TARGET_COVERAGE) }
             val curveGates = curveTargets.map { c -> trainP?.let { gateFor(it, c) } }
             val ood = global?.let { g -> g.mean to g.sd }
+            val bal = Logit.fit(dIdx.map { f[it]!!.directional() }, ys, balanced = true)
+            val balGate = bal?.let { g -> gateFor(trainIdx.map { g.prob(f[it]!!.directional()) }, TARGET_COVERAGE) }
+            val balOod = bal?.let { g -> g.mean to g.sd }
             val plus = Logit.fit(dIdx.map { f[it]!!.extended() }, ys)
             val plusGate = plus?.let { g -> gateFor(trainIdx.map { g.prob(f[it]!!.extended()) }, TARGET_COVERAGE) }
             val rM = Logit.fit(dIdx.map { randomFeat[it] }, ys)
@@ -391,6 +398,12 @@ object ShadowLab {
                 }
                 perRegime[fi.regime]?.let { (m, g) -> val p = m.prob(fi.directional()); if (abs(p - 0.5) >= g) cR[t] = if (p > 0.5) 1 else -1 }
                 if (plus != null && plusGate != null) { val p = plus.prob(fi.extended()); if (abs(p - 0.5) >= plusGate) cP[t] = if (p > 0.5) 1 else -1 }
+                if (bal != null && balGate != null && balOod != null) {
+                    val x = fi.directional()
+                    val isOod = x.indices.any { j -> abs((x[j] - balOod.first[j]) / balOod.second[j]) > OOD_Z }
+                    val p = bal.prob(x)
+                    if (!isOod && abs(p - 0.5) >= balGate) cB[t] = if (p > 0.5) 1 else -1
+                }
                 if (rM != null && rGate != null) { val p = rM.prob(randomFeat[i]); if (abs(p - 0.5) >= rGate) nRand[t] = if (p > 0.5) 1 else -1 }
                 if (sM != null && sGate != null) { val p = sM.prob(f[shuffledOf[i]!!]!!.directional()); if (abs(p - 0.5) >= sGate) nShuf[t] = if (p > 0.5) 1 else -1 }
             }
@@ -415,7 +428,9 @@ object ShadowLab {
             val (bn, bAcc) = baselineNames.map { b -> b to 100.0 * sel.count { dec[b]!![it] == y[it] } / sel.size }.maxByOrNull { it.second }!!
             val diff = DoubleArray(sel.size) { j -> val t = sel[j]; (if (dec[name]!![t] == y[t]) 1.0 else 0.0) - (if (dec[bn]!![t] == y[t]) 1.0 else 0.0) }
             val ci = Evidence.blockBootstrap(diff, HORIZON * 2, fam, seed + 7)
-            return base.copy(matchedBaseline = bn, matchedBaselineAcc = bAcc, pairedDiff = diff.average() * 100, pairedDiffLow = ci?.first?.times(100))
+            val callsAll = (0 until nT).filter { dec[name]!![it] != 0 }
+            val bNet = if (callsAll.isEmpty()) null else callsAll.sumOf { dec[bn]!![it] * mv[it] - REFERENCE_COST } / callsAll.size
+            return base.copy(matchedBaseline = bn, matchedBaselineAcc = bAcc, matchedBaselineNet = bNet, pairedDiff = diff.average() * 100, pairedDiffLow = ci?.first?.times(100))
         }
         val models = dec.keys.map { score(it) }
         val globalBest = models.filter { it.kind == "BASELINE" && it.decided >= MIN_CALLS }.maxByOrNull { it.nonFlatAcc ?: 0.0 }
@@ -443,13 +458,22 @@ object ShadowLab {
         val checks = topChecks + integrity
         val econ = top?.let { m ->
             val n0 = m.netByCost.getOrNull(0) ?: 0.0; val nr = m.netByCost.getOrNull(2) ?: 0.0; val ns = m.netByCost.getOrNull(3) ?: 0.0
-            when { nr > 0 && ns > 0 -> "ROBUST TO STRESS COST"; nr > 0 -> "FRAGILE ECONOMIC EDGE"; n0 > 0 -> "FRAGILE ECONOMIC EDGE"; else -> "NEGATIVE AFTER COSTS" }
+            val skill = (m.pairedDiffLow ?: -1.0) > 0.0
+            val bNet = m.matchedBaselineNet ?: 0.0
+            when {
+                // money made only because the market trended: the matched baseline earns about the same on the same candles
+                (nr > 0 || n0 > 0) && (!skill || nr <= bNet) -> "DRIFT, NOT SKILL"
+                nr > 0 && ns > 0 -> "ROBUST TO STRESS COST"
+                nr > 0 || n0 > 0 -> "FRAGILE ECONOMIC EDGE"
+                else -> "NEGATIVE AFTER COSTS"
+            }
         } ?: "--"
         val (verdict, detail) = when {
             integrity.any { !it.pass } -> "RUN FAILED" to "An integrity check failed (${integrity.filter { !it.pass }.joinToString { it.name }}). Results of this run must not be used."
             top != null && topChecks.all { it.pass } -> "EDGE CANDIDATE" to "${top.name} passed every pre-registered check. Candidate only: it must now hold up in live shadow before it may ever be used."
             top == null -> "NO EDGE" to "No challenger produced calls."
-            else -> "NO EDGE" to "Best challenger ${top.name} failed: " + topChecks.filter { !it.pass }.joinToString("; ") { it.name.lowercase(Locale.US) } + "."
+            else -> "NO EDGE" to "Best challenger ${top.name} failed: " + topChecks.filter { !it.pass }.joinToString("; ") { it.name.lowercase(Locale.US) } + "." +
+                (top.upCallShare?.let { u -> if (u > 80 || u < 20) String.format(Locale.US, " Direction bias: %.0f%% of its calls are UP.", u) else "" } ?: "")
         }
 
         // ---- regimes, confusion, WAIT quality, curve, calibration
@@ -784,8 +808,13 @@ object ShadowLab {
             }
         }
 
-        fun fit(xs: List<DoubleArray>, ys: List<Boolean>, lambda: Double = 2.0, iters: Int = 12): Model? {
+        /** balanced = UP and DOWN samples get equal total weight (attempt #1). */
+        fun fit(xs: List<DoubleArray>, ys: List<Boolean>, lambda: Double = 2.0, iters: Int = 12, balanced: Boolean = false): Model? {
             if (xs.size < 50 || xs.size != ys.size) return null
+            val nUp = ys.count { it }; val nDown = ys.size - nUp
+            if (balanced && (nUp < 10 || nDown < 10)) return null
+            val wUp = if (balanced) ys.size / (2.0 * nUp) else 1.0
+            val wDown = if (balanced) ys.size / (2.0 * nDown) else 1.0
             val p = xs[0].size
             val mean = DoubleArray(p) { j -> xs.sumOf { it[j] } / xs.size }
             val sd = DoubleArray(p) { j -> sqrt(xs.sumOf { (it[j] - mean[j]) * (it[j] - mean[j]) } / xs.size).let { if (it < 1e-9) 1.0 else it } }
@@ -798,8 +827,9 @@ object ShadowLab {
                     var s = 0.0
                     for (j in 0..p) s += w[j] * z[r][j]
                     val pr = 1.0 / (1.0 + exp(-s.coerceIn(-30.0, 30.0)))
-                    val e = pr - (if (ys[r]) 1.0 else 0.0)
-                    val wt = pr * (1 - pr)
+                    val cw = if (ys[r]) wUp else wDown
+                    val e = (pr - (if (ys[r]) 1.0 else 0.0)) * cw
+                    val wt = pr * (1 - pr) * cw
                     for (j in 0..p) {
                         g[j] += e * z[r][j]
                         for (k in 0..p) h[j][k] += wt * z[r][j] * z[r][k]

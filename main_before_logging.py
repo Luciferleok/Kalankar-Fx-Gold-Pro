@@ -16,7 +16,7 @@ from kivy.clock import Clock
 
 from sentiment_signal import get_sentiment_signal
 
-API_KEY = "8e1493529b8e42d9b0a9e557c3451db0"
+API_KEY = ""
 SYMBOL = "XAU/USD"
 
 

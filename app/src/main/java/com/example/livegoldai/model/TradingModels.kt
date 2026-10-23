@@ -41,7 +41,8 @@ data class BuyerSellerSentiment(
     val liveActionHindi: String,
     val liveActionEnglish: String,
     val liveActionMarathi: String = "",
-    val strengthLevel: String
+    val strengthLevel: String,
+    val available: Boolean = true      // false when the feed has no real traded volume (nothing is estimated)
 ) {
     fun getLiveAction(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> liveActionEnglish
@@ -559,7 +560,11 @@ data class GoldAnalysisResult(
     val insights: CockpitInsights? = null,
     val aiCouncil: AiCouncilReport? = null,
     val brain: BrainReport? = null,
-    val pulse: LedgerPulse? = null
+    val pulse: LedgerPulse? = null,
+    // ---- V29A source gate: why a production BUY/SELL is not allowed right now ("" = allowed)
+    val sourceState: String = "",
+    val gateReason: String = "",
+    val gateDetail: String = ""
 )
 
 @Serializable

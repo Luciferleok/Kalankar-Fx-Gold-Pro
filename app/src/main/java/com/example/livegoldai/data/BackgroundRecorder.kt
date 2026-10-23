@@ -127,7 +127,7 @@ class BackgroundRecorder(
                 val n0 = learning.currentState().records.size
                 val learned = try { learning.process(a, iv, mtf ?: emptyMap(), now) } catch (_: Exception) { null }
                 val st = learning.currentState()
-                try { proven.addAll(onAnalysis(a, iv, now)) } catch (_: Exception) { }
+                try { proven.addAll(onAnalysis(learned ?: a, iv, now)) } catch (_: Exception) { }
                 if (learned != null && st.records.size > n0) {
                     val rec = st.records.last()
                     recordedNow.add("${rec.interval} ${rec.finalSignal.name}")

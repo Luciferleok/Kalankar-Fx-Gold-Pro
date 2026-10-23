@@ -311,16 +311,15 @@ fun ProCandleChart(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            val candleBuyV = activeCandle.buyVolume ?: ((activeCandle.volume ?: 1000.0) * (if (isBull) 0.60 else 0.40))
-                            val candleTotalV = (activeCandle.volume ?: 1000.0).coerceAtLeast(1.0)
-                            val candleBuyPct = ((candleBuyV / candleTotalV) * 100).roundToInt().coerceIn(10, 90)
+                            // V29A: real buy/sell split only (taker-buy volume present), never a 60/40 estimate
+                            val candleBuyPct = activeCandle.buyVolume?.let { bv -> activeCandle.volume?.takeIf { it > 0 }?.let { tv -> ((bv / tv) * 100).roundToInt().coerceIn(0, 100) } }
 
                             HudItem(label = "O", value = String.format(Locale.US, "%.1f", activeCandle.open))
                             HudItem(label = "H", value = String.format(Locale.US, "%.1f", activeCandle.high))
                             HudItem(label = "L", value = String.format(Locale.US, "%.1f", activeCandle.low))
                             HudItem(label = "C", value = String.format(Locale.US, "%.1f", activeCandle.close), color = if (isBull) SignalBuy else SignalSell)
                             if (hasRealVolume) {
-                                HudItem(label = "B/S est.", value = "${candleBuyPct}/${100 - candleBuyPct}%", color = if (candleBuyPct >= 50) SignalBuy else SignalSell)
+                                if (candleBuyPct != null) HudItem(label = "B/S", value = "${candleBuyPct}/${100 - candleBuyPct}%", color = if (candleBuyPct >= 50) SignalBuy else SignalSell)
                                 activeCandle.vwap?.let {
                                     HudItem(label = "VWAP", value = String.format(Locale.US, "%.1f", it), color = Color(0xFFFF9100))
                                 }
@@ -417,9 +416,9 @@ fun ProCandleChart(
                     if (showVolume && hasRealVolume) {
                         val maxVolHeight = h * 0.22f
                         displayCandles.forEachIndexed { i, candle ->
-                            val vol = candle.volume ?: 500.0
+                            val vol = candle.volume ?: 0.0
                             val isBull = candle.close >= candle.open
-                            val buyVol = candle.buyVolume ?: (vol * (if (isBull) 0.60 else 0.40))
+                            val buyVol = candle.buyVolume ?: (if (isBull) vol else 0.0)   // no split known: whole bar in the candle's colour
                             val barH = ((vol / maxVolume) * maxVolHeight).toFloat().coerceIn(2f, maxVolHeight)
                             val buyH = (((buyVol / maxVolume) * maxVolHeight).toFloat()).coerceIn(1f, barH)
                             val sellH = (barH - buyH).coerceAtLeast(0f)

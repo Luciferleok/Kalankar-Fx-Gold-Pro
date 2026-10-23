@@ -238,7 +238,7 @@ object PredictionLedger {
 
     // ------------------------------------------------------------------ source-consistent verification
 
-    const val ENGINE_VERSION = "E21.0"
+    const val ENGINE_VERSION = "E22.0"   // V29A: no PAXG MTF filter, TWAP instead of invented-volume VWAP, MFI only with real volume
 
     /** True when the result is based on a trustworthy real price path. */
     fun reliable(o: LedgerOutcome): Boolean =

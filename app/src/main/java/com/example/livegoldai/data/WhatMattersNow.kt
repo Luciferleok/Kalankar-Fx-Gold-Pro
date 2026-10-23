@@ -33,6 +33,25 @@ object WhatMattersNow {
         val p = a.pulse
         val b = a.brain
 
+        // 0. V29A source gate: a paused decision is the most important thing on the screen
+        if (a.gateReason.isNotBlank()) {
+            val f = a.feed
+            when {
+                a.gateReason == "WAIT_NO_DATA_KEY" || f?.keyMissing == true -> out.add(Item("RISK",
+                    "No Twelve Data key saved: XAU/USD cannot load, so no BUY/SELL is shown. Add your key in Settings → Market data.",
+                    "Twelve Data key सेव नहीं: XAU/USD लोड नहीं हो सकता, इसलिए कोई BUY/SELL नहीं। Settings → Market data में अपनी key डालें।",
+                    "Twelve Data key सेव नाही: XAU/USD लोड होत नाही, म्हणून BUY/SELL नाही. Settings → Market data मध्ये तुमची key टाका."))
+                a.gateReason == "WAIT_DATA_DEGRADED" -> out.add(Item("RISK",
+                    "XAU/USD data failed a check (${a.gateDetail}): decision paused.",
+                    "XAU/USD डेटा एक जाँच में फेल (${a.gateDetail}): फैसला रुका है।",
+                    "XAU/USD डेटा एका तपासणीत नापास (${a.gateDetail}): निर्णय थांबवला आहे."))
+                else -> out.add(Item("RISK",
+                    "Source switch: ${a.gateDetail}${if (!f?.primaryIssue.isNullOrBlank()) " (primary: ${f?.primaryIssue})" else ""}. WAIT until Twelve Data XAU/USD is back and clean.",
+                    "स्रोत बदला: ${a.gateDetail}। Twelve Data XAU/USD लौटने और साफ़ होने तक WAIT।",
+                    "स्रोत बदलला: ${a.gateDetail}. Twelve Data XAU/USD परत येऊन स्वच्छ होईपर्यंत WAIT."))
+            }
+        }
+
         // 1. data quality
         when (p?.dataQuality) {
             "UNSAFE" -> out.add(Item("RISK",

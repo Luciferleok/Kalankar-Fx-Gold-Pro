@@ -183,6 +183,7 @@ fun LearningCenterContent(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
+        if (tab != 6) {
         Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = { recalPressed = true; onRecalibrate() },
@@ -213,6 +214,7 @@ fun LearningCenterContent(
                 color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
             )
         }
+        }   // tab != 6 (the Shadow Lab tab has its own buttons)
     }
 }
 
@@ -308,7 +310,7 @@ private fun ShadowLabTab(
         InfoRow("Lab status", st.labVerdict)
         InfoRow(t(lang, "Raw calls / proof N", "कुल कॉल / proof N", "एकूण कॉल / proof N"), "${st.calls} calls • ${st.decided} decided • ${st.proofN} non-overlapping • ${st.pending} waiting • ${st.lost} lost")
         InfoRow("Coverage", st.coverage?.let { String.format(Locale.US, "%.0f%% of %d checked candles", it * 100, st.eligible) } ?: "--")
-        InfoRow("UP / DOWN / FLAT", String.format(Locale.US, "%.0f%% / %.0f%% / %.0f%% of outcomes", st.outcomeShares.first * 100, st.outcomeShares.second * 100, st.outcomeShares.third * 100))
+        InfoRow("UP / DOWN / FLAT", if (st.eligible == 0) "--" else String.format(Locale.US, "%.0f%% / %.0f%% / %.0f%% of outcomes", st.outcomeShares.first * 100, st.outcomeShares.second * 100, st.outcomeShares.third * 100))
         InfoRow("Non-flat direction acc.", pctOrDash(st.nonFlatAcc) + (if (st.bootLow != null) String.format(Locale.US, " (block 95%%: %.0f-%.0f)", st.bootLow, st.bootHigh ?: 0.0) else "") + "  • proof " + pctOrDash(st.proofAcc))
         InfoRow("Directional call success", pctOrDash(st.callSuccess) + "  • flat call rate " + pctOrDash(st.flatRate))
         InfoRow("Balanced acc. / UP-call share", pctOrDash(st.balancedAcc) + " / " + pctOrDash(st.upCallShare))
@@ -371,7 +373,7 @@ private fun ShadowLabTab(
                 Text(pctOrDash(m.bootLow), color = TextSecondary, fontSize = 9.sp, modifier = Modifier.weight(0.14f))
             }
             if (m.kind != "BASELINE") Text(
-                "matched ${m.matchedBaseline.lowercase(Locale.US)} ${pctOrDash(m.matchedBaselineAcc)} • paired ${L.f1s(m.pairedDiff)} (low ${L.f1s(m.pairedDiffLow)}) pts • proof N ${m.proofN} • net@ref ${m.netRef?.let { String.format(Locale.US, "%+.2f", it) } ?: "--"}",
+                "matched ${m.matchedBaseline.lowercase(Locale.US)} ${pctOrDash(m.matchedBaselineAcc)} • paired ${L.f1s(m.pairedDiff)} (low ${L.f1s(m.pairedDiffLow)}) pts • proof N ${m.proofN} • net@ref ${m.netRef?.let { String.format(Locale.US, "%+.2f", it) } ?: "--"} vs baseline ${m.matchedBaselineNet?.let { String.format(Locale.US, "%+.2f", it) } ?: "--"} • UP calls ${m.upCallShare?.let { String.format(Locale.US, "%.0f%%", it) } ?: "--"}",
                 color = TextMuted, fontSize = 8.sp)
         }
         Note(t(lang,
@@ -466,6 +468,7 @@ private fun ShadowLabTab(
         Note("Gate: " + com.example.livegoldai.data.ShadowLab.Experiment.GATE_RANGE)
         Note("Correction: " + com.example.livegoldai.data.ShadowLab.Experiment.CORRECTION + " This run: ${r.familySize} challengers.")
         Note("Attempts: " + com.example.livegoldai.data.ShadowLab.Experiment.ATTEMPTS)
+        Note(com.example.livegoldai.data.ShadowLab.Experiment.ATTEMPT_1)
 
         Section(t(lang, "TEST DATA", "टेस्ट डेटा", "चाचणी डेटा"))
         InfoRow("Snapshot", r.shortId + " • " + r.snapshotId.take(24) + "…")

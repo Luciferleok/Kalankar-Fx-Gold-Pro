@@ -33,7 +33,9 @@ object TechnicalEngine {
         customEvents: List<EconomicEvent> = emptyList()
     ): GoldAnalysisResult {
         if (candles.size < 30) {
-            return fallbackAnalysis(interval)
+            // V29A: too few real candles. The placeholder is marked SIMULATED so it can never be shown as live,
+            // recorded, learned from or verified (the feed layer already refuses to call this with < 30 candles).
+            return fallbackAnalysis(interval).copy(isSimulatedFallback = true)
         }
 
         val n = candles.size
@@ -93,13 +95,16 @@ object TechnicalEngine {
         val (superTrendSeries, superTrendSignal) = calculateSuperTrend(candles, 10, 3.0)
         val lastSuperTrend = superTrendSeries.last()
 
-        // Institutional VWAP
+        // V29A feature eligibility: volume indicators need REAL traded volume of THIS instrument.
+        // Spot XAU/USD has none, so VWAP becomes TWAP (equal weights, price only) and MFI is UNAVAILABLE.
+        val realVolume = hasRealVolume(candles)
+        val vwapName = if (realVolume) "VWAP" else "TWAP (no real volume)"
         val vwapValue = calculateVwap(candles)
         val vwapSignal = if (last.close > vwapValue) Signal.BUY else Signal.SELL
 
-        // Money Flow Index (MFI 14)
-        val mfiValue = calculateMfi(candles, 14)
-        val mfiSignal = if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
+        // Money Flow Index (MFI 14): only with real volume; otherwise excluded from every vote
+        val mfiValue = if (realVolume) calculateMfi(candles, 14) else -1.0
+        val mfiSignal = if (!realVolume) Signal.WAIT else if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
 
         // Fibonacci Golden Pocket (Swing 24 bars)
         val lookback24 = min(24, n)
@@ -281,10 +286,10 @@ object TechnicalEngine {
                 detail = if (sarBull) "Price holding above recent swing-low support" else "Price breached recent swing-low"
             ),
             IndicatorItem(
-                name = "Institutional VWAP",
+                name = vwapName,
                 signal = vwapSignal,
-                valueDisplay = "VWAP: $${format2(vwapValue)} | Spot: $${format2(last.close)}",
-                detail = if (last.close > vwapValue) "Price holding above volume-weighted average (Bullish institutional premium)" else "Price trading below volume-weighted average (Bearish discount)"
+                valueDisplay = "${if (realVolume) "VWAP" else "TWAP"}: $${format2(vwapValue)} | Spot: $${format2(last.close)}",
+                detail = if (last.close > vwapValue) "Price above its ${if (realVolume) "volume-weighted" else "time-weighted"} average" else "Price below its ${if (realVolume) "volume-weighted" else "time-weighted"} average"
             )
         )
         val trendVerdict = decide(trendItems.map { it.signal })
@@ -521,22 +526,24 @@ object TechnicalEngine {
                 detail = if (superTrendSignal == Signal.BUY) "Bullish green trailing support line underneath price" else "Bearish red overhead resistance trailing line"
             ),
             IndicatorItem(
-                name = "Institutional VWAP",
+                name = vwapName,
                 signal = vwapSignal,
-                valueDisplay = "VWAP: $${format2(vwapValue)}",
-                detail = if (vwapSignal == Signal.BUY) "Price above volume-weighted institutional average (Mark-up)" else "Price below VWAP (Discount distribution)"
-            ),
+                valueDisplay = "${if (realVolume) "VWAP" else "TWAP"}: $${format2(vwapValue)}",
+                detail = if (vwapSignal == Signal.BUY) "Price above its ${if (realVolume) "volume" else "time"}-weighted average" else "Price below its ${if (realVolume) "volume" else "time"}-weighted average"
+            )
+        ) + (if (realVolume) listOf(
             IndicatorItem(
                 name = "Money Flow Index (MFI 14)",
                 signal = mfiSignal,
                 valueDisplay = "${format1(mfiValue)} / 100",
                 detail = when {
-                    mfiValue >= 80 -> "Heavy smart-money inflow (>80 overbought warning)"
-                    mfiValue >= 50 -> "Institutional accumulation flow dominant"
-                    mfiValue <= 20 -> "Oversold smart-money absorption dip (<20)"
-                    else -> "Institutional distribution flow (<50)"
+                    mfiValue >= 80 -> "Money flow above 80 (overbought zone)"
+                    mfiValue >= 50 -> "Money flow above 50 (more flow on up candles)"
+                    mfiValue <= 20 -> "Money flow below 20 (oversold zone)"
+                    else -> "Money flow below 50 (more flow on down candles)"
                 }
-            ),
+            )
+        ) else emptyList()) + listOf(
             IndicatorItem(
                 name = "Liquidity & Sweep Radar",
                 signal = liquiditySignal,
@@ -646,13 +653,7 @@ object TechnicalEngine {
             } else null
             val cSuperTrend = if (globalIdx < superTrendSeries.size) superTrendSeries[globalIdx] else null
             val cVwap = if (globalIdx < vwapSeries.size) vwapSeries[globalIdx] else null
-            // no invented volume: a candle without volume keeps the same flat filler, which the chart recognises and hides
-            val estVolume = bar.volume ?: 1000.0
-            val estBuyVolume = bar.buyVolume ?: run {
-                val rng = (bar.high - bar.low).coerceAtLeast(0.01)
-                val ratio = if (bar.close >= bar.open) (0.52 + 0.38 * (bar.close - bar.open) / rng) else (0.48 - 0.38 * (bar.open - bar.close) / rng)
-                estVolume * ratio.coerceIn(0.12, 0.88)
-            }
+            // V29A: no invented volume. Missing volume stays null (the chart then hides the volume pane).
 
             bar.copy(
                 ema9 = cEma9,
@@ -660,8 +661,8 @@ object TechnicalEngine {
                 bbUpper = cBbUpper,
                 bbLower = cBbLower,
                 superTrend = cSuperTrend,
-                volume = estVolume,
-                buyVolume = estBuyVolume,
+                volume = bar.volume,
+                buyVolume = bar.buyVolume,
                 vwap = cVwap
             )
         }
@@ -1723,13 +1724,19 @@ object TechnicalEngine {
         return Pair(st.toList(), lastSignal)
     }
 
+    /** Real traded volume on (almost) every candle. Spot XAU/USD: false. */
+    fun hasRealVolume(candles: List<CandleBar>): Boolean =
+        candles.isNotEmpty() && candles.count { (it.volume ?: 0.0) > 0.0 } >= candles.size * 9 / 10
+
+    /** VWAP with real volume, otherwise TWAP (equal weights). Never an invented volume. */
     private fun calculateVwap(candles: List<CandleBar>): Double {
         if (candles.isEmpty()) return 0.0
+        val real = hasRealVolume(candles)
         var sumPv = 0.0
         var sumV = 0.0
         for (c in candles.takeLast(min(40, candles.size))) {
             val tp = (c.high + c.low + c.close) / 3.0
-            val vol = c.volume ?: ((abs(c.close - c.open) + (c.high - c.low)) * 1420.0 + 800.0)
+            val vol = if (real) (c.volume ?: 0.0) else 1.0
             sumPv += tp * vol
             sumV += vol
         }
@@ -1740,6 +1747,7 @@ object TechnicalEngine {
         val n = candles.size
         if (n == 0) return emptyList()
         val result = ArrayList<Double>(n)
+        val real = hasRealVolume(candles)
         for (i in 0 until n) {
             val start = max(0, i - period + 1)
             var sumPv = 0.0
@@ -1747,7 +1755,7 @@ object TechnicalEngine {
             for (j in start..i) {
                 val c = candles[j]
                 val tp = (c.high + c.low + c.close) / 3.0
-                val vol = c.volume ?: ((abs(c.close - c.open) + (c.high - c.low)) * 1420.0 + 800.0)
+                val vol = if (real) (c.volume ?: 0.0) else 1.0
                 sumPv += tp * vol
                 sumV += vol
             }
@@ -1760,7 +1768,8 @@ object TechnicalEngine {
         val n = candles.size
         if (n <= period) return 50.0
         val tps = candles.map { (it.high + it.low + it.close) / 3.0 }
-        val vols = candles.map { it.volume ?: ((abs(it.close - it.open) + (it.high - it.low)) * 1420.0 + 800.0) }
+        // callers use this only when hasRealVolume() is true; a missing value counts as no flow, never as invented volume
+        val vols = candles.map { it.volume ?: 0.0 }
 
         var posFlow = 0.0
         var negFlow = 0.0
@@ -1874,61 +1883,60 @@ object TechnicalEngine {
         mfiValue: Double,
         rsi14: Double
     ): BuyerSellerSentiment {
-        if (candles.isEmpty()) {
+        // V29A: buy/sell share needs REAL traded volume of this instrument. Without it: UNAVAILABLE, nothing estimated.
+        if (candles.isEmpty() || !hasRealVolume(candles)) {
             return BuyerSellerSentiment(
-                buyersPercent = 50,
-                sellersPercent = 50,
-                buyerVolume = 5000.0,
-                sellerVolume = 5000.0,
+                buyersPercent = 0,
+                sellersPercent = 0,
+                buyerVolume = 0.0,
+                sellerVolume = 0.0,
                 netVolumeDelta = 0.0,
-                orderBookBidCount = 1500,
-                orderBookAskCount = 1500,
+                orderBookBidCount = 0,
+                orderBookAskCount = 0,
                 retailSentimentBias = Signal.WAIT,
                 institutionalSentimentBias = Signal.WAIT,
-                liveActionHindi = "पर्याप्त कैंडल नहीं हैं।",
-                liveActionEnglish = "Not enough candles to measure.",
-                strengthLevel = "BUY-SIDE SHARE: --"
+                liveActionHindi = "उपलब्ध नहीं: इस फ़ीड (स्पॉट XAU/USD) में असली ट्रेड वॉल्यूम नहीं है, इसलिए खरीद/बिक्री हिस्सा नहीं मापा जा सकता।",
+                liveActionEnglish = "Unavailable: this feed (spot XAU/USD) has no real traded volume, so the buy/sell share cannot be measured.",
+                liveActionMarathi = "उपलब्ध नाही: या फीडमध्ये (स्पॉट XAU/USD) खरा ट्रेड व्हॉल्यूम नाही, म्हणून खरेदी/विक्री हिस्सा मोजता येत नाही.",
+                strengthLevel = "UNAVAILABLE • NO REAL VOLUME",
+                available = false
             )
         }
 
         val recent = candles.takeLast(30)
         var totalBuyVol = 0.0
         var totalSellVol = 0.0
-
+        var withFlow = 0
         for (c in recent) {
-            val vol = c.volume ?: ((abs(c.close - c.open) + (c.high - c.low)) * 1420.0 + 800.0)
-            val buyV = c.buyVolume ?: run {
-                val rng = (c.high - c.low).coerceAtLeast(0.01)
-                val ratio = if (c.close >= c.open) (0.52 + 0.38 * (c.close - c.open) / rng) else (0.48 - 0.38 * (c.open - c.close) / rng)
-                vol * ratio.coerceIn(0.12, 0.88)
-            }
+            val vol = c.volume ?: continue
+            val buyV = c.buyVolume ?: continue      // real taker-buy volume only
+            withFlow++
             totalBuyVol += buyV
             totalSellVol += (vol - buyV).coerceAtLeast(0.0)
         }
-
-        val totalVol = (totalBuyVol + totalSellVol).coerceAtLeast(1.0)
-        var rawBuyerPct = (totalBuyVol / totalVol) * 100.0
-
-        val latest3 = candles.takeLast(3)
-        var l3Buy = 0.0
-        var l3Total = 0.0
-        for (c in latest3) {
-            val v = c.volume ?: 1000.0
-            val bv = c.buyVolume ?: (v * (if (c.close >= c.open) 0.65 else 0.35))
-            l3Buy += bv
-            l3Total += v
+        if (withFlow < recent.size * 9 / 10) {
+            return BuyerSellerSentiment(
+                buyersPercent = 0, sellersPercent = 0, buyerVolume = 0.0, sellerVolume = 0.0, netVolumeDelta = 0.0,
+                orderBookBidCount = 0, orderBookAskCount = 0,
+                retailSentimentBias = Signal.WAIT, institutionalSentimentBias = Signal.WAIT,
+                liveActionHindi = "उपलब्ध नहीं: इस फ़ीड में असली खरीद-वॉल्यूम (taker buy) नहीं है।",
+                liveActionEnglish = "Unavailable: this feed has volume but no real buy-side (taker) volume.",
+                liveActionMarathi = "उपलब्ध नाही: या फीडमध्ये खरा खरेदी-व्हॉल्यूम (taker buy) नाही.",
+                strengthLevel = "UNAVAILABLE • NO BUY/SELL FLOW",
+                available = false
+            )
         }
-        if (l3Total > 0.0) {
-            val l3Pct = (l3Buy / l3Total) * 100.0
-            rawBuyerPct = (rawBuyerPct * 0.60) + (l3Pct * 0.40)
-        }
+
+        val totalVol = (totalBuyVol + totalSellVol).coerceAtLeast(1e-9)
+        val rawBuyerPct = (totalBuyVol / totalVol) * 100.0
 
         val buyersPercent = rawBuyerPct.roundToInt().coerceIn(0, 100)
         val sellersPercent = 100 - buyersPercent
         val netVolumeDelta = totalBuyVol - totalSellVol
 
-        val baseBids = 1100 + (buyersPercent * 22)
-        val baseAsks = 1100 + (sellersPercent * 22)
+        // no order book exists in this data: never invent bid/ask counts
+        val baseBids = 0
+        val baseAsks = 0
 
         val retailBias = when {
             buyersPercent >= 55 -> Signal.BUY
@@ -1937,13 +1945,12 @@ object TechnicalEngine {
         }
 
         // money flow index only (a real formula over price and volume); not "smart money"
-        val instBias = if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
+        val instBias = if (mfiValue < 0) Signal.WAIT else if (mfiValue >= 50.0) Signal.BUY else Signal.SELL
 
         // what the share is built from: real traded volume when the feed has it, otherwise candle shapes
-        val realVol = candles.mapNotNull { it.volume }.distinct().size >= 3
-        val basisEn = if (realVol) "from traded volume" else "estimated from candle shapes (no real volume on this feed)"
-        val basisHi = if (realVol) "असली ट्रेड वॉल्यूम से" else "कैंडल के आकार से अनुमान (इस फ़ीड में असली वॉल्यूम नहीं)"
-        val basisMr = if (realVol) "खऱ्या ट्रेड व्हॉल्यूमवरून" else "कँडलच्या आकारावरून अंदाज (या फीडमध्ये खरा व्हॉल्यूम नाही)"
+        val basisEn = "from real traded volume"
+        val basisHi = "असली ट्रेड वॉल्यूम से"
+        val basisMr = "खऱ्या ट्रेड व्हॉल्यूमवरून"
 
         val strength = "BUY-SIDE SHARE $buyersPercent% • SELL-SIDE $sellersPercent%"
         val english = "Last 30 candles: buy-side $buyersPercent% vs sell-side $sellersPercent%, $basisEn. This describes recent candles; it is not a forecast and not an order book."
@@ -2244,8 +2251,8 @@ object TechnicalEngine {
                     high = high,
                     low = low,
                     close = close,
-                    volume = 1200.0 + abs(Math.sin(i * 0.3) * 800.0),
-                    buyVolume = 650.0 + (if (close >= open) 200.0 else -100.0)
+                    volume = null,      // V29A: SIMULATED placeholder only; no invented volume either
+                    buyVolume = null
                 )
             )
         }
