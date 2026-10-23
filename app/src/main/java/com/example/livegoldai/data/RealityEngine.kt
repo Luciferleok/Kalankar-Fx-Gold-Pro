@@ -73,7 +73,7 @@ object RealityEngine {
             val r = rsi(closes)
             TimeframeStatus(
                 timeframe = tf.uppercase(),
-                label = "PROXY CONTEXT • PAXG/USDT ${bars.size} candles",
+                label = "PAXG/USDT ${bars.size} candles • PROXY CONTEXT",   // must start with "PAXG": screens filter on it
                 signal = sig,
                 keyLevel = "EMA21 $${f2(e21)}",
                 momentumPercent = r.roundToInt(),

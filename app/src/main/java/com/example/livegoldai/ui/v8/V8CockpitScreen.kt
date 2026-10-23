@@ -406,7 +406,7 @@ fun V8CockpitScreen(
         // ---------------- multi-horizon matrix (real candles)
         val rows = analysis.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
         V8Card(level = 2) {
-            V8Label(tr(lang, "Multi-timeframe (real candles)", "मल्टी-टाइमफ्रेम (असली कैंडल)", "मल्टी-टाइमफ्रेम (खऱ्या कँडल)"))
+            V8Label(tr(lang, "Multi-timeframe • PAXG/USDT proxy", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी"))
             if (rows.isEmpty()) {
                 Text(text = tr(lang, "Not loaded right now", "अभी लोड नहीं हुआ", "सध्या लोड झाले नाही"), color = V8.Text3, fontSize = 11.sp)
             } else {
@@ -423,7 +423,7 @@ fun V8CockpitScreen(
                         Text(text = r.keyLevel, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
                     }
                 }
-                Text(text = tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(text = tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT, a different instrument: context only, not used in the XAU/USD decision", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT, अलग इंस्ट्रूमेंट: सिर्फ संदर्भ, XAU/USD फैसले में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT, वेगळे इन्स्ट्रुमेंट: फक्त संदर्भ, XAU/USD निर्णयात नाही"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
 

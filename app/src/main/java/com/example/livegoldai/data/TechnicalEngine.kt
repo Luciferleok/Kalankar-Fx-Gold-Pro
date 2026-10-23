@@ -845,7 +845,7 @@ object TechnicalEngine {
 
                 NextPredictionPlaybook(
                     verdict = Signal.BUY,
-                    urgencyTag = if (buyCount >= 5) "STRONG CONVICTION BUY 🚀" else "BUY ON PULLBACK 📈",
+                    urgencyTag = "RULES: BUY • $buyCount pillars up",
                     winProbabilityPercent = confluenceWinRate,
                     actionHeading = "BUY XAU/USD (GOLD) • INTRADAY BULLISH EXPANSION",
                     tradeType = when {
@@ -873,25 +873,25 @@ object TechnicalEngine {
                     whereToAvoidEnglish = "Do not chase green breakout candles near resistance highs ($$tp1Val). Chasing extended rallies exposes capital to false breakout traps.",
                     whereToAvoidMarathi = "मोठ्या green candle च्या शिखरावर ($$tp1Val जवळ) कधीही BUY करू नका! False breakout मध्ये अडकण्याचा सर्वात मोठा धोका येथेच असतो. Pullback येईपर्यंत FOMO मध्ये Entry घेऊ नका.",
                     whatToDoHindi = "🌟 आपको क्या करना चाहिए (सटीक रणनीति):\n" +
-                        "1. ट्रेड कौन सा लें: Gold में BUY ट्रेड लेना है! SuperTrend और ट्रेंड इंडिकेटर्स पूरी तरह बुलिश हैं।\n" +
+                        "1. नियम का संकेत: ज़्यादातर इंडिकेटर पिलर ऊपर की ओर हैं (ट्रेंड, SuperTrend)। यह नियम का नतीजा है, साबित बढ़त नहीं: असली रिकॉर्ड Learn में देखें।\n" +
                         "2. एंट्री कहाँ लें: शिखर पर खरीदारी न करें; $$entryMin से $$entryMax के बीच Pullback आने पर BUY LIMIT ऑर्डर लगाएं।\n" +
                         "3. स्टॉप लॉस (SEAL): सख्त Stop Loss $$slVal पर लगाएं! यह सपोर्ट लेवल के नीचे आपके कैपिटल को सुरक्षित रखेगा।\n" +
                         "4. पहला मुनाफा (TP1): जब कीमत $$tp1Val पर पहुंचे, 50% मुनाफा बुक करें और SL को Entry Price पर शिफ्ट कर दें।\n" +
                         "5. बड़ा लक्ष्य (TP2): शेष पोजीशन को $$tp2Val तक ट्रेल करें और बड़ा मुनाफा कमाएं।",
-                    whatToDoEnglish = "1. TRADE DIRECTION: Institutional BUY signal in Gold. Trend indicators and SuperTrend are strongly bullish.\n" +
+                    whatToDoEnglish = "1. RULE SIGNAL: most indicator pillars point UP (trend indicators, SuperTrend). A rule result, not a proven edge: see Learn for the real record.\n" +
                         "2. ENTRY EXECUTION: Avoid buying the peak; place BUY LIMIT orders in pullback zone $$entryMin - $$entryMax.\n" +
                         "3. STOP LOSS DISCIPLINE: Place hard Stop Loss at $$slVal below swing support to protect trading equity.\n" +
                         "4. TAKE PROFIT 1 (TP1): When price hits $$tp1Val, close 50% lot and move Stop Loss to Breakeven.\n" +
                         "5. RUNNER (TP2): Trail the remaining position toward $$tp2Val to maximize reward.",
                     whatToDoMarathi = "🌟 तुम्हाला काय करावे लागेल (अचूक रणनीती):\n" +
-                        "1. कोणता ट्रेड घ्यावा: Gold मध्ये BUY ट्रेड घ्यायचा आहे! SuperTrend आणि ट्रेंड इंडिकेटर्स पूर्णपणे बुलिश आहेत.\n" +
+                        "1. नियमाचा संकेत: बहुतेक इंडिकेटर पिलर वरच्या दिशेने आहेत (ट्रेंड, SuperTrend). हा नियमाचा निकाल आहे, सिद्ध आघाडी नाही: खरा रेकॉर्ड Learn मध्ये पहा.\n" +
                         "2. एंट्री कुठे घ्यावी: वरच्या शिखरावर खरेदी करू नका; $$entryMin ते $$entryMax दरम्यान Pullback आल्यावर BUY LIMIT ऑर्डर लावा.\n" +
                         "3. स्टॉप लॉस (SEAL): कडक Stop Loss $$slVal वर लावा! हे सपोर्ट लेव्हलच्या खाली तुमचे कॅपिटल सुरक्षित ठेवेल.\n" +
                         "4. पहिला नफा (TP1): किंमत $$tp1Val वर पोहोचताच 50% नफा बुक करा आणि SL ला Entry Price वर शिफ्ट करा.\n" +
                         "5. पुढील लक्ष्य (TP2): उर्वरित पोझिशन $$tp2Val पर्यंत ट्रेल करा आणि मोठा नफा मिळवा.",
-                    hindiAudioAdvice = "Gold में BUY ट्रेड का मजबूत सेटअप है। $entryMin से $entryMax ज़ोन में BUY लगाएं। सख्त Stop Loss $slVal पर अवश्य सेट करें। TP1 आते ही आधा प्रॉफिट बुक करके SL को Entry पर शिफ्ट करें।",
-                    englishAudioAdvice = "Gold setup is strongly bullish. Place BUY LIMIT orders between $entryMin and $entryMax. Protect capital with hard Stop Loss at $slVal. Take 50% profit at TP1 and advance stop to Breakeven.",
-                    marathiAudioAdvice = "Gold मध्ये BUY ट्रेडचा मजबूत सेटअप आहे. $entryMin ते $entryMax झोनमध्ये BUY लावा. कडक Stop Loss $slVal वर नक्की सेट करा. TP1 येताच अर्धा नफा बुक करून SL ला Entry वर शिफ्ट करा.",
+                    hindiAudioAdvice = "नियम ऊपर की ओर इशारा करते हैं (साबित बढ़त नहीं)। $entryMin से $entryMax ज़ोन में BUY लगाएं। सख्त Stop Loss $slVal पर अवश्य सेट करें। TP1 आते ही आधा प्रॉफिट बुक करके SL को Entry पर शिफ्ट करें।",
+                    englishAudioAdvice = "Rules point up (not a proven edge). Place BUY LIMIT orders between $entryMin and $entryMax. Protect capital with hard Stop Loss at $slVal. Take 50% profit at TP1 and advance stop to Breakeven.",
+                    marathiAudioAdvice = "नियम वरच्या दिशेने दाखवतात (सिद्ध आघाडी नाही). $entryMin ते $entryMax झोनमध्ये BUY लावा. कडक Stop Loss $slVal वर नक्की सेट करा. TP1 येताच अर्धा नफा बुक करून SL ला Entry वर शिफ्ट करा.",
                     executionRules = rules,
                     executionRulesHindi = rulesHindi,
                     executionRulesMarathi = rulesMarathi,
@@ -987,7 +987,7 @@ object TechnicalEngine {
 
                 NextPredictionPlaybook(
                     verdict = Signal.SELL,
-                    urgencyTag = if (sellCount >= 5) "STRONG CONVICTION SELL 🔻" else "SELL ON RALLY / SPIKE 📉",
+                    urgencyTag = "RULES: SELL • $sellCount pillars down",
                     winProbabilityPercent = confluenceWinRate,
                     actionHeading = "SELL XAU/USD (GOLD) FROM RESISTANCE REJECTION",
                     tradeType = when {
@@ -1011,28 +1011,28 @@ object TechnicalEngine {
                     whereToEnterHindi = "जब कीमत बाउंस होकर रेजिस्टेंस ज़ोन $$entryMin से $$entryMax में आए और ऊपर रिजेक्शन wick बने, तभी SELL निष्पादित करें। सुरक्षित SELL LIMIT ऑर्डर $$entryMax पर लगाएं।",
                     whereToEnterEnglish = "Execute SELL LIMIT orders in the bounce resistance zone between $$entryMin and $$entryMax upon upper rejection wick confirmation.",
                     whereToEnterMarathi = "जेव्हा किंमत उसळी घेऊन रेसिस्टन्स झोन $$entryMin ते $$entryMax मध्ये येईल आणि वर रिजेक्शन wick बनेल, तेव्हाच SELL ऑर्डर करा. सुरक्षित SELL LIMIT ऑर्डर $$entryMax वर लावा.",
-                    whereToAvoidHindi = "गिरी हुई लाल कैंडल के निचले स्तर ($$tp1Val के पास) पर SELL की चेस बिल्कुल न करें! बड़े बैंक यहाँ से लिक्विडिटी बाउंस दे सकते हैं। जब तक रेजिस्टेंस बाउंस न मिले, SELL न करें।",
-                    whereToAvoidEnglish = "Do not chase breakdown sell orders at oversold lows ($$tp1Val). Institutional buyers frequently trigger sharp liquidity squeezes at local supports.",
-                    whereToAvoidMarathi = "खाली पडलेल्या लाल कँडलच्या खालच्या स्तरावर ($$tp1Val जवळ) SELL चेस कधीही करू नका! बँक येथे लिक्विडिटी बाउंस देऊ शकतात. जोपर्यंत रेसिस्टन्स बाउंस मिळत नाही, तोपर्यंत SELL करू नका.",
+                    whereToAvoidHindi = "गिरी हुई लाल कैंडल के निचले स्तर ($$tp1Val के पास) पर SELL की चेस बिल्कुल न करें! यहाँ से तेज़ उछाल आ सकता है। जब तक रेजिस्टेंस बाउंस न मिले, SELL न करें।",
+                    whereToAvoidEnglish = "Do not chase breakdown sell orders at oversold lows ($$tp1Val). Selling right after a large drop risks a sharp rebound.",
+                    whereToAvoidMarathi = "खाली पडलेल्या लाल कँडलच्या खालच्या स्तरावर ($$tp1Val जवळ) SELL चेस कधीही करू नका! येथून तीव्र उसळी येऊ शकते. जोपर्यंत रेसिस्टन्स बाउंस मिळत नाही, तोपर्यंत SELL करू नका.",
                     whatToDoHindi = "⚠️ आपको क्या करना चाहिए (सटीक रणनीति):\n" +
-                        "1. ट्रेड कौन सा लें: Gold में SELL ट्रेड लेना है! रेजिस्टेंस और मंदी का ऑर्डर फ्लो सक्रिय है।\n" +
+                        "1. नियम का संकेत: ज़्यादातर इंडिकेटर पिलर नीचे की ओर हैं। स्पॉट गोल्ड में ऑर्डर-फ्लो डेटा नहीं होता; यह नियम का नतीजा है, साबित बढ़त नहीं।\n" +
                         "2. एंट्री कहाँ लें: निचले स्तर पर सेल न करें; जब कीमत बाउंस होकर $$entryMin से $$entryMax में आए तब SELL निष्पादित करें।\n" +
                         "3. स्टॉप लॉस (SEAL): सख्त Stop Loss $$slVal पर लगाएं, जो रेजिस्टेंस शिखर के ठीक ऊपर है।\n" +
                         "4. पहला मुनाफा (TP1): कीमत $$tp1Val पर आने पर 50% लॉट क्लोज़ करें और SL को Entry Price पर कर दें।\n" +
                         "5. बड़ा लक्ष्य (TP2): गहरे ब्रेकडाउन लक्ष्य $$tp2Val तक बिना डर के पोजीशन होल्ड करें।",
-                    whatToDoEnglish = "1. TRADE DIRECTION: Institutional SELL signal in Gold. Resistance rejection and negative order flow active.\n" +
+                    whatToDoEnglish = "1. RULE SIGNAL: most indicator pillars point DOWN. Spot gold has no order-flow data; this is a rule result, not a proven edge: see Learn for the real record.\n" +
                         "2. ENTRY EXECUTION: Never sell bottoms; sell relief bounces into zone $$entryMin - $$entryMax.\n" +
                         "3. STOP LOSS DISCIPLINE: Enforce hard Stop Loss at $$slVal above swing resistance to preserve equity.\n" +
                         "4. TAKE PROFIT 1 (TP1): At $$tp1Val, close 50% lot and trail Stop Loss to Breakeven.\n" +
                         "5. RUNNER (TP2): Trail runner volume toward deep extension target $$tp2Val.",
                     whatToDoMarathi = "⚠️ तुम्हाला काय करावे लागेल (अचूक रणनीती):\n" +
-                        "1. कोणता ट्रेड घ्यावा: Gold मध्ये SELL ट्रेड घ्यायचा आहे! रेसिस्टन्स आणि मंदीचा ऑर्डर फ्लो सक्रिय आहे.\n" +
+                        "1. नियमाचा संकेत: बहुतेक इंडिकेटर पिलर खालच्या दिशेने आहेत. स्पॉट गोल्डमध्ये ऑर्डर-फ्लो डेटा नसतो; हा नियमाचा निकाल आहे, सिद्ध आघाडी नाही.\n" +
                         "2. एंट्री कुठे घ्यावी: तळाला सेल करू नका; किंमत उसळी घेऊन $$entryMin ते $$entryMax मध्ये आल्यावर SELL ऑर्डर करा.\n" +
                         "3. स्टॉप लॉस (SEAL): कडक Stop Loss $$slVal वर लावा, जो रेसिस्टन्स शिखराच्या वर आहे.\n" +
                         "4. पहिला नफा (TP1): किंमत $$tp1Val वर येताच 50% लॉट क्लोज करा आणि SL ला Entry Price वर हलवा.\n" +
                         "5. पुढील लक्ष्य (TP2): ब्रेकडाउन लक्ष्य $$tp2Val पर्यंत आत्मविश्वासाने पोझिशन होल्ड करा.",
                     hindiAudioAdvice = "Gold में SELL ट्रेड का सेटअप है। रेजिस्टेंस बाउंस पर $entryMin से $entryMax में SELL ऑर्डर लगाएं। Stop Loss $slVal पर लगाना बिल्कुल न भूलें। TP1 हिट होते ही SL को Entry पर शिफ्ट करें।",
-                    englishAudioAdvice = "Gold setup is bearish from supply. Place SELL LIMIT orders between $entryMin and $entryMax. Enforce Stop Loss at $slVal. Take 50% profit at TP1 and move stop to Breakeven.",
+                    englishAudioAdvice = "Rules point down (not a proven edge). Place SELL LIMIT orders between $entryMin and $entryMax. Enforce Stop Loss at $slVal. Take 50% profit at TP1 and move stop to Breakeven.",
                     marathiAudioAdvice = "Gold मध्ये SELL ट्रेडचा सेटअप आहे. रेसिस्टन्स बाउंसवर $entryMin ते $entryMax मध्ये SELL ऑर्डर लावा. Stop Loss $slVal वर नक्की लावा. TP1 येताच SL ला Entry वर शिफ्ट करा.",
                     executionRules = rules,
                     executionRulesHindi = rulesHindi,
