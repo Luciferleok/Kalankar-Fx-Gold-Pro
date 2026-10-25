@@ -3,6 +3,7 @@ package com.example.livegoldai.data
 import com.example.livegoldai.model.GoldAnalysisResult
 import com.example.livegoldai.model.Signal
 import java.util.Locale
+import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -12,6 +13,7 @@ import kotlin.math.roundToInt
  * same snapshot. It never predicts anything itself and never writes to the ledger.
  * Missing values are "UNKNOWN" / "UNAVAILABLE", never invented.
  */
+@Serializable
 data class PredictionPresentationState(
     val builtAtMs: Long,
     // ---- identity
@@ -61,6 +63,7 @@ data class PredictionPresentationState(
     val ledgerSize: Int,
     val ledgerChecked: Int
 ) {
+    @Serializable
     data class Factor(val title: String, val points: Double)
 
     val rawDiffersFromFinal: Boolean get() = rawSignal != null && rawSignal != finalSignal
