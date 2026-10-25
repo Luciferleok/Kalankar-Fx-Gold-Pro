@@ -564,7 +564,11 @@ data class GoldAnalysisResult(
     // ---- V29A source gate: why a production BUY/SELL is not allowed right now ("" = allowed)
     val sourceState: String = "",
     val gateReason: String = "",
-    val gateDetail: String = ""
+    val gateDetail: String = "",
+    // V29B: what the quant engine said before any filter or source gate (null = not known)
+    val rawSignal: Signal? = null,
+    // V29B: the one read-only description of this decision shared by Home, Brain and the Decision Trace
+    val presentation: com.example.livegoldai.data.PredictionPresentationState? = null
 )
 
 @Serializable

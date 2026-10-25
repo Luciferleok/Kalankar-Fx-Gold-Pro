@@ -45,12 +45,12 @@ fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit) {
             Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
         }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            MiniStat(tr(lang, "QUALITY", "क्वालिटी", "क्वालिटी"), "${b.qualityIndex}", qualityColor(b.qualityIndex), Modifier.weight(1f))
-            MiniStat("SPLIT", b.edge, levelColor(b.edge), Modifier.weight(1.2f))
+            MiniStat(tr(lang, "SETUP", "सेटअप", "सेटअप"), "${b.qualityIndex}", qualityColor(b.qualityIndex), Modifier.weight(1f))
+            MiniStat(tr(lang, "PILLAR SPLIT", "पिलर बँटवारा", "पिलर विभागणी"), b.edge, levelColor(b.edge), Modifier.weight(1.2f))
             MiniStat(tr(lang, "ANOMALY", "गड़बड़ी", "विसंगती"), b.anomaly.level, levelColor(b.anomaly.level), Modifier.weight(1.2f))
             MiniStat(tr(lang, "UNCERTAINTY", "अनिश्चितता", "अनिश्चितता"), b.totalUncertainty, levelColor(b.totalUncertainty), Modifier.weight(1.4f))
         }
-        Text(text = tr(lang, "Quality index is not accuracy.", "क्वालिटी इंडेक्स सटीकता नहीं है।", "क्वालिटी इंडेक्स अचूकता नाही."), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = tr(lang, "Rule setup strength and pillar split are heuristics, not accuracy or a proven edge.", "नियम सेटअप ताकत और पिलर बँटवारा अनुमान हैं, सटीकता या साबित बढ़त नहीं।", "नियम सेटअप ताकद आणि पिलर विभागणी अंदाज आहेत, अचूकता किंवा सिद्ध आघाडी नाही."), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -112,14 +112,14 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
     V8Card(level = 2, accent = qualityColor(b.qualityIndex).copy(alpha = 0.45f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                V8Label(tr(lang, "Prediction quality index", "प्रेडिक्शन क्वालिटी इंडेक्स", "प्रेडिक्शन क्वालिटी इंडेक्स"))
+                V8Label(tr(lang, "Rule setup strength (heuristic)", "नियम सेटअप ताकत (अनुमानित)", "नियम सेटअप ताकद (अंदाजी)"))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(text = "${b.qualityIndex}", color = qualityColor(b.qualityIndex), fontSize = 34.sp, fontWeight = FontWeight.SemiBold)
                     Text(text = " / 100", color = V8.Text3, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                V8Label("SPLIT (NOT PROVEN)")
+                V8Label(tr(lang, "Pillar split (not proven)", "पिलर बँटवारा (साबित नहीं)", "पिलर विभागणी (सिद्ध नाही)"))
                 Text(text = b.edge, color = levelColor(b.edge), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
         }

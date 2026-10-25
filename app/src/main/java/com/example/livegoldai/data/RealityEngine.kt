@@ -197,7 +197,8 @@ object RealityEngine {
         interval: String,
         appliedFilter: String
     ): GoldAnalysisResult {
-        var a = analysis
+        // V29B: keep what the engine itself said, before any filter / gate (display and audit only)
+        var a = analysis.copy(rawSignal = analysis.rawSignal ?: analysis.overallSignal)
         val rawConf = analysis.agreementPercent.roundToInt()
         val calibrated = calibratedConfidence(snapshot, rawConf)
         val shownConf = calibrated ?: rawConf

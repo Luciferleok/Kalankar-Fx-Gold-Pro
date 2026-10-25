@@ -52,6 +52,8 @@ fun V8ForecastScreen(
     val rawConf = analysis.agreementPercent.roundToInt()
     val calibrated = RealityEngine.calibratedConfidence(analysis.learning, rawConf)
     var showTrace by remember { mutableStateOf(false) }
+    var showDecisionTrace by remember { mutableStateOf(false) }
+    analysis.presentation?.let { pres -> if (showDecisionTrace) DecisionTraceSheet(pres, lang) { showDecisionTrace = false } }
 
     Column(
         modifier = Modifier
@@ -92,6 +94,12 @@ fun V8ForecastScreen(
                 else tr(lang, "Not enough history yet: these are today's pillar votes, not probabilities", "अभी इतिहास कम है: ये आज के पिलर वोट हैं, संभावना नहीं", "अजून इतिहास कमी: ही आजची पिलर मते आहेत, शक्यता नाही"),
                 color = V8.Text3, fontSize = 9.sp
             )
+        }
+
+        // ---------------- V29B decision trace entry
+        if (analysis.presentation != null) V8Card(level = 3, onClick = { showDecisionTrace = true }) {
+            Text(text = tr(lang, "DECISION TRACE: raw vs final, source, evidence, trust, audit  ›", "फ़ैसले का ब्योरा: रॉ बनाम अंतिम, स्रोत, सबूत, भरोसा, ऑडिट  ›", "निर्णयाचा तपशील: रॉ विरुद्ध अंतिम, स्रोत, पुरावा, विश्वास, ऑडिट  ›"),
+                color = V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
 
         // ---------------- V10 market brain (measured state, quality, uncertainty, cross-market, analogs)

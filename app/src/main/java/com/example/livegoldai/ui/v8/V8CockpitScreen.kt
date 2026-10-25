@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +74,10 @@ fun V8CockpitScreen(
     val liveColor = when (liveState) { "LIVE" -> V8.Green; "RESTORED" -> V8.Info; "STALE" -> V8.Amber; "MARKET CLOSED" -> V8.Text3; else -> V8.Red }
     val sig = analysis.overallSignal
     val rawConf = analysis.agreementPercent.roundToInt()
+    // V29B: the shared decision description and its trace sheet
+    val pres = analysis.presentation
+    var showTrace by remember { mutableStateOf(false) }
+    if (showTrace && pres != null) DecisionTraceSheet(pres, lang) { showTrace = false }
     val calibrated = RealityEngine.calibratedConfidence(analysis.learning, rawConf)
     val ins = analysis.insights
     val health = analysis.health
@@ -181,6 +186,12 @@ fun V8CockpitScreen(
                         } },
                         color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp
                     )
+                    // V29B: never hide that the engine and the published decision differ
+                    if (pres != null && pres.rawDiffersFromFinal) Text(
+                        text = tr(lang, "RAW QUANT: ", "रॉ क्वांट: ", "रॉ क्वांट: ") + (pres.rawSignal?.name ?: "--") +
+                            tr(lang, "  •  FINAL: ", "  •  अंतिम: ", "  •  अंतिम: ") + pres.finalSignal.name,
+                        color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp
+                    )
                     if (until > now) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
@@ -193,13 +204,13 @@ fun V8CockpitScreen(
                     V8Ring(
                         percent = if (isWait) -1 else calibrated ?: rawConf,
                         color = signalColor(sig),
-                        label = if (isWait) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else if (calibrated != null) tr(lang, "past hit-rate", "पिछला हिट-रेट", "मागील हिट-रेट") else tr(lang, "agreement", "सहमति", "सहमती")
+                        label = if (isWait) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else if (calibrated != null) tr(lang, "historical hit-rate", "पिछला हिट-रेट", "मागील हिट-रेट") else tr(lang, "agreement", "सहमति", "सहमती")
                     )
                     // V29A: agreement of indicators is not a probability of winning
                     val band = RealityEngine.bandRecord(analysis.learning, rawConf)
                     Text(
                         text = if (isWait) tr(lang, "WAIT has no\nwin chance to show", "WAIT की कोई\nजीत-संभावना नहीं", "WAIT ला\nजिंकण्याची शक्यता नाही")
-                        else if (band != null) tr(lang, "similar past calls\nN=${band.decided} • not a guarantee", "मिलती-जुलती पिछली कॉल्स\nN=${band.decided} • गारंटी नहीं", "सारख्या मागील कॉल्स\nN=${band.decided} • हमी नाही")
+                        else if (band != null) tr(lang, "past calls N=${band.decided}\nnot a forecast probability", "पिछली कॉल्स N=${band.decided}\nअनुमान की संभावना नहीं", "मागील कॉल्स N=${band.decided}\nअंदाजाची शक्यता नाही")
                         else tr(lang, "evidence agreement\nnot a win probability", "संकेतों की सहमति\nजीत की संभावना नहीं", "संकेतांची सहमती\nजिंकण्याची शक्यता नाही"),
                         color = V8.Text3, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp
                     )
@@ -213,9 +224,9 @@ fun V8CockpitScreen(
                 val b = analysis.brain
                 listOf(
                     Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
-                    Triple(tr(lang, "QUALITY", "क्वालिटी", "गुणवत्ता"), b?.qualityIndex?.toString() ?: "--", tr(lang, "setup (rules)", "सेटअप (नियम)", "सेटअप (नियम)")),
+                    Triple(tr(lang, "SETUP", "सेटअप", "सेटअप"), b?.qualityIndex?.toString() ?: "--", tr(lang, "setup (rules)", "सेटअप (नियम)", "सेटअप (नियम)")),
                     // V29A.1: this is the indicator split, not a measured edge (the measured edge lives in Learn → Shadow Lab)
-                    Triple(tr(lang, "SPLIT", "बँटवारा", "विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
+                    Triple(tr(lang, "PILLAR SPLIT", "पिलर बँटवारा", "पिलर विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
                     Triple(
                         tr(lang, "ACCURACY", "सटीकता", "अचूकता"),
                         if (p == null || p.directionN < p.directionMinN) "--" else "${p.directionPct}%",
@@ -296,7 +307,14 @@ fun V8CockpitScreen(
             }
             Spacer(modifier = Modifier.height(6.dp))
             V8Hairline(V8.Line)
-            Text(text = tr(lang, "WHY?  FULL FORECAST  ›", "क्यों?  पूरा अनुमान  ›", "का?  पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = tr(lang, "WHY?  FULL FORECAST  ›", "क्यों?  पूरा अनुमान  ›", "का?  पूर्ण अंदाज  ›"), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+                if (pres != null) Text(
+                    text = tr(lang, "DECISION TRACE  ›", "फ़ैसले का ब्योरा  ›", "निर्णयाचा तपशील  ›"),
+                    color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp,
+                    modifier = Modifier.v8Press { showTrace = true }.padding(vertical = 8.dp, horizontal = 4.dp)
+                )
+            }
         }
 
         // ---------------- health strip
@@ -417,7 +435,7 @@ fun V8CockpitScreen(
         V8Card(level = 2) {
             V8Label(tr(lang, "Multi-timeframe • PAXG/USDT proxy", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी"))
             if (rows.isEmpty()) {
-                Text(text = tr(lang, "Not loaded right now", "अभी लोड नहीं हुआ", "सध्या लोड झाले नाही"), color = V8.Text3, fontSize = 11.sp)
+                Text(text = tr(lang, "MULTI-TIMEFRAME CONTEXT UNAVAILABLE • optional context, the XAU/USD decision does not use it", "मल्टी-टाइमफ़्रेम संदर्भ उपलब्ध नहीं • वैकल्पिक, XAU/USD फ़ैसला इसे इस्तेमाल नहीं करता", "मल्टी-टाइमफ्रेम संदर्भ उपलब्ध नाही • पर्यायी, XAU/USD निर्णय तो वापरत नाही"), color = V8.Text3, fontSize = 11.sp)
             } else {
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
                     listOf("TF" to 0.18f, "DIR" to 0.17f, "RSI" to 0.17f, tr(lang, "LEVEL", "लेवल", "लेव्हल") to 0.48f).forEach { (h, w) ->

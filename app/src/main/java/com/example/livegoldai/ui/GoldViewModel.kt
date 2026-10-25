@@ -251,7 +251,12 @@ class GoldViewModel @JvmOverloads constructor(
                                 integrity = com.example.livegoldai.data.AppEngine.integrity()
                             )
                         } catch (_: Exception) { null }
-                        full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)
+                        val withBrain = full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)
+                        // V29B: one read-only decision description for Home, Brain and the Decision Trace
+                        val research = try { shadowLive.stats(currentInterval).status } catch (_: Exception) { null }
+                        withBrain.copy(presentation = try {
+                            com.example.livegoldai.data.PresentationBuilder.build(withBrain, learning.currentState(), research)
+                        } catch (_: Exception) { null })
                     }
                 } catch (_: Exception) {
                     rawAnalysis
@@ -376,7 +381,8 @@ class GoldViewModel @JvmOverloads constructor(
                 val d = s.data
                 val rep = report?.first
                 if (rep != null && d != null && d.interval == rep.interval) {
-                    s.copy(aiRunning = false, data = d.copy(aiCouncil = rep, health = HealthMonitor.withAi(d.health, rep), brain = report.second ?: d.brain))
+                    s.copy(aiRunning = false, data = d.copy(aiCouncil = rep, health = HealthMonitor.withAi(d.health, rep), brain = report.second ?: d.brain,
+                        presentation = d.presentation?.copy(aiStatus = when { rep == null || rep.configured == 0 -> "NOT CONNECTED"; rep.eligible == 0 -> "ERROR"; else -> "AVAILABLE" })))
                 } else s.copy(aiRunning = false)
             }
         }
