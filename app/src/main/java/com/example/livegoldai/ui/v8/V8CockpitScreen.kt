@@ -219,70 +219,91 @@ fun V8CockpitScreen(
             }
             // Four different things, shown side by side so they are never read as one number.
             V8Hairline(V8.Line)
+            // V29B: above the fold only four independent dimensions; every other number is one tap away
             Row(modifier = Modifier.fillMaxWidth()) {
-                val p = analysis.pulse
-                val b = analysis.brain
-                listOf(
-                    Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
-                    Triple(tr(lang, "SETUP", "सेटअप", "सेटअप"), b?.qualityIndex?.toString() ?: "--", tr(lang, "setup (rules)", "सेटअप (नियम)", "सेटअप (नियम)")),
-                    // V29A.1: this is the indicator split, not a measured edge (the measured edge lives in Learn → Shadow Lab)
-                    Triple(tr(lang, "PILLAR SPLIT", "पिलर बँटवारा", "पिलर विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
-                    Triple(
-                        tr(lang, "ACCURACY", "सटीकता", "अचूकता"),
-                        if (p == null || p.directionN < p.directionMinN) "--" else "${p.directionPct}%",
-                        if (p == null) "" else "N=${p.directionN}" + if (p.directionN < p.directionMinN) "/${p.directionMinN}" else ""
-                    )
-                ).forEach { (k, v, sub) ->
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-                        Text(text = v, color = V8.Text1, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                val p0 = analysis.pulse
+                val unc = analysis.brain?.totalUncertainty ?: "--"
+                HomeTile(tr(lang, "REGIME", "स्थिति", "स्थिती"), analysis.brain?.regime?.replace('_', ' ') ?: "--", tr(lang, "measured now", "अभी मापा", "आत्ता मोजलेले"), Modifier.weight(1f))
+                HomeTile(tr(lang, "UNCERTAINTY", "अनिश्चितता", "अनिश्चितता"), unc, tr(lang, "model + market", "मॉडल + मार्केट", "मॉडेल + मार्केट"), Modifier.weight(1f),
+                    when (unc) { "HIGH" -> V8.Red; "MODERATE" -> V8.Amber; "LOW" -> V8.Green; else -> V8.Text1 })
+                HomeTile(tr(lang, "DATA", "डेटा", "डेटा"), p0?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"), Modifier.weight(1f))
+                HomeTile(tr(lang, "VERIFIED", "जाँचा", "तपासलेले"),
+                    if (p0 == null || p0.directionN < p0.directionMinN) "--" else "${p0.directionPct}%",
+                    if (p0 == null) "" else "N=${p0.directionN}" + if (p0.directionN < p0.directionMinN) "/${p0.directionMinN}" else tr(lang, " • close dir.", " • क्लोज़ दिशा", " • क्लोज दिशा"),
+                    Modifier.weight(1f))
+            }
+            var moreNumbers by remember { mutableStateOf(false) }
+            Text(
+                text = if (moreNumbers) tr(lang, "LESS  ▴", "कम  ▴", "कमी  ▴") else tr(lang, "MORE NUMBERS (heuristics, ranges)  ▾", "और संख्याएँ (अनुमान, दायरा)  ▾", "अधिक आकडे (अंदाज, पल्ला)  ▾"),
+                color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
+                modifier = Modifier.fillMaxWidth().v8Press { moreNumbers = !moreNumbers }.padding(vertical = 10.dp)
+            )
+            if (moreNumbers) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                    val p = analysis.pulse
+                    val b = analysis.brain
+                    listOf(
+                        Triple(tr(lang, "AGREEMENT", "सहमति", "सहमती"), "$rawConf%", tr(lang, "pillars", "पिलर", "पिलर")),
+                        Triple(tr(lang, "SETUP", "सेटअप", "सेटअप"), b?.qualityIndex?.toString() ?: "--", tr(lang, "setup (rules)", "सेटअप (नियम)", "सेटअप (नियम)")),
+                        // V29A.1: this is the indicator split, not a measured edge (the measured edge lives in Learn → Shadow Lab)
+                        Triple(tr(lang, "PILLAR SPLIT", "पिलर बँटवारा", "पिलर विभागणी"), b?.edge ?: "--", tr(lang, "not proven", "साबित नहीं", "सिद्ध नाही")),
+                        Triple(
+                            tr(lang, "ACCURACY", "सटीकता", "अचूकता"),
+                            if (p == null || p.directionN < p.directionMinN) "--" else "${p.directionPct}%",
+                            if (p == null) "" else "N=${p.directionN}" + if (p.directionN < p.directionMinN) "/${p.directionMinN}" else ""
+                        )
+                    ).forEach { (k, v, sub) ->
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                            Text(text = v, color = V8.Text1, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                            Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                        }
                     }
                 }
-            }
-            // second row: measured from the ledger; "--" until there is enough real history
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                val p = analysis.pulse
-                listOf(
-                    Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "engine flips", "इंजन बदलाव", "इंजिन बदल")),
-                    Triple(tr(lang, "EXP. MOVE", "अनुमानित चाल", "अपेक्षित चाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
-                    Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL"),
-                    Triple(tr(lang, "DATA", "डेटा", "डेटा"), p?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"))
-                ).forEach { (k, v, sub) ->
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-                        Text(text = v, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
-                        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                // second row: measured from the ledger; "--" until there is enough real history
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val p = analysis.pulse
+                    listOf(
+                        Triple(tr(lang, "STABILITY", "स्थिरता", "स्थिरता"), p?.stability ?: "--", tr(lang, "engine flips", "इंजन बदलाव", "इंजिन बदल")),
+                        Triple(tr(lang, "EXP. MOVE", "अनुमानित चाल", "अपेक्षित चाल"), p?.expectedMove ?: "--", tr(lang, "median, pts", "मीडियन, पॉइंट", "मध्यक, पॉइंट")),
+                        Triple(tr(lang, "COVERAGE", "कवरेज", "कव्हरेज"), p?.coverage ?: "--", "BUY/SELL"),
+                        Triple(tr(lang, "DATA", "डेटा", "डेटा"), p?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"))
+                    ).forEach { (k, v, sub) ->
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                            Text(text = v, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                            Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                        }
                     }
                 }
-            }
-            // third row: market regime and the real 10-90% range of past calls (needs 30 checked calls and a direction)
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                val p = analysis.pulse
-                val q10 = p?.expectedMoveQ10
-                val q90 = p?.expectedMoveQ90
-                val dir = when (sig) { Signal.BUY -> 1.0; Signal.SELL -> -1.0; else -> 0.0 }
-                val range = if (q10 == null || q90 == null || dir == 0.0) "--" else {
-                    val x = analysis.currentPrice + dir * q10
-                    val y = analysis.currentPrice + dir * q90
-                    String.format(Locale.US, "%.0f–%.0f", minOf(x, y), maxOf(x, y))
-                }
-                val rangeSub = when {
-                    dir == 0.0 -> tr(lang, "no direction", "दिशा नहीं", "दिशा नाही")
-                    q10 == null -> tr(lang, "needs 30 calls", "30 कॉल चाहिए", "30 कॉल लागतात")
-                    else -> tr(lang, "80% of past calls", "पिछली 80% कॉल", "मागील 80% कॉल")
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = tr(lang, "REGIME", "स्थिति", "स्थिती"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-                    Text(text = analysis.brain?.regime?.replace('_', ' ') ?: "--", color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                    Text(text = tr(lang, "measured now", "अभी मापा", "आत्ता मोजलेले"), color = V8.Text3, fontSize = 8.sp, maxLines = 1)
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = tr(lang, "EXPECTED RANGE", "अनुमानित दायरा", "अपेक्षित पल्ला"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-                    Text(text = range, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                    Text(text = rangeSub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                // third row: market regime and the real 10-90% range of past calls (needs 30 checked calls and a direction)
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    val p = analysis.pulse
+                    val q10 = p?.expectedMoveQ10
+                    val q90 = p?.expectedMoveQ90
+                    val dir = when (sig) { Signal.BUY -> 1.0; Signal.SELL -> -1.0; else -> 0.0 }
+                    val range = if (q10 == null || q90 == null || dir == 0.0) "--" else {
+                        val x = analysis.currentPrice + dir * q10
+                        val y = analysis.currentPrice + dir * q90
+                        String.format(Locale.US, "%.0f–%.0f", minOf(x, y), maxOf(x, y))
+                    }
+                    val rangeSub = when {
+                        dir == 0.0 -> tr(lang, "no direction", "दिशा नहीं", "दिशा नाही")
+                        q10 == null -> tr(lang, "needs 30 calls", "30 कॉल चाहिए", "30 कॉल लागतात")
+                        else -> tr(lang, "80% of past calls", "पिछली 80% कॉल", "मागील 80% कॉल")
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = tr(lang, "REGIME", "स्थिति", "स्थिती"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                        Text(text = analysis.brain?.regime?.replace('_', ' ') ?: "--", color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(text = tr(lang, "measured now", "अभी मापा", "आत्ता मोजलेले"), color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = tr(lang, "EXPECTED RANGE", "अनुमानित दायरा", "अपेक्षित पल्ला"), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+                        Text(text = range, color = V8.Text1, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(text = rangeSub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+                    }
                 }
             }
             if (calibrated == null) {
@@ -321,7 +342,7 @@ fun V8CockpitScreen(
         if (health != null) {
             V8Card(level = 2, onClick = onOpenHealth) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    V8Label(tr(lang, "System pulse", "सिस्टम पल्स", "सिस्टम पल्स"))
+                    V8Label(tr(lang, "System pulse • app health, not accuracy", "सिस्टम पल्स • ऐप की सेहत, सटीकता नहीं", "सिस्टम पल्स • ॲपचे आरोग्य, अचूकता नाही"))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "${health.overallScore}/100", color = statusColor(health.overallStatus), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.weight(1f))
@@ -458,5 +479,15 @@ fun V8CockpitScreen(
             Text(text = tr(lang, "Open full playbook (entry, SL, targets) →", "पूरा प्लेबुक खोलें (एंट्री, SL, टारगेट) →", "पूर्ण प्लेबुक उघडा (एंट्री, SL, टार्गेट) →"), color = V8.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/** V29B: one small labelled number on the Home forecast card. */
+@Composable
+private fun HomeTile(k: String, v: String, sub: String, modifier: Modifier, vc: androidx.compose.ui.graphics.Color = V8.Text1) {
+    Column(modifier = modifier) {
+        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+        Text(text = v, color = vc, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
     }
 }

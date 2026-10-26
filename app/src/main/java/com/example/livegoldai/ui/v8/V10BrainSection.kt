@@ -64,11 +64,14 @@ private fun MiniStat(label: String, value: String, color: Color, modifier: Modif
 
 /** Full brain: every line is a measured value, or says that it cannot be measured yet. */
 @Composable
-fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example.livegoldai.data.WhatMattersNow.Item> = emptyList()) {
+fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example.livegoldai.data.WhatMattersNow.Item> = emptyList(), part: Int = 0) {
     var showFeatures by remember { mutableStateOf(false) }
     var showLineage by remember { mutableStateOf(false) }
     var showResearch by remember { mutableStateOf(false) }
 
+    // V29B: progressive order. part 1 = market context, part 2 = reliability, research and audit, 0 = all
+    if (part == 0 || part == 1) {
+    BrainGroupHeader(tr(lang, "Market context", "मार्केट संदर्भ", "मार्केट संदर्भ"))
     // ================= MARKET BRAIN
     V8Card(level = 1, accent = V8.Gold.copy(alpha = 0.45f)) {
         V8Label(tr(lang, "Market brain", "मार्केट ब्रेन", "मार्केट ब्रेन"), V8.Gold)
@@ -108,6 +111,73 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         }
     }
 
+    // ================= ANOMALY
+    V8Card(level = 2, accent = if (b.anomaly.severity >= 2) V8.Red.copy(alpha = 0.5f) else V8.Line) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            V8Label(tr(lang, "Anomaly detector", "गड़बड़ी डिटेक्टर", "विसंगती डिटेक्टर"))
+            Spacer(modifier = Modifier.weight(1f))
+            V8Badge(b.anomaly.level, levelColor(b.anomaly.level))
+        }
+        b.anomaly.checks.forEach { c ->
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 3.dp)) {
+                Text(text = if (c.severity == 0) "✓" else "⚠", color = if (c.severity == 0) V8.Green else if (c.severity == 1) V8.Amber else V8.Red, fontSize = 11.sp, modifier = Modifier.width(18.dp))
+                Text(text = c.name, color = V8.Text1, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
+                Text(text = c.value, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
+            }
+        }
+        Text(text = tr(lang, "Compared with this chart's own last 50 candles, so limits follow volatility.", "इसी चार्ट की पिछली 50 कैंडल से तुलना, इसलिए सीमा वोलैटिलिटी के साथ बदलती है।", "याच चार्टच्या मागील 50 कँडलशी तुलना, म्हणून मर्यादा व्होलॅटिलिटीसोबत बदलते."), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+    }
+
+    // ================= CROSS-MARKET
+    val xm = b.crossMarket
+    V8Card(level = 2) {
+        V8Label(tr(lang, "Cross-market (measured relation with gold)", "क्रॉस-मार्केट (सोने से नापा गया रिश्ता)", "क्रॉस-मार्केट (सोन्याशी मोजलेला संबंध)"))
+        if (!xm.available) {
+            Text(text = "CROSS-MARKET DATA UNAVAILABLE", color = V8.Text3, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+        } else {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                listOf("" to 0.24f, "24H" to 0.17f, "30D" to 0.15f, "7D" to 0.15f, tr(lang, "IMPLIES", "संकेत", "संकेत") to 0.29f).forEach { (h, w) ->
+                    Text(text = h, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(w))
+                }
+            }
+            xm.assets.forEach { x ->
+                if (x.health == "UNAVAILABLE") {
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                        Text(text = x.key, color = V8.Text3, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
+                        Text(text = tr(lang, "unavailable", "उपलब्ध नहीं", "उपलब्ध नाही"), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.76f))
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = x.key + if (x.health == "STALE") "*" else "", color = V8.Text1, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
+                        Text(text = String.format(Locale.US, "%+.2f%%", x.change24hPct), color = if (x.change24hPct >= 0) V8.Green else V8.Red, fontSize = 10.sp, modifier = Modifier.weight(0.17f))
+                        Text(text = if (x.relation == "UNKNOWN") "--" else String.format(Locale.US, "%+.2f", x.corr30d), color = V8.Text1, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.15f))
+                        Text(text = if (x.trend == "UNKNOWN") "--" else String.format(Locale.US, "%+.2f", x.corr7d), color = V8.Text2, fontSize = 10.sp, modifier = Modifier.weight(0.15f))
+                        val imp = x.implied
+                        Text(
+                            text = if (x.divergence) "⚠ " + tr(lang, "BREAK", "टूटा", "तुटला") else if (imp == null) "—" else if (imp == Signal.BUY) tr(lang, "gold ↑", "सोना ↑", "सोने ↑") else tr(lang, "gold ↓", "सोना ↓", "सोने ↓"),
+                            color = if (x.divergence) V8.Amber else if (imp == null) V8.Text3 else signalColor(imp),
+                            fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.29f)
+                        )
+                    }
+                    if (x.trend == "FLIPPED" || x.trend == "WEAKENING" || x.trend == "STRENGTHENING") {
+                        Text(text = "   " + x.note, color = V8.Text3, fontSize = 9.sp)
+                    }
+                }
+            }
+            xm.divergences.forEach { Text(text = "⚠ $it", color = V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp)) }
+            Text(
+                text = tr(lang, "30D / 7D = correlation of hourly returns with gold futures. No fixed rule like \"dollar up = gold down\": only what was measured. Source: Yahoo Finance • checked ",
+                    "30D / 7D = सोने के फ्यूचर्स के साथ घंटे-घंटे की चाल का कोरिलेशन। \"डॉलर ऊपर = सोना नीचे\" जैसा तय नियम नहीं: सिर्फ जो नापा गया। स्रोत: Yahoo Finance • जाँचा ",
+                    "30D / 7D = सोन्याच्या फ्युचर्ससोबत तासागणिक चालीचे कोरिलेशन. \"डॉलर वर = सोने खाली\" असा ठराविक नियम नाही: फक्त जे मोजले. स्रोत: Yahoo Finance • तपासले ") +
+                    fmtAge(System.currentTimeMillis() - xm.fetchedAtMs) + tr(lang, " ago", " पहले", " आधी"),
+                color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+
+    }
+    if (part == 0 || part == 2) {
+    BrainGroupHeader(tr(lang, "Reliability", "भरोसा", "विश्वासार्हता"))
     // ================= QUALITY + EDGE
     V8Card(level = 2, accent = qualityColor(b.qualityIndex).copy(alpha = 0.45f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -169,70 +239,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         )
     }
 
-    // ================= CROSS-MARKET
-    val xm = b.crossMarket
-    V8Card(level = 2) {
-        V8Label(tr(lang, "Cross-market (measured relation with gold)", "क्रॉस-मार्केट (सोने से नापा गया रिश्ता)", "क्रॉस-मार्केट (सोन्याशी मोजलेला संबंध)"))
-        if (!xm.available) {
-            Text(text = "CROSS-MARKET DATA UNAVAILABLE", color = V8.Text3, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-        } else {
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                listOf("" to 0.24f, "24H" to 0.17f, "30D" to 0.15f, "7D" to 0.15f, tr(lang, "IMPLIES", "संकेत", "संकेत") to 0.29f).forEach { (h, w) ->
-                    Text(text = h, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(w))
-                }
-            }
-            xm.assets.forEach { x ->
-                if (x.health == "UNAVAILABLE") {
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                        Text(text = x.key, color = V8.Text3, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
-                        Text(text = tr(lang, "unavailable", "उपलब्ध नहीं", "उपलब्ध नाही"), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.76f))
-                    }
-                } else {
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = x.key + if (x.health == "STALE") "*" else "", color = V8.Text1, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.24f))
-                        Text(text = String.format(Locale.US, "%+.2f%%", x.change24hPct), color = if (x.change24hPct >= 0) V8.Green else V8.Red, fontSize = 10.sp, modifier = Modifier.weight(0.17f))
-                        Text(text = if (x.relation == "UNKNOWN") "--" else String.format(Locale.US, "%+.2f", x.corr30d), color = V8.Text1, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.15f))
-                        Text(text = if (x.trend == "UNKNOWN") "--" else String.format(Locale.US, "%+.2f", x.corr7d), color = V8.Text2, fontSize = 10.sp, modifier = Modifier.weight(0.15f))
-                        val imp = x.implied
-                        Text(
-                            text = if (x.divergence) "⚠ " + tr(lang, "BREAK", "टूटा", "तुटला") else if (imp == null) "—" else if (imp == Signal.BUY) tr(lang, "gold ↑", "सोना ↑", "सोने ↑") else tr(lang, "gold ↓", "सोना ↓", "सोने ↓"),
-                            color = if (x.divergence) V8.Amber else if (imp == null) V8.Text3 else signalColor(imp),
-                            fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.29f)
-                        )
-                    }
-                    if (x.trend == "FLIPPED" || x.trend == "WEAKENING" || x.trend == "STRENGTHENING") {
-                        Text(text = "   " + x.note, color = V8.Text3, fontSize = 9.sp)
-                    }
-                }
-            }
-            xm.divergences.forEach { Text(text = "⚠ $it", color = V8.Amber, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp)) }
-            Text(
-                text = tr(lang, "30D / 7D = correlation of hourly returns with gold futures. No fixed rule like \"dollar up = gold down\": only what was measured. Source: Yahoo Finance • checked ",
-                    "30D / 7D = सोने के फ्यूचर्स के साथ घंटे-घंटे की चाल का कोरिलेशन। \"डॉलर ऊपर = सोना नीचे\" जैसा तय नियम नहीं: सिर्फ जो नापा गया। स्रोत: Yahoo Finance • जाँचा ",
-                    "30D / 7D = सोन्याच्या फ्युचर्ससोबत तासागणिक चालीचे कोरिलेशन. \"डॉलर वर = सोने खाली\" असा ठराविक नियम नाही: फक्त जे मोजले. स्रोत: Yahoo Finance • तपासले ") +
-                    fmtAge(System.currentTimeMillis() - xm.fetchedAtMs) + tr(lang, " ago", " पहले", " आधी"),
-                color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
-
-    // ================= ANOMALY
-    V8Card(level = 2, accent = if (b.anomaly.severity >= 2) V8.Red.copy(alpha = 0.5f) else V8.Line) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            V8Label(tr(lang, "Anomaly detector", "गड़बड़ी डिटेक्टर", "विसंगती डिटेक्टर"))
-            Spacer(modifier = Modifier.weight(1f))
-            V8Badge(b.anomaly.level, levelColor(b.anomaly.level))
-        }
-        b.anomaly.checks.forEach { c ->
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 3.dp)) {
-                Text(text = if (c.severity == 0) "✓" else "⚠", color = if (c.severity == 0) V8.Green else if (c.severity == 1) V8.Amber else V8.Red, fontSize = 11.sp, modifier = Modifier.width(18.dp))
-                Text(text = c.name, color = V8.Text1, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
-                Text(text = c.value, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
-            }
-        }
-        Text(text = tr(lang, "Compared with this chart's own last 50 candles, so limits follow volatility.", "इसी चार्ट की पिछली 50 कैंडल से तुलना, इसलिए सीमा वोलैटिलिटी के साथ बदलती है।", "याच चार्टच्या मागील 50 कँडलशी तुलना, म्हणून मर्यादा व्होलॅटिलिटीसोबत बदलते."), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
-    }
-
+    BrainGroupHeader(tr(lang, "Research", "रिसर्च", "रिसर्च"))
     // ================= ANALOGS + FAMILIARITY
     V8Card(level = 2) {
         V8Label(tr(lang, "Historical analogs", "पुराने मिलते-जुलते हालात", "जुन्या समान स्थिती"), V8.Learn)
@@ -283,6 +290,7 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         }
     }
 
+    BrainGroupHeader(tr(lang, "Audit", "ऑडिट", "ऑडिट"))
     // ================= FEATURE STORE
     V8Card(level = 3, onClick = { showFeatures = !showFeatures }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -312,4 +320,12 @@ fun V10BrainSection(b: BrainReport, lang: AppLanguage, matters: List<com.example
         }
         if (showLineage) b.lineage.forEach { V8KeyValue(it.label, it.value) }
     }
+    }
+}
+
+/** V29B: a quiet group title inside the Brain screen. */
+@Composable
+internal fun BrainGroupHeader(title: String) {
+    Text(text = title.uppercase(), color = V8.Gold, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp))
 }

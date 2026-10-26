@@ -103,7 +103,11 @@ fun V8ForecastScreen(
         }
 
         // ---------------- V10 market brain (measured state, quality, uncertainty, cross-market, analogs)
-        analysis.brain?.let { V10BrainSection(it, lang, com.example.livegoldai.data.WhatMattersNow.build(analysis)) }
+        val brainMatters = remember(analysis) { com.example.livegoldai.data.WhatMattersNow.build(analysis) }
+        analysis.brain?.let { V10BrainSection(it, lang, brainMatters, part = 1) }
+
+        // V29B: evidence group (the real weighted vote and each pillar's verified record)
+        BrainGroupHeader(tr(lang, "Evidence", "सबूत", "पुरावा"))
 
         // ---------------- why this forecast (real weighted vote)
         if (ins != null) {
@@ -155,6 +159,8 @@ fun V8ForecastScreen(
                 }
             }
         }
+
+        analysis.brain?.let { V10BrainSection(it, lang, brainMatters, part = 2) }
 
         // ---------------- prediction trace
         // ---------------- forecast timeline (real ledger records of this timeframe)
