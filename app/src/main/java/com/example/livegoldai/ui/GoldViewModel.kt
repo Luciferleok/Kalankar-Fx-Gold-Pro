@@ -215,6 +215,8 @@ class GoldViewModel @JvmOverloads constructor(
             }
         } catch (_: Exception) { }
         try { _uiState.update { it.copy(oandaTokenSaved = aiVault.getOandaToken().isNotBlank()) } } catch (_: Exception) { }
+        // V32 stage 3: OANDA is the primary feed when a token is saved; the token is read from the vault per request
+        apiService.setOandaTokenProvider { aiVault.getOandaToken() }
         if (_uiState.value.bgRecording) {
             try { com.example.livegoldai.service.RecorderService.start(application) } catch (_: Exception) { }
         }
@@ -492,12 +494,14 @@ class GoldViewModel @JvmOverloads constructor(
         if (t.length < 20 || t.any { it.isWhitespace() }) return
         val saved = aiVault.putOandaToken(t)
         _uiState.update { it.copy(oandaTokenSaved = saved, oandaHealth = null) }
-        if (saved) testOanda()
+        if (saved) { apiService.clearCache(); testOanda(); loadData(isInitial = false) }
     }
 
     fun removeOandaToken() {
         aiVault.removeOandaToken()
         _uiState.update { it.copy(oandaTokenSaved = false, oandaHealth = null) }
+        apiService.clearCache()
+        loadData(isInitial = false)
     }
 
     fun testOanda() {

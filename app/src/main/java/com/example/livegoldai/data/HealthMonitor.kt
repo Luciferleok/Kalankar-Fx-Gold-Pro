@@ -38,7 +38,8 @@ class HealthMonitor {
                 if (!feed.isLive) "All live sources failed: no XAU/USD data"
                 else if (proxy) "${feed.source} (proxy: XAU/USD decisions paused)" else feed.source))
             dataChecks.add(HealthCheck("Primary source", if (feed.sourcesTried == 1 && !proxy) "OK" else "WARN",
-                (if (feed.sourcesTried == 1 && !proxy) "Twelve Data answered" else "Twelve Data failed: " + feed.primaryIssue.ifBlank { "no reason reported" }) +
+                (if (feed.sourcesTried == 1 && !proxy) SourceRegistry.badge(feed.source).split(" • ").getOrElse(1) { "Primary" } + " answered"
+                 else "Primary failed: " + feed.primaryIssue.ifBlank { "no reason reported" }) +
                     " • ${feed.creditsToday}/800 credits today"))
             dataChecks.add(HealthCheck("Fetch time", if (feed.latencyMs < 5000) "OK" else "WARN", "${feed.latencyMs} ms"))
         }

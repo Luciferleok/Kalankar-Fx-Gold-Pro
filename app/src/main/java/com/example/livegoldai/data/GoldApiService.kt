@@ -91,6 +91,7 @@ class GoldApiService(
             return out
         }
 
+        const val OANDA_SOURCE = "OANDA XAU_USD (practice)"
         const val SPOT_MIN_GAP_MS = 15 * 60_000L     // Twelve Data quota: verification history at most 4x per hour
         const val PROXY_AFTER_MS = 60 * 60_000L      // fall back to a proxy instrument only when an hour overdue
     }
@@ -105,6 +106,45 @@ class GoldApiService(
     }
 
     fun getApiKey(): String = apiKey
+
+    // ---------------- V32 stage 3: OANDA PRACTICE = PRIMARY XAU/USD FEED (read-only) ----------------
+    // The token is never stored here: it is read from the encrypted vault at the moment of each request.
+    @Volatile private var oandaToken: () -> String = { "" }
+    fun setOandaTokenProvider(p: () -> String) { oandaToken = p }
+    /** The provider changed (token saved / removed): do not reuse results from the other feed. */
+    fun clearCache() = memoryCache.clear()
+    private fun oandaTok(): String = try { oandaToken().trim() } catch (_: Exception) { "" }
+    fun oandaConfigured(): Boolean = oandaTok().isNotEmpty()
+    /** Real OkHttp transport; replaceable only so tests can answer like OANDA without a network. Set before first use. */
+    var oandaTransport: OandaTransport = OkHttpOandaTransport()
+    val oandaStore by lazy { OandaCandleStore(oandaTransport, { oandaTok() }) }
+    @Volatile private var oandaIssue = ""
+
+    /** OANDA candles for an app timeframe, UTC-aligned; newest may be forming (as with Twelve Data). null + reason when not usable. */
+    private fun fetchOandaCandles(interval: String, now: Long): List<CandleBar>? {
+        val mins = OandaGranularity.minutesOf(interval)
+        val p = mins?.takeIf { it <= 1440 }?.let { OandaGranularity.plan(it) }
+        if (p == null) { oandaIssue = "OANDA does not serve $interval here"; return null }
+        val f = oandaStore.candles(p.granularity, (200 * p.group + p.group).coerceAtMost(OandaCandles.MAX_COUNT))
+        if (f.status != OandaStatus.CONNECTED) { oandaIssue = "OANDA ${f.status}" + (if (f.httpCode > 0) " (HTTP ${f.httpCode})" else ""); return null }
+        val bars = CandleAggregator.aggregate(f.bars, p.baseMin, p.targetMin, now).bars.map { CandleAggregator.toCandle(it) }
+        if (bars.size < 30) { oandaIssue = "OANDA returned only ${bars.size} candles"; return null }
+        oandaIssue = ""
+        return bars
+    }
+
+    /** Same-provider check for a prediction made on OANDA data: OANDA M1 candles, completed ones only. */
+    private fun oandaPath(startMs: Long, endMs: Long, now: Long): PricePath {
+        if (!oandaConfigured()) return PricePath("WAIT", emptyList(), waiting = true)
+        val from = startMs - 60_000L
+        val to = minOf(endMs, now)
+        if ((to - from) / 60_000L > OandaCandles.MAX_COUNT) return PricePath("WAIT", emptyList(), waiting = true)
+        val f = oandaStore.range("M1", from, to)
+        if (f.status != OandaStatus.CONNECTED) return PricePath("WAIT", emptyList(), waiting = true)
+        val bars = f.bars.filter { it.complete && it.startMs >= from && it.startMs < endMs }.sortedBy { it.startMs }.map { PathBar(it.startMs, it.open, it.high, it.low, it.close) }
+        val covered = bars.isNotEmpty() && bars.first().t <= startMs + 120_000L && bars.last().t >= endMs - 120_000L
+        return if (covered) PricePath("OANDA XAU_USD M1", bars) else PricePath("WAIT", emptyList(), waiting = true)
+    }
 
     /** V32: base candle length in minutes, for UTC-aligned grouping. null = weekly/monthly: legacy grouping. */
     private fun tdBaseMinutes(td: String): Int? = when (td) {
@@ -146,7 +186,9 @@ class GoldApiService(
         // V29A.11: reuse a recent result; on the screen the reuse window grows when the day's credits run low
         val cached = memoryCache[normInterval]
         val now = System.currentTimeMillis()
-        val ttl = maxAgeMs ?: maxOf(cacheTtlMs, minOf(creditBudget.screenPaceMs(now), RealityEngine.intervalMinutes(normInterval) * 60_000L))
+        val useOanda = oandaConfigured()
+        // Twelve Data credit pacing only matters when Twelve Data is the feed
+        val ttl = maxAgeMs ?: if (useOanda) cacheTtlMs else maxOf(cacheTtlMs, minOf(creditBudget.screenPaceMs(now), RealityEngine.intervalMinutes(normInterval) * 60_000L))
         if (cached != null && (now - cached.first) < ttl) {
             return@withContext Result.success(cached.second)
         }
@@ -155,6 +197,25 @@ class GoldApiService(
         val dxyDeferred = async { fetchLiveDxy() }
         val us10yDeferred = async { fetchLiveUs10y() }
         val eventsDeferred = async { fetchLiveEconomicEvents() }
+
+        // Step 0 (V32): OANDA practice, read-only, when the user saved a token
+        oandaIssue = ""
+        if (useOanda) {
+            try {
+                val oc = fetchOandaCandles(normInterval, now)
+                if (oc != null) {
+                    val analysis = TechnicalEngine.analyze(candles = oc, interval = interval, customDxy = dxyDeferred.await(),
+                        customUs10y = us10yDeferred.await(), customEvents = eventsDeferred.await())
+                    val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), OANDA_SOURCE, now, 1,
+                        dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, "")
+                    memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
+                    return@withContext Result.success(finalResult)
+                }
+            } catch (e: Exception) {
+                oandaIssue = "OANDA error: ${e.javaClass.simpleName}"
+            }
+        }
+        val step = if (useOanda) 1 else 0     // how many sources were tried before Twelve Data
 
         // Step 1: TwelveData API (if API key is active and within limit)
         primaryIssue = when {
@@ -233,7 +294,7 @@ class GoldApiService(
                                 customUs10y = us10yDeferred.await(),
                                 customEvents = eventsDeferred.await()
                             )
-                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Twelve Data XAU/USD", now, 1, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, volSource)
+                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), if (useOanda) "Twelve Data XAU/USD (backup)" else "Twelve Data XAU/USD", now, 1 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, volSource)
                             memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                             return@withContext Result.success(finalResult)
                         }
@@ -319,7 +380,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, VOLUME_SOURCE)
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, VOLUME_SOURCE)
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -383,7 +444,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures • futures volume, not XAU/USD spot" else "")
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures • futures volume, not XAU/USD spot" else "")
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }
@@ -392,7 +453,12 @@ class GoldApiService(
         } catch (_: Exception) {}
 
         // Step 3 (V29A): no simulated "demo" market any more. Without a live feed the app says so.
-        Result.failure(IllegalStateException(if (apiKey.isBlank()) "NO LIVE DATA • add your Twelve Data key in Settings" else "NO LIVE DATA • no gold feed answered"))
+        // V32: say WHY: the OANDA reason first, then Twelve Data's
+        val why = listOf(oandaIssue, primaryIssue).filter { it.isNotBlank() }.joinToString(" • ")
+        Result.failure(IllegalStateException(when {
+            apiKey.isBlank() && !useOanda -> "NO LIVE DATA • add your OANDA practice token or Twelve Data key in Settings"
+            else -> "NO LIVE DATA • " + why.ifBlank { "no gold feed answered" }
+        }))
     }
 
     /**
@@ -507,10 +573,16 @@ class GoldApiService(
     private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int, volumeSource: String = ""): GoldAnalysisResult {
         val end = System.currentTimeMillis()
         val id = SourceRegistry.identify(source)
+        // V32: the reason the source(s) ahead of this one failed: OANDA first, then Twelve Data
+        val issue = when {
+            id.provider == ProviderId.OANDA -> ""
+            id.provider == ProviderId.TWELVE_DATA -> oandaIssue
+            else -> listOf(oandaIssue, primaryIssue).filter { it.isNotBlank() }.joinToString(" • ")
+        }
         return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried, volumeSource,
             instrumentId = id.instrument.name, providerId = id.provider.name, providerSymbol = id.symbol, sourceType = id.type.name,
-            keyMissing = apiKey.isBlank(), creditsToday = creditBudget.usedToday(end),
-            primaryIssue = if (id.type == SourceType.PRIMARY) "" else primaryIssue))
+            keyMissing = apiKey.isBlank() && !oandaConfigured(), creditsToday = creditBudget.usedToday(end),
+            primaryIssue = issue))
     }
 
     // ---------------- REAL VOLUME FOR THE SPOT FEED ----------------
@@ -706,6 +778,9 @@ class GoldApiService(
     suspend fun fetchPathFor(dataSource: String, startMs: Long, endMs: Long, now: Long): PricePath? = withContext(Dispatchers.IO) {
         when (PredictionLedger.instrumentOf(dataSource)) {
             "XAU" -> {
+                // V32: a prediction made on OANDA data is checked on OANDA data only (never mixed with Twelve Data)
+                if (dataSource.contains("OANDA", true)) return@withContext if (now - startMs <= 4900 * 60_000L) oandaPath(startMs, endMs, now)
+                    else PricePath("WAIT", emptyList(), waiting = true)
                 val same = if (now - startMs <= 4900 * 60_000L) spotPath(startMs, endMs, now) else null
                 when {
                     same != null && !same.waiting && same.bars.isNotEmpty() -> same

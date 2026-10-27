@@ -115,6 +115,7 @@ object PlanText {
         "ENGINE_NO_SIDE" -> t(l, "engine saw no side either", "इंजन को भी कोई पक्ष नहीं दिखा", "इंजिनलाही बाजू दिसली नाही")
         "RANGE_REGIME" -> t(l, "range regime", "रेंज मार्केट", "रेंज मार्केट")
         "NO_PROVEN_EDGE" -> t(l, "no proven edge", "कोई साबित बढ़त नहीं", "सिद्ध आघाडी नाही")
+        "QUALIFIED_OTHER_FEED" -> t(l, "qualified on Twelve Data only", "सिर्फ़ Twelve Data पर क्वालिफ़ाइड", "फक्त Twelve Data वर क्वालिफाइड")
         "HIGH_UNCERTAINTY" -> t(l, "high uncertainty", "ऊँची अनिश्चितता", "उच्च अनिश्चितता")
         "MTF_UNAVAILABLE" -> t(l, "optional MTF unavailable", "वैकल्पिक MTF उपलब्ध नहीं", "पर्यायी MTF उपलब्ध नाही")
         else -> code
@@ -203,6 +204,9 @@ object PlanText {
                     "अनिश्चितता ऊँची है" + (if (calErr >= 0) String.format(Locale.US, " (भरोसा %.0f अंक गलत)", calErr) else "") + "।",
                     "अनिश्चितता उच्च आहे" + (if (calErr >= 0) String.format(Locale.US, " (विश्वास %.0f अंक चुकीचा)", calErr) else "") + ".")
                 "NO_PROVEN_EDGE" -> t(l, "No proven predictive edge: the research model is not LIVE QUALIFIED.", "कोई साबित बढ़त नहीं: रिसर्च मॉडल LIVE QUALIFIED नहीं।", "सिद्ध आघाडी नाही: रिसर्च मॉडेल LIVE QUALIFIED नाही.")
+                "QUALIFIED_OTHER_FEED" -> t(l, "The model is LIVE QUALIFIED on Twelve Data only; this data is from OANDA, so it stays a research signal.",
+                    "मॉडल सिर्फ़ Twelve Data पर LIVE QUALIFIED है; यह डेटा OANDA का है, इसलिए रिसर्च सिग्नल ही रहेगा।",
+                    "मॉडेल फक्त Twelve Data वर LIVE QUALIFIED आहे; हा डेटा OANDA चा आहे, म्हणून रिसर्च सिग्नलच राहील.")
                 "ENGINE_NO_SIDE" -> t(l, "The engine itself also saw no side.", "इंजन को भी कोई पक्ष नहीं दिखा।", "इंजिनलाही बाजू दिसली नाही.")
                 "RANGE_REGIME" -> t(l, "The market regime is RANGE: trend rules are weaker.", "मार्केट RANGE में: ट्रेंड नियम कमज़ोर।", "मार्केट RANGE मध्ये: ट्रेंड नियम कमकुवत.")
                 else -> null   // optional MTF never explains a decision it is not part of

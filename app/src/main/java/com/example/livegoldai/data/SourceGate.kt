@@ -14,7 +14,7 @@ import kotlin.math.max
  * silently used to publish or record an XAU/USD call.
  */
 enum class InstrumentId { XAU_USD_SPOT, PAXG_USDT, GC_F, SIMULATED, LEGACY_UNKNOWN }
-enum class ProviderId { TWELVE_DATA, BINANCE, YAHOO, NONE }
+enum class ProviderId { OANDA, TWELVE_DATA, BINANCE, YAHOO, NONE }
 enum class SourceType { PRIMARY, BACKUP, PROXY, SIMULATED }
 enum class Compatibility { COMPATIBLE, PROXY_ONLY, INCOMPATIBLE }
 
@@ -25,6 +25,8 @@ object SourceRegistry {
     fun identify(feedSource: String?): Identity {
         val s = feedSource ?: ""
         return when {
+            // V32: OANDA practice XAU_USD = the same spot instrument from another provider (read-only)
+            s.contains("OANDA", true) && s.contains("XAU", true) -> Identity(InstrumentId.XAU_USD_SPOT, ProviderId.OANDA, "XAU_USD", SourceType.PRIMARY)
             s.contains("Twelve", true) && s.contains("XAU", true) -> Identity(InstrumentId.XAU_USD_SPOT, ProviderId.TWELVE_DATA, "XAU/USD", SourceType.PRIMARY)
             s.contains("PAXG", true) -> Identity(InstrumentId.PAXG_USDT, ProviderId.BINANCE, "PAXGUSDT", SourceType.PROXY)
             s.contains("GC=F", true) -> Identity(InstrumentId.GC_F, ProviderId.YAHOO, "GC=F", SourceType.BACKUP)
@@ -44,7 +46,11 @@ object SourceRegistry {
     fun badge(feedSource: String?): String {
         val i = identify(feedSource)
         return when (i.instrument) {
-            InstrumentId.XAU_USD_SPOT -> "XAU/USD • TWELVE DATA • PRIMARY"
+            InstrumentId.XAU_USD_SPOT -> when {
+                i.provider == ProviderId.OANDA -> "XAU/USD • OANDA • PRIMARY"
+                (feedSource ?: "").contains("backup", true) -> "XAU/USD • TWELVE DATA • BACKUP"
+                else -> "XAU/USD • TWELVE DATA • PRIMARY"
+            }
             InstrumentId.PAXG_USDT -> "PAXG/USDT • BINANCE • PROXY CONTEXT"
             InstrumentId.GC_F -> "GC=F • YAHOO • BACKUP CONTEXT"
             else -> "NO LIVE DATA"
@@ -142,7 +148,7 @@ class SourceStateMachine {
 
     data class Candle(val time: String, val open: Double, val high: Double, val low: Double, val close: Double)
 
-    private class Track(var state: String = "", var passes: Int = 0, var lastGoodClose: Double = 0.0, var lastGoodAt: Long = 0L,
+    private class Track(var state: String = "", var passes: Int = 0, var lastGoodClose: Double = 0.0, var lastGoodAt: Long = 0L, var provider: String = "",
                         var lastFetchId: Long = Long.MIN_VALUE, var last: Decision? = null)
     private val tracks = HashMap<String, Track>()
 
@@ -176,20 +182,30 @@ class SourceStateMachine {
             return if (id.type == SourceType.SIMULATED) set(INCOMPATIBLE, false, why, "no compatible live data")
             else set(PROXY_CONTEXT_ACTIVE, false, why, "${id.symbol} is shown as context only; XAU/USD decision paused")
         }
+        // V32: a change of PROVIDER (OANDA <-> Twelve Data) is a source switch too: decisions wait for clean fetches
+        val providerChanged = t.provider.isNotEmpty() && t.provider != id.provider.name
+        val fromProvider = t.provider
+        t.provider = id.provider.name
+        if (providerChanged) t.passes = 0
+        val name = providerName(id.provider)
         val q = quality(candles, intervalMs, marketClosed, now, t.lastGoodClose, t.lastGoodAt)
         if (q != null) {
             t.passes = 0
             return set(PRIMARY_DEGRADED, false, "WAIT_DATA_DEGRADED", q)
         }
         t.lastGoodClose = candles.last().close; t.lastGoodAt = now
-        val wasSwitched = prev == PROXY_CONTEXT_ACTIVE || prev == INCOMPATIBLE || prev == PRIMARY_DEGRADED || prev == RESTORING
+        val wasSwitched = providerChanged || prev == PROXY_CONTEXT_ACTIVE || prev == INCOMPATIBLE || prev == PRIMARY_DEGRADED || prev == RESTORING
         if (wasSwitched) {
             t.passes++
-            if (t.passes < RESTORE_PASSES) return set(RESTORING, false, "WAIT_SOURCE_SWITCH", "Twelve Data back: ${t.passes}/$RESTORE_PASSES clean fetches")
+            if (t.passes < RESTORE_PASSES) return set(RESTORING, false, "WAIT_SOURCE_SWITCH",
+                (if (providerChanged) "provider changed ${providerName(ProviderId.values().firstOrNull { it.name == fromProvider })} -> $name: " else "$name back: ") +
+                    "${t.passes}/$RESTORE_PASSES clean fetches")
         }
         t.passes = RESTORE_PASSES
-        return set(PRIMARY_ACTIVE, true, "", "Twelve Data XAU/USD, checks passed")
+        return set(PRIMARY_ACTIVE, true, "", "$name XAU/USD, checks passed")
     }
+
+    private fun providerName(p: ProviderId?) = when (p) { ProviderId.OANDA -> "OANDA"; ProviderId.TWELVE_DATA -> "Twelve Data"; ProviderId.BINANCE -> "Binance"; ProviderId.YAHOO -> "Yahoo"; else -> "--" }
 
     /** null = all checks pass, else the first failing check. */
     fun quality(candles: List<Candle>, intervalMs: Long, marketClosed: Boolean, now: Long, lastGoodClose: Double, lastGoodAt: Long): String? {

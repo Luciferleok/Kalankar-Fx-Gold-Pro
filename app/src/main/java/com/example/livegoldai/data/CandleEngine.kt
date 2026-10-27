@@ -134,6 +134,13 @@ object OandaCandles {
     fun url(granularity: String, count: Int) = OandaEndpoints.REST + "/instruments/" + OandaEndpoints.INSTRUMENT +
         "/candles?granularity=$granularity&count=${count.coerceIn(1, MAX_COUNT)}&price=M&dailyAlignment=0&alignmentTimezone=UTC"
 
+    /** RFC3339 UTC, e.g. 2026-10-27T08:00:00Z */
+    fun rfc(ms: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(java.util.Date(ms))
+
+    /** Candles between two moments (used to check a prediction on the same provider). OANDA allows max 5000 per call. */
+    fun rangeUrl(granularity: String, fromMs: Long, toMs: Long) = OandaEndpoints.REST + "/instruments/" + OandaEndpoints.INSTRUMENT +
+        "/candles?granularity=$granularity&from=${rfc(fromMs)}&to=${rfc(toMs)}&price=M&dailyAlignment=0&alignmentTimezone=UTC"
+
     data class Fetch(val status: OandaStatus, val httpCode: Int, val bars: List<CandleAggregator.Bar>, val invalidRows: Int = 0, val fromCache: Boolean = false)
 
     /** Parses OANDA's candle JSON. Rows with a bad time or price are counted and skipped, never repaired. */
@@ -192,8 +199,14 @@ class OandaCandleStore(
     private val locks = java.util.concurrent.ConcurrentHashMap<String, Any>()
     var lastLatencyMs = 0L; private set
 
-    fun candles(granularity: String, count: Int, maxWaitMs: Long = 3_000L): OandaCandles.Fetch {
-        val key = "$granularity:$count"
+    fun candles(granularity: String, count: Int, maxWaitMs: Long = 3_000L): OandaCandles.Fetch =
+        fetch("$granularity:$count", OandaCandles.url(granularity, count), maxWaitMs)
+
+    /** A fixed past range: cached the same way; [toMs] in the past means the answer cannot change. */
+    fun range(granularity: String, fromMs: Long, toMs: Long, maxWaitMs: Long = 3_000L): OandaCandles.Fetch =
+        fetch("$granularity:$fromMs-$toMs", OandaCandles.rangeUrl(granularity, fromMs, toMs), maxWaitMs)
+
+    private fun fetch(key: String, url: String, maxWaitMs: Long): OandaCandles.Fetch {
         synchronized(locks.getOrPut(key) { Any() }) {
             val now = clock()
             cache[key]?.let { (at, f) -> if (now - at < ttlMs) return f.copy(fromCache = true) }
@@ -207,13 +220,14 @@ class OandaCandleStore(
                 sleep(w); waited += w
             }
             val t0 = clock()
-            val r = transport.get(OandaCandles.url(granularity, count), tok)
+            val r = transport.get(url, tok)
             lastLatencyMs = clock() - t0
             if (r.code == 429) limiter.onRateLimited(clock())
             if (r.code != 200) return OandaCandles.Fetch(OandaDiagnostics.mapCode(r.code, r.error), r.code, emptyList())
             val (bars, bad) = OandaCandles.parse(r.body) ?: return OandaCandles.Fetch(OandaStatus.BAD_RESPONSE, 200, emptyList())
             val f = OandaCandles.Fetch(OandaStatus.CONNECTED, 200, bars, bad)
             cache[key] = clock() to f
+            if (cache.size > 200) cache.entries.sortedBy { it.value.first }.take(100).forEach { cache.remove(it.key) }
             return f
         }
     }

@@ -84,6 +84,8 @@ object PlanStamp {
             // carries over to another instrument, or to a source that the gate has not fully restored.
             SourceRegistry.compatibility(SourceRegistry.identify(a.feed?.source).instrument) != Compatibility.COMPATIBLE -> RESEARCH
             a.sourceState.isNotEmpty() && a.sourceState != SourceStateMachine.PRIMARY_ACTIVE -> RESEARCH
+            // V32: Shadow Lab qualifies on Twelve Data XAU/USD only; OANDA data stays research until qualified on OANDA itself
+            SourceRegistry.identify(a.feed?.source).provider != ProviderId.TWELVE_DATA -> RESEARCH
             else -> ACTIVE
         }
         val t = a.tradeSetup

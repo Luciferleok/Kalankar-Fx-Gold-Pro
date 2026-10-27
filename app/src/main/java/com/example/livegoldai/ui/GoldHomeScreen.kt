@@ -94,7 +94,7 @@ fun GoldHomeScreen(
             depth = uiState.backgroundDepth,
             interval = uiState.selectedInterval,
             feedLine = feedLine,
-            feedKeyLine = if (uiState.feedKeySaved) "Your own key (…${uiState.apiKey.takeLast(4)}), encrypted on this phone" else "NO KEY SAVED: XAU/USD cannot load. Add your own Twelve Data key here.",
+            feedKeyLine = if (uiState.feedKeySaved) "Your own key (…${uiState.apiKey.takeLast(4)}), encrypted on this phone" else if (uiState.oandaTokenSaved) "Not set • optional backup if OANDA fails (also used by Shadow Lab tests)" else "NO KEY SAVED: XAU/USD cannot load. Add an OANDA practice token or your own Twelve Data key here.",
             aiLine = "${keys.count { it.hasKey }} of ${keys.size} keys saved • mode ${uiState.aiMode}",
             learnLine = uiState.data?.pulse?.let { "${it.checked} checked • ${it.active} waiting • ${it.modelHealth}" } ?: "--",
             alertLine = uiState.priceAlertTarget?.let { String.format(java.util.Locale.US, "Alert at %,.2f", it) } ?: "Off",

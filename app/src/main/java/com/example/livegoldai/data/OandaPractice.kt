@@ -218,7 +218,11 @@ object OandaText {
         val notBuilt = { stage: Int -> t(l, "Not built yet (stage $stage)", "अभी नहीं बना (स्टेज $stage)", "अजून बनले नाही (स्टेज $stage)") }
         val rows = mutableListOf<Pair<String, String>>()
         rows += t(l, "Active provider (analysis)", "सक्रिय प्रोवाइडर (विश्लेषण)", "सक्रिय प्रोव्हायडर (विश्लेषण)") to
-            (activeProvider.ifBlank { "--" } + t(l, " • OANDA is not used for analysis yet", " • OANDA अभी विश्लेषण में नहीं", " • OANDA अजून विश्लेषणात नाही"))
+            (activeProvider.ifBlank { "--" } + when {
+                activeProvider.contains("OANDA") -> ""
+                tokenSaved -> t(l, " • OANDA not used now: failed or timeframe not served (see Market feed)", " • OANDA अभी नहीं: फेल या यह टाइमफ्रेम नहीं (मार्केट फ़ीड देखें)", " • OANDA आत्ता नाही: फेल किंवा हा टाइमफ्रेम नाही (मार्केट फीड पहा)")
+                else -> t(l, " • save an OANDA token to make OANDA primary", " • OANDA प्राइमरी के लिए टोकन सेव करें", " • OANDA प्रायमरीसाठी टोकन सेव्ह करा")
+            })
         rows += t(l, "OANDA practice API", "OANDA practice API", "OANDA practice API") to
             (if (!tokenSaved) status(OandaHealth(OandaStatus.NOT_CONFIGURED), l) else status(h, l))
         rows += "XAU/USD" to when (h?.xauAvailable) {
@@ -241,11 +245,11 @@ object OandaText {
             now - h.lastCandleMs <= 3 * 60_000L -> "LIVE"
             else -> "STALE"
         }
-        rows += t(l, "Streaming", "स्ट्रीमिंग", "स्ट्रीमिंग") to notBuilt(3)
+        rows += t(l, "Streaming", "स्ट्रीमिंग", "स्ट्रीमिंग") to notBuilt(4)
         rows += t(l, "Historical candle sync", "हिस्टोरिकल कैंडल सिंक", "हिस्टोरिकल कँडल सिंक") to
             (if (sync == null) t(l, "Not run • tap SYNC", "नहीं चला • SYNC दबाएँ", "चालले नाही • SYNC दाबा")
              else "${sync.okCount}/${sync.rows.size} " + t(l, "timeframes OK", "टाइमफ्रेम OK", "टाइमफ्रेम OK") + " • " + utcHm(sync.atMs) + " • ${sync.requests} " + t(l, "requests", "रिक्वेस्ट", "रिक्वेस्ट"))
-        rows += t(l, "Reconnection", "री-कनेक्शन", "री-कनेक्शन") to notBuilt(3)
+        rows += t(l, "Reconnection", "री-कनेक्शन", "री-कनेक्शन") to notBuilt(4)
         rows += t(l, "Rate limit", "रेट लिमिट", "रेट लिमिट") to
             (if (h?.status == OandaStatus.RATE_LIMITED) t(l, "WARNING: OANDA answered 429", "चेतावनी: OANDA ने 429 दिया", "इशारा: OANDA ने 429 दिला")
              else t(l, "OK • test limited to 1 per 15 s (3 requests)", "OK • 15 सेकंड में 1 टेस्ट (3 रिक्वेस्ट)", "OK • 15 सेकंदात 1 टेस्ट (3 रिक्वेस्ट)"))

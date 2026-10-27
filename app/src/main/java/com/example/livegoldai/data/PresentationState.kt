@@ -103,7 +103,7 @@ object PresentationBuilder {
             InstrumentId.XAU_USD_SPOT -> "XAU/USD"; InstrumentId.PAXG_USDT -> "PAXG/USDT"; InstrumentId.GC_F -> "GC=F"; else -> UNKNOWN
         }
         val provider = when (id.provider) {
-            ProviderId.TWELVE_DATA -> "TWELVE DATA"; ProviderId.BINANCE -> "BINANCE"; ProviderId.YAHOO -> "YAHOO"; else -> "NONE"
+            ProviderId.OANDA -> "OANDA"; ProviderId.TWELVE_DATA -> "TWELVE DATA"; ProviderId.BINANCE -> "BINANCE"; ProviderId.YAHOO -> "YAHOO"; else -> "NONE"
         }
         // V29E: the record of THIS snapshot (same candle) first, so an expired forecast keeps its identity and outcome
         val rec = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated }
@@ -180,7 +180,8 @@ object PresentationBuilder {
                 SourceRegistry.compatibility(id.instrument) == Compatibility.COMPATIBLE,
             quoteAtMs = a.feed?.fetchedAtMs ?: 0L,
             publishedAtMs = rec?.createdAt ?: 0L,
-            provenEdge = researchStatus == "LIVE QUALIFIED",
+            // V32: a qualification earned on Twelve Data is not proof for another provider's data
+            provenEdge = researchStatus == "LIVE QUALIFIED" && id.provider == ProviderId.TWELVE_DATA,
             planStatus = a.tradeSetup.planStatus,
             forecastState = ForecastState.resolve(a.tradeSetup, a.overallSignal, researchStatus),
             horizonMin = TechnicalEngine.calculateValidityMinutes(a.interval),
@@ -206,6 +207,7 @@ object PresentationBuilder {
         val regime = a.brain?.regime ?: a.insights?.regime
         if (regime.equals("RANGE", true) && primary != "RANGE") out.add("RANGE_REGIME")
         if (researchStatus != "LIVE QUALIFIED") out.add("NO_PROVEN_EDGE")
+        else if (SourceRegistry.identify(a.feed?.source).provider != ProviderId.TWELVE_DATA) out.add("QUALIFIED_OTHER_FEED")
         if (a.brain?.totalUncertainty == "HIGH") out.add("HIGH_UNCERTAINTY")
         if (a.mtfMatrix?.timeframes?.any { it.label.startsWith("PAXG") } != true) out.add("MTF_UNAVAILABLE")
         return out

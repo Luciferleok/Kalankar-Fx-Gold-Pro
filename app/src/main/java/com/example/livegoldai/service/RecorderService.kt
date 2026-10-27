@@ -50,6 +50,13 @@ class RecorderService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppEngine.init(filesDir)
+        // V32: the recorder can run without the screen (after a restart). Give it the same saved keys:
+        // the OANDA token is read from the encrypted vault per request; the Twelve Data key only if none is set yet.
+        try {
+            val vault = com.example.livegoldai.ui.AiKeyVault(getSharedPreferences("kalankar_gold_prefs", Context.MODE_PRIVATE))
+            AppEngine.api.setOandaTokenProvider { vault.getOandaToken() }
+            if (AppEngine.api.getApiKey().isBlank()) vault.getFeedKey().takeIf { it.isNotBlank() }?.let { AppEngine.api.setApiKey(it) }
+        } catch (_: Exception) { }
         createChannels(this)
         goForeground(statusNotification("Prediction recorder starting…", "Recording begins within a minute", null))
     }
