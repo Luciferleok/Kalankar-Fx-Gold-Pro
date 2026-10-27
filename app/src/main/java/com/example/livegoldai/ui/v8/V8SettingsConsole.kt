@@ -52,7 +52,13 @@ data class SettingsConsoleState(
     val recorderLine: String,
     val healthLine: String,            // e.g. "86/100 • HEALTHY"
     val engine: String,
-    val appVersion: String
+    val appVersion: String,
+    // V32 OANDA practice (stage 1)
+    val oandaTokenLine: String = "",
+    val oandaSaved: Boolean = false,
+    val oandaStatusLine: String = "",
+    val oandaPanel: List<Pair<String, String>> = emptyList(),
+    val oandaTesting: Boolean = false
 )
 
 class SettingsConsoleActions(
@@ -69,7 +75,10 @@ class SettingsConsoleActions(
     val onOpenSystem: () -> Unit,
     val onResetAppearance: () -> Unit,
     val onResetChart: () -> Unit,
-    val onClose: () -> Unit
+    val onClose: () -> Unit,
+    val onSaveOandaToken: (String) -> Unit = {},
+    val onRemoveOandaToken: () -> Unit = {},
+    val onTestOanda: () -> Unit = {}
 )
 
 /**
@@ -83,6 +92,9 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
     var query by remember { mutableStateOf("") }
     var editKey by remember { mutableStateOf(false) }
     var keyDraft by remember { mutableStateOf("") }
+    var editOanda by remember { mutableStateOf(false) }
+    var oandaDraft by remember { mutableStateOf("") }
+    var healthOpen by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf("") }      // which reset is waiting for a second tap
     val haptic = LocalHapticFeedback.current
     val q = query.trim().lowercase()
@@ -147,7 +159,7 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
             }
 
             // ================= MARKET & DATA
-            if (show("market", "data", "feed", "source", "twelve", "key", "api")) {
+            if (show("market", "data", "feed", "source", "twelve", "key", "api", "oanda", "health", "token")) {
                 Section(tr(lang, "MARKET DATA", "मार्केट डेटा", "मार्केट डेटा"))
                 if (show("feed", "source", "market", "live")) Row1(tr(lang, "Market feed", "मार्केट फ़ीड", "मार्केट फीड"), s.feedLine) {}
                 if (show("key", "api", "twelve", "feed")) Row1(tr(lang, "Twelve Data key", "Twelve Data की", "Twelve Data की"), s.feedKeyLine, onClick = { editKey = !editKey; keyDraft = "" }) { Chevron() }
@@ -168,6 +180,42 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
                         }
                         Text(text = tr(lang, "Stored only on this phone. Backup feeds (PAXG, GC=F) need no key.", "सिर्फ़ इस फ़ोन में सेव। बैकअप फ़ीड (PAXG, GC=F) को की नहीं चाहिए।", "फक्त या फोनमध्ये सेव्ह. बॅकअप फीड (PAXG, GC=F) ला की लागत नाही."), color = V8.Text3, style = KType.Caption)
                     }
+                }
+                // V32: OANDA practice token + Market Data Health panel
+                if (show("oanda", "key", "api", "token", "feed")) Row1(tr(lang, "OANDA practice token", "OANDA practice टोकन", "OANDA practice टोकन"), s.oandaTokenLine, onClick = { editOanda = !editOanda; oandaDraft = "" }) { Chevron() }
+                if (editOanda) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(V8.Card2).border(0.6.dp, V8.Line, RoundedCornerShape(10.dp)).padding(12.dp)) {
+                            if (oandaDraft.isEmpty()) Text(text = tr(lang, "Paste practice token", "practice टोकन पेस्ट करें", "practice टोकन पेस्ट करा"), color = V8.Text3, style = KType.BodyPrimary)
+                            BasicTextField(
+                                value = oandaDraft, onValueChange = { oandaDraft = it.trim() }, singleLine = true,
+                                textStyle = TextStyle(color = V8.Text1, fontSize = 13.sp), cursorBrush = SolidColor(V8.Gold),
+                                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row {
+                            if (s.oandaSaved) SmallAction(tr(lang, "REMOVE", "हटाएँ", "काढा"), danger = true) { a.onRemoveOandaToken(); editOanda = false; oandaDraft = "" }
+                            Spacer(modifier = Modifier.weight(1f))
+                            SmallAction(tr(lang, "SAVE & TEST", "सेव और टेस्ट", "सेव्ह व टेस्ट")) { if (oandaDraft.length >= 20) { a.onSaveOandaToken(oandaDraft); editOanda = false; oandaDraft = ""; healthOpen = true } }
+                        }
+                        Text(text = tr(lang,
+                            "Practice account token only. Encrypted on this phone and never shown again. The app only reads prices: it has no code that can place orders.",
+                            "सिर्फ़ practice अकाउंट का टोकन। इस फ़ोन में एन्क्रिप्ट, दोबारा कभी नहीं दिखेगा। ऐप सिर्फ़ प्राइस पढ़ता है: ऑर्डर लगाने का कोड ही नहीं है।",
+                            "फक्त practice खात्याचा टोकन. या फोनमध्ये एन्क्रिप्ट, पुन्हा कधीही दिसणार नाही. ॲप फक्त किंमत वाचते: ऑर्डर लावण्याचा कोडच नाही."), color = V8.Text3, style = KType.Caption)
+                    }
+                }
+                if (show("oanda", "health", "data", "feed", "market")) Row1(tr(lang, "Market Data Health", "मार्केट डेटा हेल्थ", "मार्केट डेटा हेल्थ"), s.oandaStatusLine, onClick = { healthOpen = !healthOpen }) {
+                    SmallAction(if (s.oandaTesting) "…" else tr(lang, "TEST", "टेस्ट", "टेस्ट")) { if (!s.oandaTesting) { a.onTestOanda(); healthOpen = true } }
+                }
+                if (healthOpen) {
+                    Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(V8.Card2).border(0.6.dp, V8.Line, RoundedCornerShape(10.dp)).padding(12.dp)) {
+                        s.oandaPanel.forEach { (k, v) ->
+                            Text(text = k.uppercase(), color = V8.Text3, style = KType.Caption)
+                            Text(text = v, color = V8.Text1, style = KType.BodyPrimary, modifier = Modifier.padding(bottom = 8.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
                 if (show("reset", "chart", "timeframe")) Row1(tr(lang, "Reset chart settings", "चार्ट सेटिंग रीसेट", "चार्ट सेटिंग रीसेट"), if (confirm == "chart") tr(lang, "Tap again to confirm", "पक्का करने के लिए फिर दबाएँ", "खात्रीसाठी पुन्हा दाबा") else tr(lang, "Default timeframe back to 4H", "डिफ़ॉल्ट टाइमफ्रेम 4H", "डिफॉल्ट टाइमफ्रेम 4H")) {
                     SmallAction(if (confirm == "chart") tr(lang, "CONFIRM", "पक्का", "खात्री") else tr(lang, "RESET", "रीसेट", "रीसेट"), danger = confirm == "chart") {

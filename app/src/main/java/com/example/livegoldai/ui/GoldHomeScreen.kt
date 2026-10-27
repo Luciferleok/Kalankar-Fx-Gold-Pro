@@ -102,7 +102,13 @@ fun GoldHomeScreen(
             recorderLine = uiState.data?.pulse?.background?.takeIf { it.isNotBlank() } ?: if (uiState.bgRecording) "On" else "Off",
             healthLine = uiState.data?.health?.let { "${it.overallScore}/100 • ${it.overallStatus}" } ?: "--",
             engine = com.example.livegoldai.data.PredictionLedger.ENGINE_VERSION,
-            appVersion = appVersion
+            appVersion = appVersion,
+            oandaTokenLine = com.example.livegoldai.data.OandaText.tokenLine(uiState.oandaTokenSaved, uiState.language),
+            oandaSaved = uiState.oandaTokenSaved,
+            oandaStatusLine = if (uiState.oandaTesting) "…" else if (!uiState.oandaTokenSaved) com.example.livegoldai.data.OandaText.status(com.example.livegoldai.data.OandaHealth(com.example.livegoldai.data.OandaStatus.NOT_CONFIGURED), uiState.language)
+                else com.example.livegoldai.data.OandaText.status(uiState.oandaHealth, uiState.language),
+            oandaPanel = com.example.livegoldai.data.OandaText.panel(uiState.oandaHealth, uiState.oandaTokenSaved, f?.let { com.example.livegoldai.data.SourceRegistry.badge(it.source) } ?: "", now, uiState.language),
+            oandaTesting = uiState.oandaTesting
         )
         val consoleActions = com.example.livegoldai.ui.v8.SettingsConsoleActions(
             onLang = { viewModel.selectLanguage(it) },
@@ -118,7 +124,10 @@ fun GoldHomeScreen(
             onOpenSystem = { showSettings = false; viewModel.setBottomTab(3) },
             onResetAppearance = { viewModel.resetAppearance() },
             onResetChart = { viewModel.setInterval("4h") },
-            onClose = { showSettings = false }
+            onClose = { showSettings = false },
+            onSaveOandaToken = { viewModel.saveOandaToken(it) },
+            onRemoveOandaToken = { viewModel.removeOandaToken() },
+            onTestOanda = { viewModel.testOanda() }
         )
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showSettings = false },

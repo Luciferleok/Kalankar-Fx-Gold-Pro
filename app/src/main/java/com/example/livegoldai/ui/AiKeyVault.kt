@@ -45,6 +45,11 @@ class AiKeyVault(private val prefs: SharedPreferences) {
     fun putFeedKey(key: String): Boolean = putSecret("feed_key_twelvedata", key)
     fun getFeedKey(): String = getSecret("feed_key_twelvedata")
 
+    /** V32: OANDA PRACTICE token, encrypted the same way. Read only at the moment a request is made. */
+    fun putOandaToken(token: String): Boolean = putSecret("feed_token_oanda_practice", token)
+    fun getOandaToken(): String = getSecret("feed_token_oanda_practice")
+    fun removeOandaToken() { prefs.edit().remove("feed_token_oanda_practice").apply() }
+
     private fun putSecret(name: String, value: String): Boolean = try {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, secretKey())

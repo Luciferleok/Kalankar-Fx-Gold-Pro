@@ -106,6 +106,10 @@ data class GoldUiState(
     val bgRecording: Boolean = true,  // 24/7 background prediction recorder (foreground service)
     val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
     val feedKeySaved: Boolean = false,             // true when the user saved their own Twelve Data key
+    // ---- V32 OANDA practice (stage 1: connection check only; the token itself is never in UI state)
+    val oandaTokenSaved: Boolean = false,
+    val oandaHealth: com.example.livegoldai.data.OandaHealth? = null,
+    val oandaTesting: Boolean = false,
     // ---- V28 Shadow Lab (walk-forward tournament on real history; never changes the live signal)
     val shadowReport: com.example.livegoldai.data.ShadowLab.Report? = null,
     val shadowRunning: Boolean = false,
@@ -208,6 +212,7 @@ class GoldViewModel @JvmOverloads constructor(
                 _uiState.update { it.copy(apiKey = saved, feedKeySaved = true) }
             }
         } catch (_: Exception) { }
+        try { _uiState.update { it.copy(oandaTokenSaved = aiVault.getOandaToken().isNotBlank()) } } catch (_: Exception) { }
         if (_uiState.value.bgRecording) {
             try { com.example.livegoldai.service.RecorderService.start(application) } catch (_: Exception) { }
         }
@@ -474,6 +479,42 @@ class GoldViewModel @JvmOverloads constructor(
         val saved = aiVault.putFeedKey(k)          // encrypted with the Android Keystore, survives restarts
         _uiState.update { it.copy(apiKey = k, feedKeySaved = saved) }
         loadData(isInitial = false)
+    }
+
+    // ---- V32 OANDA practice: save / remove / test. Token goes straight into the Keystore vault.
+    private val oandaGate = com.example.livegoldai.data.OandaProbeGate()
+    private val oandaTransport by lazy { com.example.livegoldai.data.OkHttpOandaTransport() }
+
+    fun saveOandaToken(token: String) {
+        val t = token.trim()
+        if (t.length < 20 || t.any { it.isWhitespace() }) return
+        val saved = aiVault.putOandaToken(t)
+        _uiState.update { it.copy(oandaTokenSaved = saved, oandaHealth = null) }
+        if (saved) testOanda()
+    }
+
+    fun removeOandaToken() {
+        aiVault.removeOandaToken()
+        _uiState.update { it.copy(oandaTokenSaved = false, oandaHealth = null) }
+    }
+
+    fun testOanda() {
+        val now = System.currentTimeMillis()
+        if (!oandaGate.tryStart(now)) {
+            if (!_uiState.value.oandaTesting) _uiState.update { it.copy(oandaHealth = (it.oandaHealth ?: com.example.livegoldai.data.OandaHealth(com.example.livegoldai.data.OandaStatus.COOLDOWN, checkedAtMs = now))) }
+            return
+        }
+        _uiState.update { it.copy(oandaTesting = true) }
+        viewModelScope.launch {
+            val h = withContext(Dispatchers.IO) {
+                try {
+                    com.example.livegoldai.data.OandaDiagnostics.run(oandaTransport, aiVault.getOandaToken())
+                } catch (_: Exception) {
+                    com.example.livegoldai.data.OandaHealth(com.example.livegoldai.data.OandaStatus.BAD_RESPONSE, checkedAtMs = System.currentTimeMillis())
+                } finally { oandaGate.done() }
+            }
+            _uiState.update { it.copy(oandaHealth = h, oandaTesting = false) }
+        }
     }
 
     fun setBackgroundDepth(depth: String) {
