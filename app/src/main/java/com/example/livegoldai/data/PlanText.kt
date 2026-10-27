@@ -18,14 +18,21 @@ object PlanText {
         val ts = a.tradeSetup
         val reason = a.presentation?.let { DecisionTraceText.reason(it, l) } ?: ""
         val p = a.presentation
-        val head = t(l, "FINAL DECISION: ", "अंतिम फ़ैसला: ", "अंतिम निर्णय: ") + a.overallSignal.name +
+        // V29D: a BUY/SELL without a proven edge is an unverified research signal, never a "decision" to trade
+        val head = if (a.overallSignal != Signal.WAIT && ts.planStatus != PlanStamp.ACTIVE)
+            t(l, "RESEARCH SIGNAL: ", "रिसर्च सिग्नल: ", "रिसर्च सिग्नल: ") + a.overallSignal.name + t(l, " (UNVERIFIED)", " (असत्यापित)", " (असत्यापित)")
+        else t(l, "FINAL DECISION: ", "अंतिम फ़ैसला: ", "अंतिम निर्णय: ") + a.overallSignal.name +
             (if (a.overallSignal == Signal.WAIT && p != null) " — " + reasonShort(p.reasonCode, l) else "")
         val sub = when (ts.planStatus) {
             PlanStamp.ACTIVE -> t(l, "Active plan from this snapshot. Not financial advice.", "इसी स्नैपशॉट का सक्रिय प्लान। वित्तीय सलाह नहीं।", "याच स्नॅपशॉटचा सक्रिय प्लॅन. आर्थिक सल्ला नाही.")
             PlanStamp.STOPPED -> t(l, "STOP-LOSS HIT inside candle ${ts.stopTouched}: this trade is over, do not enter.",
                 "कैंडल ${ts.stopTouched} में STOP-LOSS लग चुका: यह ट्रेड खत्म, एंट्री मत लो।", "कँडल ${ts.stopTouched} मध्ये STOP-LOSS लागला: हा ट्रेड संपला, एंट्री घेऊ नका.")
             PlanStamp.INACTIVE_WAIT -> t(l, "NO ACTIVE TRADE. The engine wanted ${(a.rawSignal ?: Signal.WAIT).name} but it was held: ", "कोई सक्रिय ट्रेड नहीं। इंजन ${(a.rawSignal ?: Signal.WAIT).name} चाहता था पर रोका गया: ", "सक्रिय ट्रेड नाही. इंजिनला ${(a.rawSignal ?: Signal.WAIT).name} हवे होते पण थांबवले: ") + reason
-            PlanStamp.NO_DATA -> t(l, "NO ACTIVE TRADE: no usable live XAU/USD data.", "कोई सक्रिय ट्रेड नहीं: उपयोगी लाइव XAU/USD डेटा नहीं।", "सक्रिय ट्रेड नाही: वापरण्यायोग्य लाइव्ह XAU/USD डेटा नाही.")
+            PlanStamp.NO_DATA -> t(l, "NO ACTIVE TRADE: market data is ${ts.freshness.ifBlank { "unusable" }}. The last forecast is kept only for reference.",
+                "कोई सक्रिय ट्रेड नहीं: मार्केट डेटा ${ts.freshness.ifBlank { "अनुपयोगी" }} है। पिछला अनुमान सिर्फ़ संदर्भ के लिए।", "सक्रिय ट्रेड नाही: मार्केट डेटा ${ts.freshness.ifBlank { "निरुपयोगी" }} आहे. मागील अंदाज फक्त संदर्भासाठी.")
+            PlanStamp.RESEARCH -> t(l, "Unverified research signal: no proven predictive edge. Levels are conditional research, not a trade instruction.",
+                "असत्यापित रिसर्च सिग्नल: कोई साबित बढ़त नहीं। लेवल शर्त वाला रिसर्च हैं, ट्रेड का निर्देश नहीं।", "असत्यापित रिसर्च सिग्नल: सिद्ध आघाडी नाही. लेव्हल अटींवरील रिसर्च आहेत, ट्रेडची सूचना नाही.")
+            PlanStamp.EXPIRED -> t(l, "PREDICTION EXPIRED: its horizon has passed. Wait for the next review.", "प्रेडिक्शन की अवधि खत्म। अगली जाँच का इंतज़ार करें।", "अंदाजाची मुदत संपली. पुढील तपासणीची वाट पहा.")
             else -> t(l, "NO ACTIVE TRADE. Levels below are a conditional scenario only.", "कोई सक्रिय ट्रेड नहीं। नीचे के लेवल सिर्फ़ एक शर्त वाला परिदृश्य हैं।", "सक्रिय ट्रेड नाही. खालील लेव्हल फक्त अटींवरील परिस्थिती आहेत.")
         }
         val extra = listOfNotNull(
@@ -50,6 +57,8 @@ object PlanText {
     fun planTitle(ts: TradeSetup, l: AppLanguage): String = when (ts.planStatus) {
         PlanStamp.ACTIVE -> t(l, "ACTION PLAN (ACTIVE)", "एक्शन प्लान (सक्रिय)", "अ‍ॅक्शन प्लॅन (सक्रिय)")
         PlanStamp.STOPPED -> t(l, "PLAN CLOSED: STOP-LOSS HIT", "प्लान बंद: STOP-LOSS लगा", "प्लॅन बंद: STOP-LOSS लागला")
+        PlanStamp.RESEARCH -> t(l, "UNVERIFIED RESEARCH LEVELS", "असत्यापित रिसर्च लेवल", "असत्यापित रिसर्च लेव्हल")
+        PlanStamp.EXPIRED -> t(l, "PREDICTION EXPIRED", "प्रेडिक्शन की अवधि खत्म", "अंदाजाची मुदत संपली")
         else -> t(l, "CONDITIONAL SCENARIO (NOT A TRADE)", "शर्त वाला परिदृश्य (ट्रेड नहीं)", "अटींवरील परिस्थिती (ट्रेड नाही)")
     }
 
@@ -84,9 +93,10 @@ object PlanText {
             t(l, "Source", "स्रोत", "स्रोत") + " ${ts.dataSource.ifBlank { "UNKNOWN" }} @ ${time(ts.sourceTimeMs)} • " +
             t(l, "built", "बना", "तयार") + " ${time(ts.generatedAtMs)}\n" +
             t(l, "Model", "मॉडल", "मॉडेल") + " ${ts.modelVersion.ifBlank { "UNKNOWN" }} • " + t(l, "plan", "प्लान", "प्लॅन") + " ${ts.planStatus}\n" +
-            t(l, "Prices are feed mid quotes. Your broker's bid/ask, spread and stop execution will differ.",
-                "भाव फ़ीड के मिड कोट हैं। आपके ब्रोकर का bid/ask, स्प्रेड और स्टॉप एक्ज़ीक्यूशन अलग होगा।",
-                "भाव फीडचे मिड कोट आहेत. तुमच्या ब्रोकरचा bid/ask, स्प्रेड आणि स्टॉप एक्झिक्युशन वेगळे असेल.")
+            t(l, "Horizon", "अवधि", "कालावधी") + " ${ts.horizonMin} min • " + t(l, "expires", "समाप्ति", "मुदत") + " ${time(ts.expiresAtMs)} • " + t(l, "data", "डेटा", "डेटा") + " ${ts.freshness.ifBlank { "UNKNOWN" }}\n" +
+            t(l, "Prices are feed mid quotes. Your broker's bid/ask, spread, slippage and stop execution will differ.",
+                "भाव फ़ीड के मिड कोट हैं। आपके ब्रोकर का bid/ask, स्प्रेड, स्लिपेज और स्टॉप एक्ज़ीक्यूशन अलग होगा।",
+                "भाव फीडचे मिड कोट आहेत. तुमच्या ब्रोकरचा bid/ask, स्प्रेड, स्लिपेज आणि स्टॉप एक्झिक्युशन वेगळे असेल.")
 
     // ================= V29C =================
 
@@ -219,6 +229,8 @@ object PlanText {
         val data = when (dq) { "EXCELLENT", "GOOD" -> t(l, "DATA USABLE", "डेटा ठीक", "डेटा वापरण्यायोग्य") to "OK"; "UNKNOWN" -> t(l, "DATA UNKNOWN", "डेटा अज्ञात", "डेटा अज्ञात") to "NA"; else -> t(l, "DATA $dq", "डेटा $dq", "डेटा $dq") to "WARN" }
         val signal = when {
             p.isTradeSetupActive -> t(l, "SIGNAL ELIGIBLE", "सिग्नल योग्य", "सिग्नल पात्र") to "OK"
+            p.finalSignal != Signal.WAIT && p.planStatus == PlanStamp.RESEARCH -> t(l, "RESEARCH SIGNAL (UNVERIFIED)", "रिसर्च सिग्नल (असत्यापित)", "रिसर्च सिग्नल (असत्यापित)") to "WARN"
+            p.planStatus == PlanStamp.NO_DATA -> t(l, "SIGNAL BLOCKED (DATA)", "सिग्नल रुका (डेटा)", "सिग्नल थांबला (डेटा)") to "BLOCK"
             p.finalSignal != Signal.WAIT -> t(l, "SIGNAL CLOSED", "सिग्नल बंद", "सिग्नल बंद") to "WARN"
             p.rawDiffersFromFinal || p.reasonCode in listOf("SOURCE", "DATA", "NO_KEY", "RANGE", "LEARNED") -> t(l, "SIGNAL BLOCKED", "सिग्नल रुका", "सिग्नल थांबला") to "BLOCK"
             else -> t(l, "NO SIGNAL", "कोई सिग्नल नहीं", "सिग्नल नाही") to "WARN"

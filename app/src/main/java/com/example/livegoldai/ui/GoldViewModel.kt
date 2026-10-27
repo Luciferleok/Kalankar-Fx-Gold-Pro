@@ -256,7 +256,7 @@ class GoldViewModel @JvmOverloads constructor(
                         val research = try { shadowLive.stats(currentInterval).status } catch (_: Exception) { null }
                         val st = learning.currentState()
                         // V31: stamp the plan (status + provenance) from this same snapshot before anything shows it
-                        val stamped = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st) } catch (_: Exception) { withBrain }
+                        val stamped = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st, researchStatus = research) } catch (_: Exception) { withBrain }
                         stamped.copy(presentation = try {
                             com.example.livegoldai.data.PresentationBuilder.build(stamped, st, research)
                         } catch (_: Exception) { null })

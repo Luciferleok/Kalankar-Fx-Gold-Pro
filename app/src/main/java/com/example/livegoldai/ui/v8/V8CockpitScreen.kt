@@ -195,9 +195,23 @@ fun V8CockpitScreen(
                         color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp
                     )
                     // V29C: a WAIT has no validity countdown; show the real next review (next candle) instead
+                    // V29D: an unproven BUY/SELL is labelled as an unverified research signal
+                    if (sig != Signal.WAIT && analysis.tradeSetup.planStatus != com.example.livegoldai.data.PlanStamp.ACTIVE) Text(
+                        text = when (analysis.tradeSetup.planStatus) {
+                            com.example.livegoldai.data.PlanStamp.NO_DATA -> tr(lang, "DATA ", "डेटा ", "डेटा ") + analysis.tradeSetup.freshness + tr(lang, " • NOT ACTIONABLE", " • कार्रवाई योग्य नहीं", " • कृती योग्य नाही")
+                            com.example.livegoldai.data.PlanStamp.STOPPED -> tr(lang, "STOP-LOSS HIT • CLOSED", "STOP-LOSS लगा • बंद", "STOP-LOSS लागला • बंद")
+                            com.example.livegoldai.data.PlanStamp.EXPIRED -> tr(lang, "EXPIRED", "अवधि खत्म", "मुदत संपली")
+                            else -> tr(lang, "UNVERIFIED RESEARCH SIGNAL", "असत्यापित रिसर्च सिग्नल", "असत्यापित रिसर्च सिग्नल")
+                        },
+                        color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp
+                    )
+                    // V29D: stable expiry (ledger record, else candle open + horizon); the horizon is shown, never reset by a refresh
                     if (sig != Signal.WAIT && until > now) {
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                        Text(text = tr(lang, "HORIZON ", "अवधि ", "कालावधी ") + "${analysis.tradeSetup.horizonMin}m • " + tr(lang, "ENDS IN ", "खत्म ", "संपेल ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                    } else if (sig != Signal.WAIT && until in 1..now) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = tr(lang, "HORIZON ENDED • REVIEW DUE", "अवधि खत्म • जाँच बाकी", "कालावधी संपला • तपासणी बाकी"), color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                     } else if (sig == Signal.WAIT) {
                         // V29C.1: one fixed review time from the decision's snapshot; REVIEW DUE when passed
                         val review = pres?.nextReviewAtMs ?: 0L

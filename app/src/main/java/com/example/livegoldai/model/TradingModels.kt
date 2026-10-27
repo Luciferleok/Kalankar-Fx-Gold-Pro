@@ -368,7 +368,11 @@ data class TradeSetup(
     val sourceTimeMs: Long = 0L,
     val generatedAtMs: Long = 0L,
     val modelVersion: String = "",
-    val stopTouched: String = ""             // candle time when the recorded stop was touched, "" if not
+    val stopTouched: String = "",            // candle time when the recorded stop was touched, "" if not
+    // ---- V29D
+    val horizonMin: Int = 0,                 // the call's horizon (several candles on short timeframes)
+    val expiresAtMs: Long = 0L,              // stable UTC expiry (ledger record, else candle open + horizon)
+    val freshness: String = ""               // LIVE / DELAYED / STALE / OFFLINE / MARKET CLOSED
 ) {
     fun getStrategyNote(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> strategyNote

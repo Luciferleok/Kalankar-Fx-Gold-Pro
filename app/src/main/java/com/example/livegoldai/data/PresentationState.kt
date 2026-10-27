@@ -72,7 +72,15 @@ data class PredictionPresentationState(
     val provenEdge: Boolean = false,                    // true only when the research model is LIVE QUALIFIED
     // V29C.1: when this decision is reviewed: the open of the decision's candle + one interval (0 = unknown).
     // Fixed by the snapshot, so refreshing the price never moves it; once passed the screen says REVIEW DUE.
-    val nextReviewAtMs: Long = 0L
+    val nextReviewAtMs: Long = 0L,
+    // ---- V29D: plan status + separately defined historical statistics (never merged into one number)
+    val planStatus: String = "",
+    val freshness: String = "",
+    val closeDirectionPct: Int = -1,       // Home VERIFIED: did the close move the called way (all timeframes)
+    val closeDirectionN: Int = 0,
+    val coverage: String = "",              // share of checked predictions that took a side
+    val ledgerFirstAtMs: Long = 0L,
+    val ledgerLastAtMs: Long = 0L
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -159,12 +167,19 @@ object PresentationBuilder {
             restorationPending = if (a.sourceState == SourceStateMachine.RESTORING)
                 Regex("(\\d+)/(\\d+)").find(a.gateDetail)?.value ?: "0/${SourceStateMachine.RESTORE_PASSES}" else "",
             isTradeSetupActive = a.tradeSetup.planStatus == PlanStamp.ACTIVE && a.overallSignal != Signal.WAIT,
-            scenarioAvailable = a.overallSignal == Signal.WAIT &&
-                (a.tradeSetup.planStatus == PlanStamp.SCENARIO || a.tradeSetup.planStatus == PlanStamp.INACTIVE_WAIT) &&
+            scenarioAvailable = (a.tradeSetup.planStatus == PlanStamp.RESEARCH ||
+                (a.overallSignal == Signal.WAIT && (a.tradeSetup.planStatus == PlanStamp.SCENARIO || a.tradeSetup.planStatus == PlanStamp.INACTIVE_WAIT))) &&
                 SourceRegistry.compatibility(id.instrument) == Compatibility.COMPATIBLE,
             quoteAtMs = a.feed?.fetchedAtMs ?: 0L,
             publishedAtMs = rec?.createdAt ?: 0L,
             provenEdge = researchStatus == "LIVE QUALIFIED",
+            planStatus = a.tradeSetup.planStatus,
+            freshness = a.tradeSetup.freshness.ifBlank { Freshness.assess(a, now) },
+            closeDirectionPct = a.pulse?.directionPct ?: -1,
+            closeDirectionN = a.pulse?.directionN ?: 0,
+            coverage = a.pulse?.coverage ?: "",
+            ledgerFirstAtMs = state?.records?.firstOrNull()?.createdAt ?: 0L,
+            ledgerLastAtMs = state?.records?.lastOrNull()?.createdAt ?: 0L,
             nextReviewAtMs = ShadowLive.barMs(a.lastUpdated)?.let { it + RealityEngine.intervalMinutes(a.interval) * 60_000L } ?: 0L
         )
     }

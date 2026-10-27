@@ -103,8 +103,16 @@ object DecisionTraceText {
                 t(lang, "Production engine", "प्रोडक्शन इंजन", "प्रोडक्शन इंजिन") to t(lang, "Rules (not a trained model)", "नियम (प्रशिक्षित मॉडल नहीं)", "नियम (प्रशिक्षित मॉडेल नाही)"),
                 t(lang, "Verified record audit", "जाँचा रिकॉर्ड ऑडिट", "तपासलेला रेकॉर्ड ऑडिट") to u(p.ledgerAudit),
                 t(lang, "Research model (Shadow Lab)", "रिसर्च मॉडल (Shadow Lab)", "रिसर्च मॉडेल (Shadow Lab)") to u(p.researchModelStatus),
-                t(lang, "Historical hit-rate", "पिछला हिट-रेट", "मागील हिट-रेट") to
+                // V29D: each statistic keeps its own definition and N; none of them is today's win chance
+                t(lang, "Hit-rate of this agreement band (this TF)", "इस सहमति बैंड का हिट-रेट (यह TF)", "या सहमती बँडचा हिट-रेट (हा TF)") to
                     (if (p.hitRatePct < 0) t(lang, "not enough calls in this band", "इस बैंड में पर्याप्त कॉल नहीं", "या बँडमध्ये पुरेशा कॉल नाहीत") else "${p.hitRatePct}% • N=${p.hitRateN}"),
+                t(lang, "Close-direction accuracy (all TF)", "क्लोज़-दिशा सटीकता (सभी TF)", "क्लोज-दिशा अचूकता (सर्व TF)") to
+                    (if (p.closeDirectionPct < 0) unknown else "${p.closeDirectionPct}% • N=${p.closeDirectionN}"),
+                t(lang, "Coverage (took a side)", "कवरेज (पक्ष लिया)", "कव्हरेज (बाजू घेतली)") to p.coverage.ifBlank { unknown },
+                t(lang, "Records from", "रिकॉर्ड अवधि", "रेकॉर्ड कालावधी") to
+                    (if (p.ledgerFirstAtMs > 0) PlanText.utcTime(p.ledgerFirstAtMs) + " → " + PlanText.utcTime(p.ledgerLastAtMs) else unknown),
+                t(lang, "Hypothetical economics", "काल्पनिक आर्थिक नतीजा", "काल्पनिक आर्थिक निकाल") to t(lang, "scorecard: close-to-close $, before costs", "स्कोरकार्ड: क्लोज़-से-क्लोज़ $, खर्च से पहले", "स्कोअरकार्ड: क्लोज-ते-क्लोज $, खर्चापूर्वी"),
+                t(lang, "Realized trading results", "असली ट्रेडिंग नतीजे", "प्रत्यक्ष ट्रेडिंग निकाल") to t(lang, "NOT TRACKED (the app never sees your broker fills)", "ट्रैक नहीं (ऐप आपके ब्रोकर के सौदे नहीं देखता)", "ट्रॅक नाही (ॲप तुमच्या ब्रोकरचे व्यवहार पाहत नाही)"),
                 t(lang, "Big % on Home is", "होम पर बड़ा % है", "होमवरचा मोठा % आहे") to when (p.headlineKind) {
                     "HISTORICAL" -> t(lang, "HISTORICAL hit-rate (not a forecast)", "पिछला हिट-रेट (अनुमान नहीं)", "मागील हिट-रेट (अंदाज नाही)")
                     "HEURISTIC" -> t(lang, "HEURISTIC agreement (not a probability)", "अनुमानित सहमति (संभावना नहीं)", "अंदाजी सहमती (शक्यता नाही)")

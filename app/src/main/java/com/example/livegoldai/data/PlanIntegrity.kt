@@ -39,7 +39,10 @@ object RiskMath {
  *  INACTIVE_WAIT     the engine wanted BUY/SELL but the final decision is WAIT: no trade, levels are only a record
  *  SCENARIO          the engine itself said WAIT: levels are a conditional "if it breaks out" scenario
  *  STOPPED_INTRABAR  the recorded call's stop was touched inside the candle: the trade is over even before the close
- *  NO_DATA           no usable live data
+ *  NO_DATA           no usable live data, or the data is STALE / OFFLINE (V29D)
+ *  RESEARCH_SIGNAL   V29D: a published BUY/SELL whose predictive edge is NOT proven (no LIVE QUALIFIED model):
+ *                    an unverified research signal; its levels are conditional research, never a trade instruction
+ *  EXPIRED           V29D: the prediction horizon has passed
  */
 object PlanStamp {
     const val ACTIVE = "ACTIVE"
@@ -47,24 +50,44 @@ object PlanStamp {
     const val SCENARIO = "SCENARIO"
     const val STOPPED = "STOPPED_INTRABAR"
     const val NO_DATA = "NO_DATA"
+    const val RESEARCH = "RESEARCH_SIGNAL"
+    const val EXPIRED = "EXPIRED"
 
     fun isActionable(t: TradeSetup): Boolean = t.planStatus == ACTIVE
 
-    fun stamp(a: GoldAnalysisResult, state: LedgerState?, now: Long = System.currentTimeMillis()): GoldAnalysisResult {
+    /**
+     * V29D: horizon and a STABLE expiry. Before: validUntil = analysis time + horizon, so every 60 s refresh pushed
+     * the expiry forward (a 5M call showed 21-25 min forever). Now: the ledger record's expiry, else candle open + horizon.
+     */
+    fun horizonMin(interval: String): Int = TechnicalEngine.calculateValidityMinutes(interval)
+    fun stableExpiry(a: GoldAnalysisResult, rec: LedgerRecord?): Long =
+        rec?.expiresAt ?: ShadowLive.barMs(a.lastUpdated)?.let { it + horizonMin(a.interval) * 60_000L } ?: 0L
+
+    /**
+     * @param researchStatus Shadow Lab live status of this timeframe. Only "LIVE QUALIFIED" makes a BUY/SELL actionable.
+     */
+    fun stamp(a: GoldAnalysisResult, state: LedgerState?, now: Long = System.currentTimeMillis(), researchStatus: String? = null): GoldAnalysisResult {
         val rec = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated }
         val raw = a.rawSignal ?: a.overallSignal
+        val fresh = Freshness.assess(a, now)
+        val expiry = stableExpiry(a, rec)
         var touched = ""
         val status = when {
             a.isSimulatedFallback || a.feed?.isLive != true -> NO_DATA
+            fresh == Freshness.STALE || fresh == Freshness.OFFLINE || fresh == Freshness.CLOSED -> NO_DATA
             a.overallSignal == Signal.WAIT -> if (raw != Signal.WAIT) INACTIVE_WAIT else SCENARIO
-            rec != null && rec.finalSignal == a.overallSignal && rec.slDistance > 0 -> {
-                touched = stopTouch(a, rec.price, rec.slDistance, rec.barId)
-                if (touched.isNotEmpty()) STOPPED else ACTIVE
-            }
+            expiry in 1 until now -> EXPIRED
+            rec != null && rec.finalSignal == a.overallSignal && rec.slDistance > 0 &&
+                stopTouch(a, rec.price, rec.slDistance, rec.barId).also { touched = it }.isNotEmpty() -> STOPPED
+            researchStatus != "LIVE QUALIFIED" -> RESEARCH
             else -> ACTIVE
         }
         val t = a.tradeSetup
-        return a.copy(tradeSetup = t.copy(
+        return a.copy(nextPrediction = a.nextPrediction?.copy(validUntilTimestamp = if (expiry > 0) expiry else a.nextPrediction.validUntilTimestamp),
+            tradeSetup = t.copy(
+            horizonMin = horizonMin(a.interval),
+            expiresAtMs = expiry,
+            freshness = fresh,
             planStatus = status,
             snapshotId = rec?.snapshotId?.ifBlank { null } ?: "S-${a.interval}-${a.lastUpdated.replace(" ", "T")}",
             instrument = SourceRegistry.badge(a.feed?.source),
@@ -85,5 +108,31 @@ object PlanStamp {
         val bars = a.recentCandles.filter { it.datetime >= fromBar }
         val hit = bars.firstOrNull { if (buy) it.low <= level else it.high >= level } ?: return ""
         return hit.datetime
+    }
+}
+
+/**
+ * V29D: one freshness verdict for the data behind a decision. Thresholds follow how this app actually gets data:
+ *  the screen re-fetches every 60 s (LIVE = quote <= 120 s old), and when credits are low it may reuse one fetch for
+ *  up to one candle (V29A.11) (DELAYED = <= one candle). Older than that, or a newest candle older than 2 candles + 2 min
+ *  (the same limit as the source gate), is STALE: the decision may describe a market that has moved on.
+ */
+object Freshness {
+    const val LIVE = "LIVE"; const val DELAYED = "DELAYED"; const val STALE = "STALE"; const val OFFLINE = "OFFLINE"; const val CLOSED = "MARKET CLOSED"
+
+    fun assess(a: GoldAnalysisResult, now: Long): String {
+        val f = a.feed
+        if (f == null || !f.isLive || a.isSimulatedFallback) return OFFLINE
+        if (PredictionLedger.isMarketClosed(now)) return CLOSED
+        val ivMs = RealityEngine.intervalMinutes(a.interval) * 60_000L
+        val quoteAge = now - f.fetchedAtMs
+        val candleAge = ShadowLive.barMs(a.lastUpdated)?.let { now - it } ?: Long.MAX_VALUE
+        return when {
+            f.fetchedAtMs <= 0L -> OFFLINE
+            candleAge > 2 * ivMs + 120_000L -> STALE
+            quoteAge <= 120_000L -> LIVE
+            quoteAge <= maxOf(120_000L, ivMs) -> DELAYED
+            else -> STALE
+        }
     }
 }

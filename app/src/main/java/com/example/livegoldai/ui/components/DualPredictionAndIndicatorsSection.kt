@@ -1088,9 +1088,9 @@ fun PredictionBigCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "💡 Trailing Rule: When price hits TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}), immediately move Stop Loss to Entry price — trade becomes 100% Risk-Free!"
-                                    AppLanguage.HINDI -> "💡 ट्रेलिंग नियम: जब भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) छुए, तुरंत Stop Loss को एंट्री भाव पर ले आएं — ट्रेड 100% जोखिम-मुक्त हो जाएगा!"
-                                    AppLanguage.MARATHI -> "💡 ट्रेलिंग नियम: जेव्हा भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) गाठेल, लगेच Stop Loss एन्ट्री भावावर हलवा — ट्रेड 100% जोखीममुक्त होईल!"
+                                    AppLanguage.ENGLISH -> "💡 Trailing Rule: When price hits TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}), moving Stop Loss to Entry reduces risk, but gaps and slippage can still cause a loss."
+                                    AppLanguage.HINDI -> "💡 ट्रेलिंग नियम: जब भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) छुए, Stop Loss को एंट्री पर लाने से जोखिम घटता है, पर गैप और स्लिपेज से फिर भी नुकसान हो सकता है।"
+                                    AppLanguage.MARATHI -> "💡 ट्रेलिंग नियम: जेव्हा भाव TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) गाठेल, Stop Loss एन्ट्रीवर हलवल्याने जोखीम कमी होते, पण गॅप आणि स्लिपेजमुळे तरीही तोटा होऊ शकतो."
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,

@@ -827,7 +827,7 @@ object TechnicalEngine {
                 val rules = listOf(
                     "1. Order Type: Buy Limit in zone $$entryMin - $$entryMax (Don't chase high wicks)",
                     "2. Stop Loss: Set SL at $$slVal immediately upon execution (Zero emotional trading)",
-                    "3. TP1 Hit ($$tp1Val): Book 50% profit & immediately drag SL to Entry Price (Risk-Free Trade)",
+                    "3. TP1 Hit ($$tp1Val): Book 50% profit & move SL to Entry Price (reduces risk; gaps and slippage can still lose)",
                     "4. TP2 Hit ($$tp2Val): Book 30% profit and let remaining 20% runner ride to $$tp3Val"
                 )
                 val rulesHindi = listOf(

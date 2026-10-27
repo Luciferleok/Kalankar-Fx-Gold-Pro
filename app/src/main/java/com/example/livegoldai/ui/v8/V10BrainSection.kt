@@ -41,7 +41,9 @@ fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit, pres: c
         Row(verticalAlignment = Alignment.CenterVertically) {
             V8Label(tr(lang, "Market brain", "मार्केट ब्रेन", "मार्केट ब्रेन"))
             Spacer(modifier = Modifier.weight(1f))
-            Text(text = "›", color = V8.Text3, fontSize = 14.sp)
+            // V29D: which snapshot these numbers describe (Home and Brain show the same time when they are the same)
+            Text(text = com.example.livegoldai.data.PlanText.utcTime(b.builtAtMs), color = V8.Text3, fontSize = 9.sp)
+            Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
         }
         // V29C.1: three separately scoped statuses instead of one blended label
         // stacked so the three badges never overflow a small (320dp) screen
