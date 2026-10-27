@@ -42,12 +42,16 @@ object DecisionTraceText {
             listOf(
                 t(lang, "Raw quant", "रॉ क्वांट", "रॉ क्वांट") to signal(p.rawSignal, lang),
                 t(lang, "Final decision", "अंतिम फ़ैसला", "अंतिम निर्णय") to p.finalSignal.name,
-                t(lang, "Reason", "कारण", "कारण") to reason(p, lang),
+                t(lang, "Primary reason", "मुख्य कारण", "मुख्य कारण") to reason(p, lang),
                 t(lang, "Timeframe", "टाइमफ़्रेम", "टाइमफ्रेम") to p.timeframe,
                 t(lang, "Newest candle", "नई कैंडल", "नवीन कँडल") to u(p.candleTime)
             ),
-            if (p.rawDiffersFromFinal) t(lang, "The engine and the published decision differ: the reason above is why.",
-                "इंजन और प्रकाशित फ़ैसला अलग हैं: ऊपर का कारण इसकी वजह है।", "इंजिन आणि प्रकाशित निर्णय वेगळे आहेत: वरचे कारण त्याचे स्पष्टीकरण आहे.") else null
+            listOfNotNull(
+                if (p.restorationPending.isNotEmpty()) PlanText.restoration(p.restorationPending, lang) else null,
+                PlanText.secondaryLine(p.secondaryReasons, lang).ifBlank { null },
+                if (p.rawDiffersFromFinal) t(lang, "The engine and the published decision differ: the primary reason is why.",
+                    "इंजन और प्रकाशित फ़ैसला अलग हैं: मुख्य कारण इसकी वजह है।", "इंजिन आणि प्रकाशित निर्णय वेगळे आहेत: मुख्य कारण त्याचे स्पष्टीकरण आहे.") else null
+            ).joinToString("\n").ifBlank { null }
         )
         val source = Section(
             t(lang, "Market source", "मार्केट स्रोत", "मार्केट स्रोत"),
@@ -55,7 +59,7 @@ object DecisionTraceText {
                 t(lang, "Instrument • provider", "इंस्ट्रूमेंट • प्रदाता", "इन्स्ट्रुमेंट • प्रदाता") to p.sourceBadge,
                 t(lang, "Usable by the XAU model", "XAU मॉडल के लायक", "XAU मॉडेलसाठी योग्य") to
                     (if (p.compatibleWithModel) t(lang, "YES", "हाँ", "होय") else "⚠ " + t(lang, "NO (proxy / unknown)", "नहीं (प्रॉक्सी / अज्ञात)", "नाही (प्रॉक्सी / अज्ञात)")),
-                t(lang, "Source state", "स्रोत स्थिति", "स्रोत स्थिती") to u(p.sourceState),
+                t(lang, "Source state", "स्रोत स्थिति", "स्रोत स्थिती") to (if (p.restorationPending.isNotEmpty()) "⚠ RESTORING ${p.restorationPending}" else u(p.sourceState)),
                 t(lang, "Data age", "डेटा की उम्र", "डेटाचे वय") to age(p.analysisAtMs, now, lang),
                 t(lang, "Data quality", "डेटा क्वालिटी", "डेटा गुणवत्ता") to u(p.dataQuality)
             )
@@ -102,6 +106,7 @@ object DecisionTraceText {
                     else -> t(lang, "UNAVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही")
                 },
                 t(lang, "Rule setup strength", "नियम सेटअप ताकत", "नियम सेटअप ताकद") to (if (p.ruleSetupStrength < 0) unknown else "${p.ruleSetupStrength}/100 " + t(lang, "(heuristic)", "(अनुमानित)", "(अंदाजी)")),
+                t(lang, "Proven edge", "साबित बढ़त", "सिद्ध आघाडी") to (if (p.provenEdge) t(lang, "LIVE QUALIFIED (research model)", "LIVE QUALIFIED (रिसर्च मॉडल)", "LIVE QUALIFIED (रिसर्च मॉडेल)") else "⚠ " + t(lang, "NO PROVEN PREDICTIVE EDGE", "कोई साबित बढ़त नहीं", "सिद्ध आघाडी नाही")),
                 t(lang, "Uncertainty", "अनिश्चितता", "अनिश्चितता") to u(p.uncertainty),
                 t(lang, "Regime", "रेजीम", "रेजीम") to u(p.regime)
             ),
@@ -115,7 +120,10 @@ object DecisionTraceText {
                 t(lang, "Snapshot", "स्नैपशॉट", "स्नॅपशॉट") to u(p.snapshotId),
                 t(lang, "Engine • features • model", "इंजन • फ़ीचर • मॉडल", "इंजिन • फीचर • मॉडेल") to "${p.engineVersion} • ${p.featureVersion} • ${u(p.modelVersion)}",
                 t(lang, "Ledger", "लेजर", "लेजर") to "${p.ledgerSize} / ${p.ledgerChecked} " + t(lang, "checked", "जाँचे", "तपासले"),
-                t(lang, "Trace built", "ब्योरा बना", "तपशील तयार") to age(p.builtAtMs, now, lang) + t(lang, " ago", " पहले", " आधी")
+                t(lang, "Latest quote", "आख़िरी भाव", "शेवटचा भाव") to PlanText.utcTime(p.quoteAtMs),
+                t(lang, "Newest candle (open)", "नई कैंडल (शुरुआत)", "नवीन कँडल (सुरुवात)") to u(p.candleTime),
+                t(lang, "Analysis built", "विश्लेषण बना", "विश्लेषण तयार") to PlanText.utcTime(p.builtAtMs),
+                t(lang, "Decision published", "फ़ैसला दर्ज", "निर्णय नोंदवला") to (if (p.publishedAtMs > 0) PlanText.utcTime(p.publishedAtMs) else t(lang, "NOT RECORDED", "दर्ज नहीं", "नोंदवलेले नाही"))
             )
         )
         return listOf(decision, source, evidence, trust, audit)

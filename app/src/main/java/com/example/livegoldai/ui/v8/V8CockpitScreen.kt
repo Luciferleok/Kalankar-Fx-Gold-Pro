@@ -178,7 +178,9 @@ fun V8CockpitScreen(
                         text = RealityEngine.waitReason(analysis).let { (code, en) -> when (code) {
                             "DATA" -> tr(lang, en, "डेटा जाँच फेल", "डेटा तपासणी नापास")
                             "NO_KEY" -> tr(lang, en, "डेटा key नहीं", "डेटा key नाही")
-                            "SOURCE" -> tr(lang, en, "स्रोत बदला", "स्रोत बदलला")
+                            "SOURCE" -> if (pres != null && pres.restorationPending.isNotEmpty())
+                                tr(lang, "RESTORATION PENDING ${pres.restorationPending} • BLOCKED", "बहाली बाकी ${pres.restorationPending} • रुका", "पुनर्स्थापना बाकी ${pres.restorationPending} • थांबवले")
+                                else tr(lang, en, "स्रोत बदला", "स्रोत बदलला")
                             "RANGE" -> tr(lang, en, "रेंज फ़िल्टर • साइडवेज़ मार्केट", "रेंज फिल्टर • साइडवेज मार्केट")
                             "LEARNED" -> tr(lang, en, "सीखा हुआ फ़िल्टर", "शिकलेला फिल्टर")
                             "BELOW_GATE" -> tr(lang, en, en.replace("PILLARS", "पिलर"), en.replace("PILLARS", "पिलर"))
@@ -192,9 +194,14 @@ fun V8CockpitScreen(
                             tr(lang, "  •  FINAL: ", "  •  अंतिम: ", "  •  अंतिम: ") + pres.finalSignal.name,
                         color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp
                     )
-                    if (until > now) {
+                    // V29C: a WAIT has no validity countdown; show the real next review (next candle) instead
+                    if (sig != Signal.WAIT && until > now) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                    } else if (sig == Signal.WAIT) {
+                        val review = com.example.livegoldai.data.PlanText.nextReviewMs(selectedInterval, now)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = tr(lang, "NEXT REVIEW ", "अगली जाँच ", "पुढील तपासणी ") + fmtAge(review - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                     }
                 }
                 // the ring shows exactly one real number: calibrated confidence if measured, else raw pillar agreement

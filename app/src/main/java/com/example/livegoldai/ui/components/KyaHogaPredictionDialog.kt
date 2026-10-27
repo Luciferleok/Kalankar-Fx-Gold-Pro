@@ -50,6 +50,7 @@ fun KyaHogaPredictionDialog(
     // V31-C: only an ACTIVE plan of a published BUY/SELL is actionable; everything else is a scenario or closed
     val actionable = com.example.livegoldai.data.PlanStamp.isActionable(tradeSetup) && analysis.overallSignal != Signal.WAIT
     val PT = com.example.livegoldai.data.PlanText
+    var showResearch by remember { mutableStateOf(false) }
 
     // Probabilities calculation
     val baseProb = prediction?.winProbabilityPercent ?: tradeSetup.confidencePercent
@@ -332,6 +333,7 @@ fun KyaHogaPredictionDialog(
                         }
                     }
 
+                    if (analysis.overallSignal != Signal.WAIT) {
                     // 1.5 LIVE PREDICTION VALIDITY COUNTDOWN BANNER
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -447,6 +449,65 @@ fun KyaHogaPredictionDialog(
                         }
                     }
 
+                    } else {
+                        // V29C: a WAIT has no active validity: show the real next review instead of a green countdown
+                        Surface(shape = RoundedCornerShape(16.dp), color = ObsidianSurfaceCard, border = BorderStroke(1.dp, SignalWait.copy(alpha = 0.45f)), modifier = Modifier.fillMaxWidth().testTag("dialog_no_active_signal")) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(text = PT.noActiveSignal(currentLanguage), color = SignalWait, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                                Text(text = PT.nextReview(PT.nextReviewMs(analysis.interval, System.currentTimeMillis()), currentLanguage), color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                    // 6. Why This Prediction (3 Technical Reasons)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = ObsidianSurfaceElevated,
+                        border = CardDefaults.outlinedCardBorder().copy(
+                            brush = Brush.horizontalGradient(listOf(ObsidianBorderHighlight, ObsidianBorder))
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "🔬 WHY THIS FORECAST? (3 MAIN REASONS)"
+                                    AppLanguage.HINDI -> "🔬 ऐसा क्यों होगा? (3 मुख्य कारण)"
+                                    AppLanguage.MARATHI -> "🔬 असे का घडेल? (3 मुख्य तांत्रिक कारणे)"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                color = GoldLight
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            ReasonRow(
+                                number = "1",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "SMC pillar (SuperTrend, VWAP/TWAP, structure) now: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
+                                    AppLanguage.HINDI -> "SMC पिलर (SuperTrend, VWAP/TWAP, संरचना) अभी: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}।"
+                                    AppLanguage.MARATHI -> "SMC पिलर (SuperTrend, VWAP/TWAP, रचना) आता: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            ReasonRow(
+                                number = "2",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "Pillars: ${analysis.groups.count { it.verdict == analysis.overallSignal }} of ${analysis.totalGroups} indicator groups say ${analysis.overallSignal.name}."
+                                    AppLanguage.HINDI -> "पिलर: ${analysis.totalGroups} में से ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर ग्रुप ${analysis.overallSignal.name} कह रहे हैं।"
+                                    AppLanguage.MARATHI -> "पिलर: ${analysis.totalGroups} पैकी ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर गट ${analysis.overallSignal.name} सांगत आहेत."
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            ReasonRow(
+                                number = "3",
+                                text = when (currentLanguage) {
+                                    AppLanguage.ENGLISH -> "Market regime: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. Trend rules are weak in a RANGE."
+                                    AppLanguage.HINDI -> "मार्केट की स्थिति: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}। RANGE में ट्रेंड के नियम कमज़ोर रहते हैं।"
+                                    AppLanguage.MARATHI -> "मार्केटची स्थिती: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. RANGE मध्ये ट्रेंडचे नियम कमकुवत असतात."
+                                }
+                            )
+                        }
+                    }
                     // 1.6 PREDICTION TRACK RECORD: KITNE SAHI / KITNE GALAT
                     analysis.timeframeAudit?.let { audit ->
                         Surface(
@@ -481,7 +542,7 @@ fun KyaHogaPredictionDialog(
                                         )
                                     }
                                     Text(
-                                        text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% REAL WIN RATE (N=${audit.totalSignalsTested})",
+                                        text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else PT.hitRateBadge(audit.winRatePercent, audit.totalSignalsTested, currentLanguage),
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         fontWeight = FontWeight.Black,
                                         color = SignalBuy
@@ -512,7 +573,7 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "Correct / TP Hit"
+                                                    AppLanguage.ENGLISH -> "Correct (target / direction)"
                                                     AppLanguage.HINDI -> "सही प्रेडिक्शन"
                                                     AppLanguage.MARATHI -> "अचूक अंदाज"
                                                 },
@@ -567,13 +628,13 @@ fun KyaHogaPredictionDialog(
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Text(
-                                                text = "${if (audit.netPipsGained >= 0) "+" else ""}${audit.netPipsGained}",
+                                                text = PT.pointsValue(audit.netPipsGained),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.Black,
                                                 color = if (audit.netPipsGained >= 0) GoldLight else SignalSell
                                             )
                                             Text(
-                                                text = "Net Pips P&L",
+                                                text = PT.pointsLabel(currentLanguage),
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = TextSecondary
                                             )
@@ -584,6 +645,15 @@ fun KyaHogaPredictionDialog(
                         }
                     }
 
+                    // V29C: historical evidence never reads as a proven edge
+                    if (analysis.presentation?.provenEdge != true) Text(text = PT.noProvenEdge(currentLanguage), color = SignalWait, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp))
+                    // V29C Section D: research details, collapsed by default
+                    Text(
+                        text = PT.researchToggle(showResearch, currentLanguage),
+                        color = GoldLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { showResearch = !showResearch }.background(ObsidianSurfaceElevated).padding(horizontal = 14.dp, vertical = 14.dp)
+                    )
+                    if (showResearch) {
                     // 1.7 AI AUTOMATIC ERROR SELF-CORRECTION (गलतियों से आगे का ऑटोमैटिक सुधार)
                     prediction?.appliedCorrections?.takeIf { it.isNotEmpty() }?.let { corrections ->
                         Surface(
@@ -635,9 +705,9 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "Past errors prevented in this prediction"
-                                                    AppLanguage.HINDI -> "पिछली गलतियों से सीखकर यह सिग्नल सुधारा गया"
-                                                    AppLanguage.MARATHI -> "मागील चुकांमधून शिकून हा सिग्नल सुधारण्यात आला"
+                                                    AppLanguage.ENGLISH -> PT.safetyChecksNote(AppLanguage.ENGLISH)
+                                                    AppLanguage.HINDI -> PT.safetyChecksNote(AppLanguage.HINDI)
+                                                    AppLanguage.MARATHI -> PT.safetyChecksNote(AppLanguage.MARATHI)
                                                 },
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                                 color = TextSecondary
@@ -650,7 +720,7 @@ fun KyaHogaPredictionDialog(
                                         color = NeonGreen.copy(alpha = 0.15f)
                                     ) {
                                         Text(
-                                            text = "${corrections.size} SHIELDS 🛡️",
+                                            text = PT.safetyChecksBadge(corrections.size, currentLanguage),
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                             fontWeight = FontWeight.Bold,
@@ -759,14 +829,14 @@ fun KyaHogaPredictionDialog(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(text = "🤖", fontSize = 16.sp)
+                                        Text(text = "⚙", fontSize = 16.sp, color = GoldLight)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "RULE COUNCIL CONSENSUS"
-                                                    AppLanguage.HINDI -> "5 नियमों की संयुक्त राय "
-                                                    AppLanguage.MARATHI -> "5 नियमांची संयुक्त सहमती"
+                                                    AppLanguage.ENGLISH -> PT.councilTitle(consensus.totalModelsCount, AppLanguage.ENGLISH)
+                                                    AppLanguage.HINDI -> PT.councilTitle(consensus.totalModelsCount, AppLanguage.HINDI)
+                                                    AppLanguage.MARATHI -> PT.councilTitle(consensus.totalModelsCount, AppLanguage.MARATHI)
                                                 },
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Black,
@@ -774,7 +844,7 @@ fun KyaHogaPredictionDialog(
                                                 letterSpacing = 0.5.sp
                                             )
                                             Text(
-                                                text = "5 local rules • no AI call",
+                                                text = PT.councilNote(currentLanguage),
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = TextSecondary
                                             )
@@ -786,7 +856,7 @@ fun KyaHogaPredictionDialog(
                                         color = primaryColor.copy(alpha = 0.2f)
                                     ) {
                                         Text(
-                                            text = "${consensus.agreeingModelsCount}/${consensus.totalModelsCount} AGREE",
+                                            text = PT.councilBadge(consensus.agreeingModelsCount, consensus.totalModelsCount, consensus.consensusSignal, currentLanguage),
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                             fontWeight = FontWeight.Bold,
@@ -891,11 +961,7 @@ fun KyaHogaPredictionDialog(
 
                             // Bullish Probability Bar
                             ProbabilityItemRow(
-                                title = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🚀 Bullish Rally (Upward Move)"
-                                    AppLanguage.HINDI -> "🚀 Bullish Rally (ऊपर की चाल)"
-                                    AppLanguage.MARATHI -> "🚀 Bullish Rally (वर जाणारी तेजी)"
-                                },
+                                title = PT.shareRow(Signal.BUY, split.fromHistory, currentLanguage),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.BUY) "past calls: went the called way" else "past calls: went against the call"
                                     AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.BUY) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
@@ -910,11 +976,7 @@ fun KyaHogaPredictionDialog(
 
                             // Sideways Probability Bar
                             ProbabilityItemRow(
-                                title = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "⏸️ Sideways Range (Consolidation)"
-                                    AppLanguage.HINDI -> "⏸️ Sideways Range (कोई बड़ी चाल नहीं)"
-                                    AppLanguage.MARATHI -> "⏸️ Sideways Range (मर्यादित चढ-उतार)"
-                                },
+                                title = PT.shareRow(Signal.WAIT, split.fromHistory, currentLanguage),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (split.fromHistory) "past calls: no real move" else "share of pillars voting WAIT"
                                     AppLanguage.HINDI -> if (split.fromHistory) "पिछली कॉल: कोई असली चाल नहीं" else "WAIT वोट करने वाले पिलर"
@@ -929,11 +991,7 @@ fun KyaHogaPredictionDialog(
 
                             // Bearish Probability Bar
                             ProbabilityItemRow(
-                                title = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🔻 Bearish Drop (Downward Move)"
-                                    AppLanguage.HINDI -> "🔻 Bearish Drop (नीचे की चाल)"
-                                    AppLanguage.MARATHI -> "🔻 Bearish Drop (खाली घसरण)"
-                                },
+                                title = PT.shareRow(Signal.SELL, split.fromHistory, currentLanguage),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.SELL) "past calls: went the called way" else "past calls: went against the call"
                                     AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.SELL) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
@@ -1122,6 +1180,10 @@ fun KyaHogaPredictionDialog(
                         }
                     }
 
+                    }
+                    if (actionable || showResearch) {
+                        if (!actionable) Text(text = PT.researchScenarioTitle(currentLanguage), color = SignalWait, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                        if (actionable || analysis.presentation?.compatibleWithModel != false) {
                     // 4. Action Playbook (Entry, SL, TP)
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -1229,6 +1291,9 @@ fun KyaHogaPredictionDialog(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                     )
 
+                        } else Text(text = PT.levelsSuppressed(currentLanguage), color = TextMuted, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                        // V29C: invalidation only for an active trade, or for a valid research scenario
+                        if (actionable || analysis.presentation?.scenarioAvailable == true) {
                     // 5. Invalidation Warning Alert
                     Surface(
                         shape = RoundedCornerShape(12.dp),
@@ -1252,9 +1317,9 @@ fun KyaHogaPredictionDialog(
                             Column {
                                 Text(
                                     text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "When is this Prediction Cancelled? (Invalidation Rule)"
-                                        AppLanguage.HINDI -> "कब यह प्रेडिक्शन कैंसिल होगी? (Invalidation Rule)"
-                                        AppLanguage.MARATHI -> "हा अंदाज कधी रद्द मानला जाईल? (Invalidation Rule)"
+                                        AppLanguage.ENGLISH -> if (actionable) "When is this Prediction Cancelled? (Invalidation Rule)" else PT.scenarioInvalidationTitle(AppLanguage.ENGLISH)
+                                        AppLanguage.HINDI -> if (actionable) "कब यह प्रेडिक्शन कैंसिल होगी? (Invalidation Rule)" else PT.scenarioInvalidationTitle(AppLanguage.HINDI)
+                                        AppLanguage.MARATHI -> if (actionable) "हा अंदाज कधी रद्द मानला जाईल? (Invalidation Rule)" else PT.scenarioInvalidationTitle(AppLanguage.MARATHI)
                                     },
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Black,
@@ -1276,54 +1341,6 @@ fun KyaHogaPredictionDialog(
                         }
                     }
 
-                    // 6. Why This Prediction (3 Technical Reasons)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = ObsidianSurfaceElevated,
-                        border = CardDefaults.outlinedCardBorder().copy(
-                            brush = Brush.horizontalGradient(listOf(ObsidianBorderHighlight, ObsidianBorder))
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🔬 WHY THIS FORECAST? (3 MAIN REASONS)"
-                                    AppLanguage.HINDI -> "🔬 ऐसा क्यों होगा? (3 मुख्य कारण)"
-                                    AppLanguage.MARATHI -> "🔬 असे का घडेल? (3 मुख्य तांत्रिक कारणे)"
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
-                                color = GoldLight
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            ReasonRow(
-                                number = "1",
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "SMC pillar (SuperTrend, VWAP/TWAP, structure) now: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
-                                    AppLanguage.HINDI -> "SMC पिलर (SuperTrend, VWAP/TWAP, संरचना) अभी: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}।"
-                                    AppLanguage.MARATHI -> "SMC पिलर (SuperTrend, VWAP/TWAP, रचना) आता: ${analysis.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"}."
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            ReasonRow(
-                                number = "2",
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Pillars: ${analysis.groups.count { it.verdict == analysis.overallSignal }} of ${analysis.totalGroups} indicator groups say ${analysis.overallSignal.name}."
-                                    AppLanguage.HINDI -> "पिलर: ${analysis.totalGroups} में से ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर ग्रुप ${analysis.overallSignal.name} कह रहे हैं।"
-                                    AppLanguage.MARATHI -> "पिलर: ${analysis.totalGroups} पैकी ${analysis.groups.count { it.verdict == analysis.overallSignal }} इंडिकेटर गट ${analysis.overallSignal.name} सांगत आहेत."
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            ReasonRow(
-                                number = "3",
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Market regime: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. Trend rules are weak in a RANGE."
-                                    AppLanguage.HINDI -> "मार्केट की स्थिति: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}। RANGE में ट्रेंड के नियम कमज़ोर रहते हैं।"
-                                    AppLanguage.MARATHI -> "मार्केटची स्थिती: ${analysis.insights?.regime?.replace('_', ' ') ?: "--"}. RANGE मध्ये ट्रेंडचे नियम कमकुवत असतात."
-                                }
-                            )
                         }
                     }
                 }

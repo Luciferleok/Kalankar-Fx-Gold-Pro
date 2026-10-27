@@ -61,7 +61,15 @@ data class PredictionPresentationState(
     val featureVersion: String,
     val modelVersion: String,
     val ledgerSize: Int,
-    val ledgerChecked: Int
+    val ledgerChecked: Int,
+    // ---- V29C
+    val secondaryReasons: List<String> = emptyList(),   // codes: RANGE_REGIME, NO_PROVEN_EDGE, HIGH_UNCERTAINTY, MTF_UNAVAILABLE, ENGINE_NO_SIDE
+    val restorationPending: String = "",                // "1/2" while Twelve Data is back but not yet restored, else ""
+    val isTradeSetupActive: Boolean = false,
+    val scenarioAvailable: Boolean = false,
+    val quoteAtMs: Long = 0L,                           // latest market quote arrived
+    val publishedAtMs: Long = 0L,                       // this decision was recorded in the ledger (0 = not recorded)
+    val provenEdge: Boolean = false                     // true only when the research model is LIVE QUALIFIED
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -143,8 +151,32 @@ object PresentationBuilder {
             featureVersion = com.example.livegoldai.data.brain.FeatureCatalog.VERSION,
             modelVersion = a.learning?.modelVersion?.ifBlank { null } ?: UNKNOWN,
             ledgerSize = state?.records?.size ?: 0,
-            ledgerChecked = state?.results?.size ?: 0
+            ledgerChecked = state?.results?.size ?: 0,
+            secondaryReasons = secondary(a, code, researchStatus),
+            restorationPending = if (a.sourceState == SourceStateMachine.RESTORING)
+                Regex("(\\d+)/(\\d+)").find(a.gateDetail)?.value ?: "0/${SourceStateMachine.RESTORE_PASSES}" else "",
+            isTradeSetupActive = a.tradeSetup.planStatus == PlanStamp.ACTIVE && a.overallSignal != Signal.WAIT,
+            scenarioAvailable = a.overallSignal == Signal.WAIT &&
+                (a.tradeSetup.planStatus == PlanStamp.SCENARIO || a.tradeSetup.planStatus == PlanStamp.INACTIVE_WAIT) &&
+                SourceRegistry.compatibility(id.instrument) == Compatibility.COMPATIBLE,
+            quoteAtMs = a.feed?.fetchedAtMs ?: 0L,
+            publishedAtMs = rec?.createdAt ?: 0L,
+            provenEdge = researchStatus == "LIVE QUALIFIED"
         )
+    }
+
+    /** V29C: secondary factors, never shown as the main reason. Deterministic order. */
+    fun secondary(a: GoldAnalysisResult, primary: String, researchStatus: String?): List<String> {
+        val out = ArrayList<String>()
+        if (primary == "SOURCE" || primary == "DATA" || primary == "NO_KEY") {
+            if ((a.rawSignal ?: a.overallSignal) == Signal.WAIT) out.add("ENGINE_NO_SIDE")
+        }
+        val regime = a.brain?.regime ?: a.insights?.regime
+        if (regime.equals("RANGE", true) && primary != "RANGE") out.add("RANGE_REGIME")
+        if (researchStatus != "LIVE QUALIFIED") out.add("NO_PROVEN_EDGE")
+        if (a.brain?.totalUncertainty == "HIGH") out.add("HIGH_UNCERTAINTY")
+        if (a.mtfMatrix?.timeframes?.any { it.label.startsWith("PAXG") } != true) out.add("MTF_UNAVAILABLE")
+        return out
     }
 
     /** Evidence is judged against what the engine itself said (raw), so a filtered WAIT still shows its support/conflict. */
