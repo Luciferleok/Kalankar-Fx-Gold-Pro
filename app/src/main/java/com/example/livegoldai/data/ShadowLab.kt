@@ -788,11 +788,26 @@ object ShadowLab {
         else -> 0L
     }
 
-    fun group(bars: List<Bar>, size: Int): List<Bar> {
+    /**
+     * V32 (approved): intraday groups are aligned to UTC bar boundaries (CandleAggregator) and only FULL groups are
+     * kept: every base candle present and the group's end time passed. Before, groups were counted from the first
+     * stored row, so the phase depended on where the history started, and one group could join Friday's last
+     * minutes with Sunday's first. Weekly/monthly groups keep the old counting. Labels = group START time.
+     */
+    fun group(bars: List<Bar>, size: Int, baseMs: Long = 0L, nowMs: Long = System.currentTimeMillis()): List<Bar> {
         if (size <= 1) return bars
-        return bars.chunked(size).filter { it.size == size }.map { ch ->
-            Bar(ch.first().time, ch.first().open, ch.maxOf { it.high }, ch.minOf { it.low }, ch.last().close)
+        if (baseMs <= 0L || baseMs >= 86_400_000L || baseMs % 60_000L != 0L) {
+            return bars.chunked(size).filter { it.size == size }.map { ch ->
+                Bar(ch.first().time, ch.first().open, ch.maxOf { it.high }, ch.minOf { it.low }, ch.last().close)
+            }
         }
+        val baseMin = (baseMs / 60_000L).toInt()
+        val parsed = bars.mapNotNull { b ->
+            GoldApiService.parseCandleUtc(b.time)?.let { CandleAggregator.Bar(it, b.open, b.high, b.low, b.close, null, null, it + baseMs <= nowMs) }
+        }
+        return CandleAggregator.aggregate(parsed, baseMin, baseMin * size, nowMs).bars
+            .filter { it.bar.complete && it.parts == it.expected }
+            .map { Bar(CandleAggregator.label(it.bar.startMs), it.bar.open, it.bar.high, it.bar.low, it.bar.close) }
     }
 
     fun f1(x: Double?) = if (x == null) "--" else String.format(Locale.US, "%.1f", x)

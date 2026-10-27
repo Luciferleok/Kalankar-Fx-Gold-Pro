@@ -192,7 +192,7 @@ class ShadowLive(
             if (deepen && endDate == null) return Result.failure(IllegalStateException("Nothing stored yet: run the test first"))
             val fresh = fetchBase(td, endDate).getOrElse { return Result.failure(it) }
             val (all, man) = history.add(td, fresh, ShadowLab.tdCandleMs(td), now)
-            val bars = ShadowLab.group(all, group)
+            val bars = ShadowLab.group(all, group, ShadowLab.tdCandleMs(td), now)
             val rep = ShadowLab.run(interval, bars, now, man.dataHash, man.gapCount).copy(historyRevisions = man.revisions.sumOf { it.changedBars })
             synchronized(this) {
                 reports[interval] = rep
