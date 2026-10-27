@@ -102,6 +102,14 @@ object MultiAiConsensusEngine {
                 "ॲपचा मुख्य सिग्नल: BUY/SELL साठी वेटेड पिलर सहमती 68% हवी.")
         )
 
+        return build(models, currentPrice, atrSafe)
+    }
+
+    /**
+     * V31-A: counts, consensus, agreement, summary and plan text all come from this ONE list of evaluated rules.
+     * Used at generation and again whenever a rule card is re-evaluated, so cards and summary can never disagree.
+     */
+    fun build(models: List<SingleAiPredictionInsight>, currentPrice: Double, atrSafe: Double): MultiAiConsensusReport {
         val buyVotes = models.count { it.signal == Signal.BUY }
         val sellVotes = models.count { it.signal == Signal.SELL }
         val waitVotes = models.count { it.signal == Signal.WAIT }
@@ -110,11 +118,10 @@ object MultiAiConsensusEngine {
             sellVotes >= 3 -> Signal.SELL to sellVotes
             else -> Signal.WAIT to maxOf(waitVotes, buyVotes, sellVotes)
         }
-        val agreementPercent = agreeing * 100 / models.size
-
+        val n = models.size.coerceAtLeast(1)
+        val agreementPercent = agreeing * 100 / n
         val tp = if (consensus == Signal.SELL) currentPrice - 1.6 * atrSafe else currentPrice + 1.6 * atrSafe
         val sl = if (consensus == Signal.SELL) currentPrice + 1.5 * atrSafe else currentPrice - 1.5 * atrSafe
-
         return MultiAiConsensusReport(
             unanimousAgreementPercent = agreementPercent,
             consensusSignal = consensus,
@@ -132,5 +139,15 @@ object MultiAiConsensusEngine {
             calibratedSlRecommendation = if (consensus == Signal.WAIT) "--" else "$${f2(sl)} (1.5x ATR)",
             calibratedTpRecommendation = if (consensus == Signal.WAIT) "--" else "$${f2(tp)} (1.6x ATR)"
         )
+    }
+
+    /** V31-A: true only when the summary numbers are exactly what the rule cards say. Screens hide the council otherwise. */
+    fun consistent(c: MultiAiConsensusReport): Boolean {
+        val m = c.modelInsights
+        if (m.isEmpty() || c.totalModelsCount != m.size) return false
+        val b = m.count { it.signal == Signal.BUY }; val s = m.count { it.signal == Signal.SELL }; val w = m.count { it.signal == Signal.WAIT }
+        val expected = when { b >= 3 -> Signal.BUY to b; s >= 3 -> Signal.SELL to s; else -> Signal.WAIT to maxOf(w, b, s) }
+        return c.consensusSignal == expected.first && c.agreeingModelsCount == expected.second &&
+            c.consensusSummaryEnglish.contains("($b BUY, $s SELL, $w WAIT)")
     }
 }

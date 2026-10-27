@@ -190,7 +190,7 @@ fun TradeSetupCard(
                         AppLanguage.MARATHI -> "टार्गेट 1 (TP1)"
                     },
                     value = "$${String.format(Locale.US, "%.2f", setup.takeProfit1)}",
-                    subtext = "+${String.format(Locale.US, "%.0f", setup.takeProfit1Pips)} Pips (1:1)",
+                    subtext = "+${String.format(Locale.US, "%.0f", setup.takeProfit1Pips)} Pips (" + rrOne(setup, setup.takeProfit1) + ")",
                     accentColor = SignalBuy,
                     modifier = Modifier.weight(1f)
                 )
@@ -201,7 +201,7 @@ fun TradeSetupCard(
                         AppLanguage.MARATHI -> "टार्गेट 2 (TP2)"
                     },
                     value = "$${String.format(Locale.US, "%.2f", setup.takeProfit2)}",
-                    subtext = "+${String.format(Locale.US, "%.0f", setup.takeProfit2Pips)} Pips (${setup.riskRewardRatio})",
+                    subtext = "+${String.format(Locale.US, "%.0f", setup.takeProfit2Pips)} Pips (" + rrOne(setup, setup.takeProfit2) + ")",
                     accentColor = GoldLight,
                     modifier = Modifier.weight(1f)
                 )
@@ -312,7 +312,8 @@ fun TradeSetupCard(
                     )
                 }
 
-                Button(
+                // V31-C: no lot-size prompt for a plan that is not an ACTIVE trade
+                if (com.example.livegoldai.data.PlanStamp.isActionable(setup) && setup.signal != com.example.livegoldai.model.Signal.WAIT) Button(
                     onClick = { onOpenCalculator(setup.stopLossPips) },
                     modifier = Modifier
                         .weight(1f)
@@ -419,4 +420,10 @@ private fun PillBadge(
             )
         }
     }
+}
+
+/** V31-B: risk:reward of ONE target, from this setup's own entry and stop. */
+private fun rrOne(setup: com.example.livegoldai.model.TradeSetup, target: Double): String {
+    val x = com.example.livegoldai.data.RiskMath.rewardPerRisk(setup.entryPrice, setup.stopLoss, target, setup.signal)
+    return if (x.isNaN()) "R:R --" else String.format(java.util.Locale.US, "R:R 1:%.2f", x)
 }

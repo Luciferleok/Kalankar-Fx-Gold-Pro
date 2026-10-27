@@ -262,8 +262,10 @@ object RealityEngine {
             val insights = c.modelInsights.map { m ->
                 val key = "eng:${m.provider.name}"
                 val acc = LearningEngine.accuracyLabel(snapshot, key)
+                // V31-A: the risk guard follows the same engine signal as the other rules (the raw quant signal),
+                // never the filtered final decision, so the council describes one consistent rule evaluation
                 val guardSignal = if (m.provider == AiModelProvider.CLAUDE) {
-                    if (lastLoss && analysis.buyCount < 5 && analysis.sellCount < 5) Signal.WAIT else a.overallSignal
+                    if (lastLoss && analysis.buyCount < 5 && analysis.sellCount < 5) Signal.WAIT else analysis.overallSignal
                 } else m.signal
                 m.copy(
                     signal = guardSignal,
@@ -272,7 +274,8 @@ object RealityEngine {
                     correctionAppliedMarathi = "खरी अचूकता: $acc"
                 )
             }
-            a = a.copy(multiAiConsensus = c.copy(modelInsights = insights))
+            // V31-A: rebuild counts / consensus / summary from the re-evaluated cards (was: old summary kept -> 3 BUY shown over 2 BUY cards)
+            a = a.copy(multiAiConsensus = MultiAiConsensusEngine.build(insights, analysis.currentPrice, analysis.tradeSetup.atrPips / 10.0))
         }
 
         // 4. bots with real accuracy

@@ -359,7 +359,16 @@ data class TradeSetup(
     val strategyNote: String,
     val strategyNoteHindi: String = "",
     val strategyNoteMarathi: String = "",
-    val atrPips: Double
+    val atrPips: Double,
+    // ---- V31-C/E/F: plan status and provenance (filled by PlanStamp from the same snapshot)
+    val planStatus: String = "UNSTAMPED",    // ACTIVE / INACTIVE_WAIT / SCENARIO / STOPPED_INTRABAR / NO_DATA; UNSTAMPED = never actionable (fail closed)
+    val snapshotId: String = "",
+    val instrument: String = "",
+    val dataSource: String = "",
+    val sourceTimeMs: Long = 0L,
+    val generatedAtMs: Long = 0L,
+    val modelVersion: String = "",
+    val stopTouched: String = ""             // candle time when the recorded stop was touched, "" if not
 ) {
     fun getStrategyNote(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> strategyNote

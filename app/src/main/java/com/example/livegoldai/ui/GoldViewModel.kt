@@ -254,8 +254,11 @@ class GoldViewModel @JvmOverloads constructor(
                         val withBrain = full.copy(brain = try { buildBrain(full, council) } catch (_: Exception) { null }, pulse = pulse)
                         // V29B: one read-only decision description for Home, Brain and the Decision Trace
                         val research = try { shadowLive.stats(currentInterval).status } catch (_: Exception) { null }
-                        withBrain.copy(presentation = try {
-                            com.example.livegoldai.data.PresentationBuilder.build(withBrain, learning.currentState(), research)
+                        val st = learning.currentState()
+                        // V31: stamp the plan (status + provenance) from this same snapshot before anything shows it
+                        val stamped = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st) } catch (_: Exception) { withBrain }
+                        stamped.copy(presentation = try {
+                            com.example.livegoldai.data.PresentationBuilder.build(stamped, st, research)
                         } catch (_: Exception) { null })
                     }
                 } catch (_: Exception) {

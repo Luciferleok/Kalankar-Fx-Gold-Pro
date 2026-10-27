@@ -47,6 +47,9 @@ fun KyaHogaPredictionDialog(
     val prediction = analysis.nextPrediction
     val candleInsight = analysis.candleInsight
     val tradeSetup = analysis.tradeSetup
+    // V31-C: only an ACTIVE plan of a published BUY/SELL is actionable; everything else is a scenario or closed
+    val actionable = com.example.livegoldai.data.PlanStamp.isActionable(tradeSetup) && analysis.overallSignal != Signal.WAIT
+    val PT = com.example.livegoldai.data.PlanText
 
     // Probabilities calculation
     val baseProb = prediction?.winProbabilityPercent ?: tradeSetup.confidencePercent
@@ -172,7 +175,8 @@ fun KyaHogaPredictionDialog(
                                     Text(
                                         maxLines = 1,
                                         softWrap = false,
-                                        text = "${prediction?.winProbabilityPercent ?: baseProb}%",
+                                        text = if (analysis.overallSignal == Signal.WAIT) "NO CALL"
+                                            else "${prediction?.winProbabilityPercent ?: baseProb}% " + when (analysis.presentation?.headlineKind) { "HISTORICAL" -> "hit-rate"; else -> "agr" },
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -215,6 +219,21 @@ fun KyaHogaPredictionDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    // V31-G: ONE authoritative decision banner at the top
+                    val (bannerHead, bannerSub) = PT.banner(analysis, currentLanguage)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = primaryColor.copy(alpha = 0.10f),
+                        border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.55f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            Text(text = bannerHead, color = primaryColor, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = bannerSub, color = if (actionable) TextPrimary else SignalWait, fontSize = 12.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
                     // 1. Direct Forecast Big Answer Card
                     Surface(
                         shape = RoundedCornerShape(18.dp),
@@ -266,11 +285,7 @@ fun KyaHogaPredictionDialog(
                                         AppLanguage.HINDI -> "नियम नीचे की ओर हैं • टारगेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
                                         AppLanguage.MARATHI -> "नियम खालच्या दिशेने आहेत • टार्गेट 2, ${tradeSetup.takeProfit2Pips.toInt()} पिप्स दूर"
                                     }
-                                    else -> when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "🟡 GOLD IS CURRENTLY IN CONSOLIDATION / RANGE-BOUND MOVE!"
-                                        AppLanguage.HINDI -> "🟡 GOLD में अभी CONSOLIDATION / RANGE-BOUND चाल रहेगी!"
-                                        AppLanguage.MARATHI -> "🟡 GOLD मध्ये सध्या मर्यादित चढ-उतार / रेंज-बाऊंड हालचाल राहील!"
-                                    }
+                                    else -> PT.waitHeadline(analysis, currentLanguage)
                                 },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black,
@@ -280,7 +295,7 @@ fun KyaHogaPredictionDialog(
 
                             Spacer(modifier = Modifier.height(6.dp))
 
-                            Text(
+                            if (actionable) Text(
                                 text = prediction?.actionHeading ?: (
                                     if (isBuy) "Buyers are accumulating heavily at support. Target $${String.format(Locale.US, "%.2f", tradeSetup.takeProfit2)}"
                                     else "Sellers are dominant under resistance. Target $${String.format(Locale.US, "%.2f", tradeSetup.takeProfit2)}"
@@ -291,7 +306,7 @@ fun KyaHogaPredictionDialog(
                             )
 
                             val whatToDoStr = prediction?.getWhatToDo(currentLanguage) ?: ""
-                            if (whatToDoStr.isNotBlank()) {
+                            if (actionable && whatToDoStr.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
@@ -724,7 +739,7 @@ fun KyaHogaPredictionDialog(
                     }
 
                     // 1.8 MULTI-AI ENSEMBLE CONSENSUS (Gemini + ChatGPT + Claude + DeepSeek + Perplexity)
-                    analysis.multiAiConsensus?.let { consensus ->
+                    analysis.multiAiConsensus?.takeIf { com.example.livegoldai.data.MultiAiConsensusEngine.consistent(it) }?.let { consensus ->
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = ObsidianSurfaceCard,
@@ -853,11 +868,7 @@ fun KyaHogaPredictionDialog(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "PAST RECORD (NOT A FORECAST)"
-                                            AppLanguage.HINDI -> "पिछला रिकॉर्ड (भविष्यवाणी नहीं)"
-                                            AppLanguage.MARATHI -> "मागील रेकॉर्ड (भविष्यवाणी नाही)"
-                                        },
+                                        text = PT.evidenceTitle(split.fromHistory, currentLanguage),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Black,
                                         color = GoldLight,
@@ -868,9 +879,9 @@ fun KyaHogaPredictionDialog(
 
                             Text(
                                 text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> if (split.fromHistory) "What really happened after this app's past BUY/SELL calls (all timeframes). It is a track record, not the chance of this call." else "Not enough history yet: these are today's pillar votes, not probabilities"
-                                    AppLanguage.HINDI -> if (split.fromHistory) "पिछली BUY/SELL कॉल्स के बाद असल में क्या हुआ, उस पर आधारित" else "अभी इतिहास कम है: ये आज के पिलर वोट हैं, संभावना नहीं"
-                                    AppLanguage.MARATHI -> if (split.fromHistory) "मागील BUY/SELL कॉल्सनंतर प्रत्यक्षात काय झाले त्यावर आधारित" else "अजून इतिहास कमी: ही आजची पिलर मते आहेत, शक्यता नाही"
+                                    AppLanguage.ENGLISH -> PT.evidenceNote(split.fromHistory, AppLanguage.ENGLISH)
+                                    AppLanguage.HINDI -> PT.evidenceNote(split.fromHistory, AppLanguage.HINDI)
+                                    AppLanguage.MARATHI -> PT.evidenceNote(split.fromHistory, AppLanguage.MARATHI)
                                 },
                                 fontSize = 9.sp,
                                 color = TextMuted
@@ -1065,11 +1076,7 @@ fun KyaHogaPredictionDialog(
                                     horizontalAlignment = Alignment.End
                                 ) {
                                     Text(
-                                        text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Next Expected Target"
-                                            AppLanguage.HINDI -> "अगला संभावित टारगेट"
-                                            AppLanguage.MARATHI -> "पुढील अपेक्षित टार्गेट"
-                                        },
+                                        text = PT.targetLabel(tradeSetup, currentLanguage),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontSize = 10.sp,
                                         color = TextMuted
@@ -1131,11 +1138,7 @@ fun KyaHogaPredictionDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "🎯 RECOMMENDED ACTION PLAN"
-                                        AppLanguage.HINDI -> "🎯 आपको क्या करना चाहिए (ACTION PLAN)"
-                                        AppLanguage.MARATHI -> "🎯 तुम्ही काय करायला हवे (अ‍ॅक्शन प्लॅन)"
-                                    },
+                                    text = PT.planTitle(tradeSetup, currentLanguage),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Black,
                                     color = GoldLight
@@ -1145,7 +1148,7 @@ fun KyaHogaPredictionDialog(
                                     color = primaryColor.copy(alpha = 0.2f)
                                 ) {
                                     Text(
-                                        text = "R:R ${tradeSetup.riskRewardRatio}",
+                                        text = "risk:reward ${tradeSetup.riskRewardRatio}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -1183,8 +1186,8 @@ fun KyaHogaPredictionDialog(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // 1-Tap Lot Calculator Button
-                            OutlinedButton(
+                            // 1-Tap Lot Calculator Button (V31-C: only for an ACTIVE plan)
+                            if (actionable) OutlinedButton(
                                 onClick = {
                                     onDismiss()
                                     onOpenLotCalculator(tradeSetup.stopLossPips)
@@ -1218,6 +1221,13 @@ fun KyaHogaPredictionDialog(
                             }
                         }
                     }
+
+                    // V31-E: where every price above came from (same snapshot)
+                    Text(
+                        text = PT.provenance(tradeSetup, currentLanguage),
+                        color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                    )
 
                     // 5. Invalidation Warning Alert
                     Surface(
