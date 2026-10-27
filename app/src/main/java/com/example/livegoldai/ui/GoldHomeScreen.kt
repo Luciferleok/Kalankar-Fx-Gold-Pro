@@ -107,8 +107,10 @@ fun GoldHomeScreen(
             oandaSaved = uiState.oandaTokenSaved,
             oandaStatusLine = if (uiState.oandaTesting) "…" else if (!uiState.oandaTokenSaved) com.example.livegoldai.data.OandaText.status(com.example.livegoldai.data.OandaHealth(com.example.livegoldai.data.OandaStatus.NOT_CONFIGURED), uiState.language)
                 else com.example.livegoldai.data.OandaText.status(uiState.oandaHealth, uiState.language),
-            oandaPanel = com.example.livegoldai.data.OandaText.panel(uiState.oandaHealth, uiState.oandaTokenSaved, f?.let { com.example.livegoldai.data.SourceRegistry.badge(it.source) } ?: "", now, uiState.language),
-            oandaTesting = uiState.oandaTesting
+            oandaPanel = com.example.livegoldai.data.OandaText.panel(uiState.oandaHealth, uiState.oandaTokenSaved, f?.let { com.example.livegoldai.data.SourceRegistry.badge(it.source) } ?: "", now, uiState.language, uiState.oandaSync),
+            oandaTesting = uiState.oandaTesting,
+            oandaSyncRows = com.example.livegoldai.data.OandaText.syncRows(uiState.oandaSync, uiState.language),
+            oandaSyncing = uiState.oandaSyncing
         )
         val consoleActions = com.example.livegoldai.ui.v8.SettingsConsoleActions(
             onLang = { viewModel.selectLanguage(it) },
@@ -127,7 +129,8 @@ fun GoldHomeScreen(
             onClose = { showSettings = false },
             onSaveOandaToken = { viewModel.saveOandaToken(it) },
             onRemoveOandaToken = { viewModel.removeOandaToken() },
-            onTestOanda = { viewModel.testOanda() }
+            onTestOanda = { viewModel.testOanda() },
+            onSyncOanda = { viewModel.syncOandaCandles() }
         )
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showSettings = false },

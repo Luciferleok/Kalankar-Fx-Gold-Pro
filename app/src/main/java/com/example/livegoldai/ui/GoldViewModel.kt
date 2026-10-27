@@ -110,6 +110,8 @@ data class GoldUiState(
     val oandaTokenSaved: Boolean = false,
     val oandaHealth: com.example.livegoldai.data.OandaHealth? = null,
     val oandaTesting: Boolean = false,
+    val oandaSync: com.example.livegoldai.data.CandleSync.Report? = null,
+    val oandaSyncing: Boolean = false,
     // ---- V28 Shadow Lab (walk-forward tournament on real history; never changes the live signal)
     val shadowReport: com.example.livegoldai.data.ShadowLab.Report? = null,
     val shadowRunning: Boolean = false,
@@ -514,6 +516,28 @@ class GoldViewModel @JvmOverloads constructor(
                 } finally { oandaGate.done() }
             }
             _uiState.update { it.copy(oandaHealth = h, oandaTesting = false) }
+        }
+    }
+
+    // ---- V32 stage 2: candle sync check (read-only; the analysis feed is not changed)
+    private val oandaSyncGate = com.example.livegoldai.data.OandaProbeGate()
+    private val oandaStore by lazy { com.example.livegoldai.data.OandaCandleStore(oandaTransport, { aiVault.getOandaToken() }) }
+
+    fun syncOandaCandles() {
+        if (!_uiState.value.oandaTokenSaved || !oandaSyncGate.tryStart(System.currentTimeMillis())) return
+        _uiState.update { it.copy(oandaSyncing = true) }
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) {
+                try {
+                    val rep = com.example.livegoldai.data.CandleSync.run(oandaStore, { System.currentTimeMillis() })
+                    val d = _uiState.value.data
+                    val td = d != null && com.example.livegoldai.data.SourceRegistry.identify(d.feed?.source).provider == com.example.livegoldai.data.ProviderId.TWELVE_DATA
+                    val (ag, note) = if (td && d != null) com.example.livegoldai.data.CandleSync.agreement(d.interval, d.recentCandles, oandaStore, System.currentTimeMillis())
+                        else Pair(null, "Twelve Data is not the active feed")
+                    rep.copy(agreement = ag, agreementNote = note)
+                } catch (_: Exception) { null } finally { oandaSyncGate.done() }
+            }
+            _uiState.update { it.copy(oandaSync = r, oandaSyncing = false) }
         }
     }
 

@@ -58,7 +58,9 @@ data class SettingsConsoleState(
     val oandaSaved: Boolean = false,
     val oandaStatusLine: String = "",
     val oandaPanel: List<Pair<String, String>> = emptyList(),
-    val oandaTesting: Boolean = false
+    val oandaTesting: Boolean = false,
+    val oandaSyncRows: List<Pair<String, String>> = emptyList(),
+    val oandaSyncing: Boolean = false
 )
 
 class SettingsConsoleActions(
@@ -78,7 +80,8 @@ class SettingsConsoleActions(
     val onClose: () -> Unit,
     val onSaveOandaToken: (String) -> Unit = {},
     val onRemoveOandaToken: () -> Unit = {},
-    val onTestOanda: () -> Unit = {}
+    val onTestOanda: () -> Unit = {},
+    val onSyncOanda: () -> Unit = {}
 )
 
 /**
@@ -212,6 +215,16 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
                     Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(V8.Card2).border(0.6.dp, V8.Line, RoundedCornerShape(10.dp)).padding(12.dp)) {
                         s.oandaPanel.forEach { (k, v) ->
                             Text(text = k.uppercase(), color = V8.Text3, style = KType.Caption)
+                            Text(text = v, color = V8.Text1, style = KType.BodyPrimary, modifier = Modifier.padding(bottom = 8.dp))
+                        }
+                        // V32 stage 2: candle sync for 2m..30m from real OANDA candles
+                        Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(V8.Line))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp)) {
+                            Text(text = tr(lang, "CANDLE SYNC 2M–30M", "कैंडल सिंक 2M–30M", "कँडल सिंक 2M–30M"), color = V8.Gold, style = KType.SectionLabel, modifier = Modifier.weight(1f))
+                            SmallAction(if (s.oandaSyncing) "…" else tr(lang, "SYNC", "सिंक", "सिंक")) { if (!s.oandaSyncing && s.oandaSaved) a.onSyncOanda() }
+                        }
+                        s.oandaSyncRows.forEach { (k, v) ->
+                            Text(text = k, color = V8.Text3, style = KType.Caption)
                             Text(text = v, color = V8.Text1, style = KType.BodyPrimary, modifier = Modifier.padding(bottom = 8.dp))
                         }
                     }

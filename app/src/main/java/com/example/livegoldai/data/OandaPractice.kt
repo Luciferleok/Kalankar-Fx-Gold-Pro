@@ -214,7 +214,7 @@ object OandaText {
     }
 
     /** Rows of the Market Data Health panel: label to value. [activeProvider] = the badge of the feed the analysis uses now. */
-    fun panel(h: OandaHealth?, tokenSaved: Boolean, activeProvider: String, now: Long, l: AppLanguage): List<Pair<String, String>> {
+    fun panel(h: OandaHealth?, tokenSaved: Boolean, activeProvider: String, now: Long, l: AppLanguage, sync: CandleSync.Report? = null): List<Pair<String, String>> {
         val notBuilt = { stage: Int -> t(l, "Not built yet (stage $stage)", "अभी नहीं बना (स्टेज $stage)", "अजून बनले नाही (स्टेज $stage)") }
         val rows = mutableListOf<Pair<String, String>>()
         rows += t(l, "Active provider (analysis)", "सक्रिय प्रोवाइडर (विश्लेषण)", "सक्रिय प्रोव्हायडर (विश्लेषण)") to
@@ -242,7 +242,9 @@ object OandaText {
             else -> "STALE"
         }
         rows += t(l, "Streaming", "स्ट्रीमिंग", "स्ट्रीमिंग") to notBuilt(3)
-        rows += t(l, "Historical candle sync", "हिस्टोरिकल कैंडल सिंक", "हिस्टोरिकल कँडल सिंक") to notBuilt(2)
+        rows += t(l, "Historical candle sync", "हिस्टोरिकल कैंडल सिंक", "हिस्टोरिकल कँडल सिंक") to
+            (if (sync == null) t(l, "Not run • tap SYNC", "नहीं चला • SYNC दबाएँ", "चालले नाही • SYNC दाबा")
+             else "${sync.okCount}/${sync.rows.size} " + t(l, "timeframes OK", "टाइमफ्रेम OK", "टाइमफ्रेम OK") + " • " + utcHm(sync.atMs) + " • ${sync.requests} " + t(l, "requests", "रिक्वेस्ट", "रिक्वेस्ट"))
         rows += t(l, "Reconnection", "री-कनेक्शन", "री-कनेक्शन") to notBuilt(3)
         rows += t(l, "Rate limit", "रेट लिमिट", "रेट लिमिट") to
             (if (h?.status == OandaStatus.RATE_LIMITED) t(l, "WARNING: OANDA answered 429", "चेतावनी: OANDA ने 429 दिया", "इशारा: OANDA ने 429 दिला")
@@ -250,6 +252,34 @@ object OandaText {
         rows += t(l, "Order execution", "ऑर्डर एक्सीक्यूशन", "ऑर्डर एक्झिक्युशन") to
             t(l, "DISABLED • the app has no order code", "बंद • ऐप में ऑर्डर का कोड ही नहीं", "बंद • ॲपमध्ये ऑर्डरचा कोडच नाही")
         return rows
+    }
+
+    /** One row per requested timeframe, plus the Twelve Data agreement check. Only what the sync really found. */
+    fun syncRows(r: CandleSync.Report?, l: AppLanguage): List<Pair<String, String>> {
+        if (r == null) return emptyList()
+        val rows = r.rows.map { x ->
+            val key = "${x.targetMin}M • ${x.plan}"
+            key to when {
+                x.status != OandaStatus.CONNECTED -> status(OandaHealth(x.status, httpCode = 0), l)
+                x.completed == 0 -> t(l, "No completed bars returned", "कोई पूरी कैंडल नहीं मिली", "पूर्ण कँडल मिळाली नाही")
+                else -> buildString {
+                    append("${x.completed} " + t(l, "completed", "पूरी", "पूर्ण"))
+                    append(" • " + t(l, "last", "आख़िरी", "शेवटची") + " " + OandaDiagnostics.utc(x.lastCompleteMs).removeSuffix(" UTC").substring(11) + " UTC")
+                    append(" • " + String.format(Locale.US, "%.3f", x.lastClose))
+                    if (x.developing) append(" • " + t(l, "1 forming (not used)", "1 बन रही (इस्तेमाल नहीं)", "1 बनत आहे (वापर नाही)"))
+                    if (x.gappedBars > 0) append(" • ${x.gappedBars} " + t(l, "with missing minutes (no ticks; not filled)", "में मिनट गायब (टिक नहीं; भरे नहीं)", "मध्ये मिनिटे नाहीत (टिक नाही; भरली नाहीत)"))
+                    if (x.misaligned > 0) append(" • ${x.misaligned} " + t(l, "MISALIGNED dropped", "गलत-संरेखित हटाई", "चुकीची संरेखित काढली"))
+                    if (x.invalid > 0) append(" • ${x.invalid} " + t(l, "invalid dropped", "अमान्य हटाई", "अवैध काढली"))
+                }
+            }
+        }
+        val a = r.agreement
+        val agree = t(l, "OANDA vs Twelve Data", "OANDA बनाम Twelve Data", "OANDA विरुद्ध Twelve Data") to
+            (if (a == null) t(l, "Not compared", "तुलना नहीं हुई", "तुलना नाही") + if (r.agreementNote.isNotBlank()) " • ${r.agreementNote}" else ""
+             else "${a.interval.uppercase()} " + OandaDiagnostics.utc(a.barMs).substring(11) + " • " +
+                String.format(Locale.US, "%.3f vs %.3f • Δ %+.3f (%.3f%%) • ", a.oanda, a.twelve, a.diff, a.pct) +
+                (if (a.agrees) t(l, "AGREE", "मेल खाते हैं", "जुळतात") else t(l, "DIFFERENT • feeds are never mixed", "अलग • फ़ीड कभी मिलाए नहीं जाते", "वेगळे • फीड कधीही मिसळले जात नाहीत")))
+        return rows + agree
     }
 
     private fun utcHm(ms: Long) = SimpleDateFormat("HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(java.util.Date(ms)) + " UTC"

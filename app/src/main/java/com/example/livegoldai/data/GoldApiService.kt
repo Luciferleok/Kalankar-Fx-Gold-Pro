@@ -106,6 +106,17 @@ class GoldApiService(
 
     fun getApiKey(): String = apiKey
 
+    /** V32: base candle length in minutes, for UTC-aligned grouping. null = weekly/monthly: legacy grouping. */
+    private fun tdBaseMinutes(td: String): Int? = when (td) {
+        "1min" -> 1; "5min" -> 5; "15min" -> 15; "30min" -> 30; "45min" -> 45; "1h" -> 60; "2h" -> 120; "4h" -> 240; "1day" -> 1440
+        else -> null
+    }
+    private fun binanceBaseMinutes(b: String): Int? = when (b) {
+        "1m" -> 1; "3m" -> 3; "5m" -> 5; "15m" -> 15; "30m" -> 30; "1h" -> 60; "2h" -> 120; "4h" -> 240; "6h" -> 360; "1d" -> 1440
+        else -> null
+    }
+
+    /** Legacy grouping, now only for weekly bars (2w / 3w). */
     private fun aggregateCandles(candles: List<CandleBar>, groupSize: Int): List<CandleBar> {
         if (candles.size < groupSize || groupSize <= 1) return candles
         val result = mutableListOf<CandleBar>()
@@ -209,7 +220,11 @@ class GoldApiService(
                         // V29A (choice A): PAXG/USDT volume is a different market and is no longer merged into
                         // XAU/USD candles, so it cannot reach any XAU/USD indicator or vote.
                         val volSource = ""
-                        val candleList = if (tdGroup > 1) aggregateCandles(rawList, tdGroup) else rawList
+                        // V32: groups are aligned to UTC bar boundaries and labelled with the bar START (before: counted
+                        // from the first row returned, and labelled with the last minute inside the group)
+                        val candleList = if (tdGroup <= 1) rawList
+                            else tdBaseMinutes(tdInterval)?.let { CandleAggregator.alignCandles(rawList, it, tdGroup, System.currentTimeMillis()) }
+                                ?: aggregateCandles(rawList, tdGroup)
                         if (candleList.size >= 30) {
                             val analysis = TechnicalEngine.analyze(
                                 candles = candleList,
@@ -268,7 +283,7 @@ class GoldApiService(
                 val klines = json.parseToJsonElement(bodyString).jsonArray
                 if (klines.size >= 10) {
                     val rawList = mutableListOf<CandleBar>()
-                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }   // V32: UTC, same format as Twelve Data
                     for (item in klines) {
                         val arr = item.jsonArray
                         val timeMs = arr[0].jsonPrimitive.content.toLongOrNull() ?: 0L
@@ -293,7 +308,9 @@ class GoldApiService(
                             )
                         }
                     }
-                    val candleList = if (binanceGroup > 1) aggregateCandles(rawList, binanceGroup) else rawList
+                    val candleList = if (binanceGroup <= 1) rawList
+                        else binanceBaseMinutes(binanceInterval)?.let { CandleAggregator.alignCandles(rawList, it, binanceGroup, System.currentTimeMillis()) }
+                            ?: aggregateCandles(rawList, binanceGroup)
                     if (candleList.size >= 30) {
                         val analysis = TechnicalEngine.analyze(
                             candles = candleList,
@@ -346,7 +363,7 @@ class GoldApiService(
 
                 if (timestampArr != null && closes != null && timestampArr.size >= 10) {
                     val rawList = mutableListOf<CandleBar>()
-                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+                    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }   // V32: UTC, same format as Twelve Data
                     for (i in timestampArr.indices) {
                         val ts = timestampArr[i].jsonPrimitive.content.toLongOrNull() ?: continue
                         val c = closes[i].jsonPrimitive.content.toDoubleOrNull() ?: continue
