@@ -34,7 +34,8 @@ class GoldApiService(
     class VolBar(val t: Long, val v: Double, val buy: Double)
 
     companion object {
-        const val VOLUME_SOURCE = "PAXG/USDT (Binance)"
+        // V29D-H2: PAXG/USDT trades are a different market: always named as PROXY volume, never as XAU/USD volume
+        const val VOLUME_SOURCE = "PAXG/USDT (Binance) • PROXY volume, not XAU/USD"
 
         /** One Twelve Data credit budget for the whole app (screen, recorder, verification, Shadow Lab). */
         val creditBudget = CreditBudget()
@@ -365,7 +366,7 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures" else "")
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures • futures volume, not XAU/USD spot" else "")
                         memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                         return@withContext Result.success(finalResult)
                     }

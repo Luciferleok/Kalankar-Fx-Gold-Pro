@@ -80,6 +80,10 @@ object PlanStamp {
             rec != null && rec.finalSignal == a.overallSignal && rec.slDistance > 0 &&
                 stopTouch(a, rec.price, rec.slDistance, rec.barId).also { touched = it }.isNotEmpty() -> STOPPED
             researchStatus != "LIVE QUALIFIED" -> RESEARCH
+            // V29D-H1: Shadow Lab models are trained and qualified on Twelve Data XAU/USD only. A qualification never
+            // carries over to another instrument, or to a source that the gate has not fully restored.
+            SourceRegistry.compatibility(SourceRegistry.identify(a.feed?.source).instrument) != Compatibility.COMPATIBLE -> RESEARCH
+            a.sourceState.isNotEmpty() && a.sourceState != SourceStateMachine.PRIMARY_ACTIVE -> RESEARCH
             else -> ACTIVE
         }
         val t = a.tradeSetup

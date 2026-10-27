@@ -383,9 +383,14 @@ class GoldViewModel @JvmOverloads constructor(
             _uiState.update { s ->
                 val d = s.data
                 val rep = report?.first
-                if (rep != null && d != null && d.interval == rep.interval) {
-                    s.copy(aiRunning = false, data = d.copy(aiCouncil = rep, health = HealthMonitor.withAi(d.health, rep), brain = report.second ?: d.brain,
-                        presentation = d.presentation?.copy(aiStatus = when { rep == null || rep.configured == 0 -> "NOT CONNECTED"; rep.eligible == 0 -> "ERROR"; else -> "AVAILABLE" })))
+                // V29D-H4: attach the AI result only to the SAME snapshot it was computed on; a newer refresh
+                // must never receive a brain / council built from an older candle (no mixed snapshots)
+                if (rep != null && d != null && d.interval == rep.interval && d.lastUpdated == data.lastUpdated && d.feed?.fetchedAtMs == data.feed?.fetchedAtMs) {
+                    val newBrain = report.second ?: d.brain
+                    s.copy(aiRunning = false, data = d.copy(aiCouncil = rep, health = HealthMonitor.withAi(d.health, rep), brain = newBrain,
+                        presentation = d.presentation?.copy(
+                            aiStatus = when { rep.configured == 0 -> "NOT CONNECTED"; rep.eligible == 0 -> "ERROR"; else -> "AVAILABLE" },
+                            uncertainty = newBrain?.totalUncertainty ?: d.presentation?.uncertainty ?: "UNKNOWN")))
                 } else s.copy(aiRunning = false)
             }
         }
