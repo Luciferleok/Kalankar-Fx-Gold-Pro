@@ -69,25 +69,11 @@ fun KyaHogaPredictionDialog(
         else -> SignalWait
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse_glow")
-    val pulseGlow by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseGlow"
-    )
+    // V29E: no constant glow animation (it recomposed the modal every frame)
 
-    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    // V29E: no per-second state here (the timer lives in ForecastTimer), so the modal does not recompose every second
+    val nowMillis = System.currentTimeMillis()
     val validUntil = prediction?.validUntilTimestamp ?: 0L
-    LaunchedEffect(validUntil) {
-        while (isActive) {
-            delay(1000)
-            nowMillis = System.currentTimeMillis()
-        }
-    }
     val remainingMillis = (validUntil - nowMillis).coerceAtLeast(0L)
     val isValid = remainingMillis > 0L || validUntil == 0L
     val remTotalSeconds = remainingMillis / 1000L
@@ -110,19 +96,20 @@ fun KyaHogaPredictionDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.92f)
+                .heightIn(max = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.92f).dp)
+                .navigationBarsPadding()
                 .testTag("kya_hoga_prediction_dialog"),
             shape = RoundedCornerShape(24.dp),
             color = ObsidianSurfaceCard,
             border = CardDefaults.outlinedCardBorder().copy(
                 brush = Brush.linearGradient(
-                    listOf(GoldPrimary, primaryColor.copy(alpha = pulseGlow), ObsidianBorderHighlight, GoldDark)
+                    listOf(GoldPrimary, primaryColor.copy(alpha = 0.6f), ObsidianBorderHighlight, GoldDark)
                 )
             )
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .padding(20.dp)
             ) {
                 // Top Header Row
@@ -216,7 +203,7 @@ fun KyaHogaPredictionDialog(
                 // Scrollable Content
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1f, fill = false)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -334,118 +321,29 @@ fun KyaHogaPredictionDialog(
                     }
 
                     if (analysis.overallSignal != Signal.WAIT) {
-                    // 1.5 LIVE PREDICTION VALIDITY COUNTDOWN BANNER
+                    // V29E: one state-driven validity card. Title and colours come from ForecastState (never ACTIVE for
+                    // research); only the small timer below ticks, so the heavy modal is not recomposed every second.
+                    val fState = analysis.presentation?.forecastState ?: com.example.livegoldai.data.ForecastState.resolve(tradeSetup, analysis.overallSignal, null)
+                    val FS = com.example.livegoldai.data.ForecastState
+                    val stateColor = when (fState) { FS.APPROVED_ACTIVE -> SignalBuy; FS.STALE, FS.OFFLINE, FS.STOPPED -> SignalSell; else -> SignalWait }
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isValid) ObsidianSurfaceElevated else ObsidianSurfaceCard,
-                        border = CardDefaults.outlinedCardBorder().copy(
-                            brush = Brush.horizontalGradient(
-                                if (isValid) listOf(NeonGreen.copy(alpha = 0.8f), GoldPrimary.copy(alpha = 0.6f))
-                                else listOf(SignalSell.copy(alpha = 0.6f), ObsidianBorder)
-                            )
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("dialog_validity_timer_banner")
+                        color = ObsidianSurfaceCard,
+                        border = BorderStroke(1.dp, stateColor.copy(alpha = 0.45f)),
+                        modifier = Modifier.fillMaxWidth().testTag("dialog_validity_timer_banner")
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isValid) NeonGreen.copy(alpha = pulseGlow) else SignalSell)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> if (isValid) "PREDICTION VALIDITY (ACTIVE)" else "VALIDITY EXPIRED (EVALUATING)"
-                                            AppLanguage.HINDI -> if (isValid) "प्रेडिक्शन वैधता (सक्रिय)" else "समय समाप्त (अगला चक्र शुरू)"
-                                            AppLanguage.MARATHI -> if (isValid) "प्रेडिक्शन वैधता (सक्रिय)" else "वेळ संपली (पुढील चक्र सुरू)"
-                                        },
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (isValid) GoldLight else TextMuted,
-                                        letterSpacing = 0.8.sp
-                                    )
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = (if (isValid) NeonGreen else SignalSell).copy(alpha = 0.16f),
-                                    border = BorderStroke(1.dp, (if (isValid) NeonGreen else SignalSell).copy(alpha = 0.5f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isValid) Icons.Default.HourglassTop else Icons.Default.TimerOff,
-                                            contentDescription = null,
-                                            tint = if (isValid) NeonGreen else SignalSell,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = if (isValid) "⏳ $countdownStr" else "EXPIRED",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = if (isValid) NeonGreen else SignalSell
-                                        )
-                                    }
-                                }
-                            }
-
+                            Text(text = FS.validityTitle(fState, currentLanguage), color = stateColor, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 0.6.sp)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(text = FS.validitySubtitle(fState, currentLanguage), color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
                             Spacer(modifier = Modifier.height(8.dp))
-
-                            LinearProgressIndicator(
-                                progress = { progressFraction },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(5.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = if (progressFraction > 0.25f) NeonGreen else AmberWarning,
-                                trackColor = ObsidianBorder
+                            Text(text = FS.intervalLine(analysis.interval, tradeSetup.horizonMin.takeIf { it > 0 } ?: (prediction?.validityDurationMinutes ?: 0), currentLanguage),
+                                color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            ForecastTimer(
+                                expiresAtMs = analysis.presentation?.expiresAtMs?.takeIf { it > 0 } ?: validUntil,
+                                outcome = analysis.presentation?.outcome ?: "",
+                                language = currentLanguage
                             )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "⏱️ ${prediction?.getValidityFormatted(currentLanguage) ?: "Active for this interval"}",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "Auto-Evaluated at TP1/SL"
-                                        AppLanguage.HINDI -> "TP1 या SL हिट होने पर स्वतः समाप्त"
-                                        AppLanguage.MARATHI -> "TP1 किंवा SL हिट झाल्यास पूर्ण"
-                                    },
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    color = TextMuted
-                                )
-                            }
-
-                            val ruleText = prediction?.getInvalidationRule(currentLanguage) ?: ""
-                            if (ruleText.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "🛡️ $ruleText",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = GoldLight.copy(alpha = 0.9f)
-                                )
-                            }
                         }
                     }
 
@@ -948,7 +846,7 @@ fun KyaHogaPredictionDialog(
 
                             // Bullish Probability Bar
                             ProbabilityItemRow(
-                                title = PT.shareRow(Signal.BUY, split.fromHistory, currentLanguage),
+                                title = PT.shareRow(Signal.BUY, split.fromHistory, currentLanguage, analysis.overallSignal),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.BUY) "past calls: went the called way" else "past calls: went against the call"
                                     AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.BUY) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
@@ -963,7 +861,7 @@ fun KyaHogaPredictionDialog(
 
                             // Sideways Probability Bar
                             ProbabilityItemRow(
-                                title = PT.shareRow(Signal.WAIT, split.fromHistory, currentLanguage),
+                                title = PT.shareRow(Signal.WAIT, split.fromHistory, currentLanguage, analysis.overallSignal),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (split.fromHistory) "past calls: no real move" else "share of pillars voting WAIT"
                                     AppLanguage.HINDI -> if (split.fromHistory) "पिछली कॉल: कोई असली चाल नहीं" else "WAIT वोट करने वाले पिलर"
@@ -978,7 +876,7 @@ fun KyaHogaPredictionDialog(
 
                             // Bearish Probability Bar
                             ProbabilityItemRow(
-                                title = PT.shareRow(Signal.SELL, split.fromHistory, currentLanguage),
+                                title = PT.shareRow(Signal.SELL, split.fromHistory, currentLanguage, analysis.overallSignal),
                                 hindiDetail = when (currentLanguage) {
                                     AppLanguage.ENGLISH -> if (!split.fromHistory) "share of indicator pillars voting this way" else if (analysis.overallSignal == Signal.SELL) "past calls: went the called way" else "past calls: went against the call"
                                     AppLanguage.HINDI -> if (!split.fromHistory) "इस ओर वोट करने वाले इंडिकेटर पिलर" else if (analysis.overallSignal == Signal.SELL) "पिछली कॉल: बताई दिशा में गईं" else "पिछली कॉल: उल्टी गईं"
@@ -1156,7 +1054,7 @@ fun KyaHogaPredictionDialog(
                                         Text(text = "🕯️", fontSize = 12.sp)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Next Candle Forecast: ${candleInsight.nextCandleForecast}",
+                                            text = PT.nextCandleLabel(currentLanguage) + candleInsight.nextCandleForecast,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontSize = 10.sp,
                                             color = TextSecondary
@@ -1214,19 +1112,19 @@ fun KyaHogaPredictionDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 ActionItemPill(
-                                    label = "ENTRY ZONE",
+                                    label = if (actionable) "ENTRY ZONE" else "HYP. ENTRY",
                                     value = "$${String.format(Locale.US, "%.2f", tradeSetup.entryPrice)}",
                                     color = GoldLight,
                                     modifier = Modifier.weight(1f)
                                 )
                                 ActionItemPill(
-                                    label = "STOP LOSS",
+                                    label = if (actionable) "STOP LOSS" else "HYP. INVALIDATION",
                                     value = "$${String.format(Locale.US, "%.2f", tradeSetup.stopLoss)}",
                                     color = SignalSell,
                                     modifier = Modifier.weight(1f)
                                 )
                                 ActionItemPill(
-                                    label = "TARGET TP1",
+                                    label = if (actionable) "TARGET TP1" else "HYP. PROJECTED",
                                     value = "$${String.format(Locale.US, "%.2f", tradeSetup.takeProfit1)}",
                                     color = SignalBuy,
                                     modifier = Modifier.weight(1f)
@@ -1492,4 +1390,20 @@ private fun ReasonRow(
             lineHeight = 14.sp
         )
     }
+}
+
+/** V29E: the only per-second state of the modal: remaining time to a FIXED expiry, then the real outcome status. */
+@Composable
+private fun ForecastTimer(expiresAtMs: Long, outcome: String, language: AppLanguage) {
+    if (expiresAtMs <= 0L) return
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(expiresAtMs) {
+        while (isActive && now < expiresAtMs) { delay(1000); now = System.currentTimeMillis() }
+    }
+    val PT = com.example.livegoldai.data.PlanText
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = if (now < expiresAtMs) PT.remainingLine(expiresAtMs, now, language) else com.example.livegoldai.data.ForecastState.outcomeLine(outcome, language),
+        color = if (now < expiresAtMs) TextSecondary else SignalWait, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+    )
 }

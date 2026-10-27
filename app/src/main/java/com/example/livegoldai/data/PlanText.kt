@@ -57,7 +57,7 @@ object PlanText {
     fun planTitle(ts: TradeSetup, l: AppLanguage): String = when (ts.planStatus) {
         PlanStamp.ACTIVE -> t(l, "ACTION PLAN (ACTIVE)", "एक्शन प्लान (सक्रिय)", "अ‍ॅक्शन प्लॅन (सक्रिय)")
         PlanStamp.STOPPED -> t(l, "PLAN CLOSED: STOP-LOSS HIT", "प्लान बंद: STOP-LOSS लगा", "प्लॅन बंद: STOP-LOSS लागला")
-        PlanStamp.RESEARCH -> t(l, "UNVERIFIED RESEARCH LEVELS", "असत्यापित रिसर्च लेवल", "असत्यापित रिसर्च लेव्हल")
+        PlanStamp.RESEARCH -> t(l, "HYPOTHETICAL RESEARCH SCENARIO", "काल्पनिक रिसर्च परिदृश्य", "काल्पनिक रिसर्च परिस्थिती")
         PlanStamp.EXPIRED -> t(l, "PREDICTION EXPIRED", "प्रेडिक्शन की अवधि खत्म", "अंदाजाची मुदत संपली")
         else -> t(l, "CONDITIONAL SCENARIO (NOT A TRADE)", "शर्त वाला परिदृश्य (ट्रेड नहीं)", "अटींवरील परिस्थिती (ट्रेड नाही)")
     }
@@ -137,7 +137,7 @@ object PlanText {
         if (open) t(l, "RESEARCH DETAILS  ▴", "रिसर्च विवरण  ▴", "रिसर्च तपशील  ▴")
         else t(l, "RESEARCH DETAILS (rule council, vote shares, scenario, provenance)  ▾", "रिसर्च विवरण (नियम परिषद, वोट हिस्सा, परिदृश्य, स्रोत)  ▾", "रिसर्च तपशील (नियम परिषद, मत वाटा, परिस्थिती, स्रोत)  ▾")
 
-    fun researchScenarioTitle(l: AppLanguage) = t(l, "RESEARCH SCENARIOS — NOT AN ACTIVE TRADE", "रिसर्च परिदृश्य — सक्रिय ट्रेड नहीं", "रिसर्च परिस्थिती — सक्रिय ट्रेड नाही")
+    fun researchScenarioTitle(l: AppLanguage) = t(l, "HYPOTHETICAL RESEARCH SCENARIO — NOT AN ACTIVE TRADE", "काल्पनिक रिसर्च परिदृश्य — सक्रिय ट्रेड नहीं", "काल्पनिक रिसर्च परिस्थिती — सक्रिय ट्रेड नाही")
     fun scenarioInvalidationTitle(l: AppLanguage) = t(l, "SCENARIO INVALIDATION CONDITIONS", "परिदृश्य रद्द होने की शर्तें", "परिस्थिती रद्द होण्याच्या अटी")
     fun levelsSuppressed(l: AppLanguage) = t(l, "Levels hidden: the price source is not usable for XAU/USD decisions.", "लेवल छिपाए: भाव स्रोत XAU/USD फ़ैसलों के लायक नहीं।", "लेव्हल लपवले: भाव स्रोत XAU/USD निर्णयांसाठी योग्य नाही.")
 
@@ -157,14 +157,16 @@ object PlanText {
     fun councilNote(l: AppLanguage) = t(l, "Rule agreement does not prove prediction accuracy.", "नियमों की सहमति भविष्यवाणी की सटीकता साबित नहीं करती।", "नियमांची सहमती अंदाजाची अचूकता सिद्ध करत नाही.")
 
     // vote shares (current pillar votes) vs past outcomes
-    fun shareRow(kind: Signal, fromHistory: Boolean, l: AppLanguage): String = if (!fromHistory) when (kind) {
+    fun shareRow(kind: Signal, fromHistory: Boolean, l: AppLanguage, current: Signal = Signal.WAIT): String = if (!fromHistory) when (kind) {
         Signal.BUY -> t(l, "BUY VOTE SHARE", "BUY वोट हिस्सा", "BUY मत वाटा")
         Signal.WAIT -> t(l, "WAIT VOTE SHARE", "WAIT वोट हिस्सा", "WAIT मत वाटा")
         Signal.SELL -> t(l, "SELL VOTE SHARE", "SELL वोट हिस्सा", "SELL मत वाटा")
-    } else when (kind) {
-        Signal.BUY -> t(l, "PAST CALLS: PRICE WENT UP", "पिछली कॉल: भाव ऊपर गया", "मागील कॉल: भाव वर गेला")
-        Signal.WAIT -> t(l, "PAST CALLS: NO REAL MOVE", "पिछली कॉल: कोई असली चाल नहीं", "मागील कॉल: खरी हालचाल नाही")
-        Signal.SELL -> t(l, "PAST CALLS: PRICE WENT DOWN", "पिछली कॉल: भाव नीचे गया", "मागील कॉल: भाव खाली गेला")
+    } else when {
+        // V29E: history rows are outcomes RELATIVE to each past call's own direction (BUY and SELL calls mixed),
+        // shown on the side of the current call; they are not price-direction frequencies
+        kind == Signal.WAIT -> t(l, "PAST CALLS: NO REAL MOVE", "पिछली कॉल: कोई असली चाल नहीं", "मागील कॉल: खरी हालचाल नाही")
+        kind == current -> t(l, "PAST CALLS: WENT THE CALLED WAY", "पिछली कॉल: बताई दिशा में गईं", "मागील कॉल: सांगितलेल्या दिशेने")
+        else -> t(l, "PAST CALLS: WENT AGAINST THE CALL", "पिछली कॉल: उल्टी गईं", "मागील कॉल: उलट गेल्या")
     }
     fun shareNote(l: AppLanguage) = t(l, "Shares of rule-based indicator pillars. Not probabilities of future market outcomes.",
         "नियम-आधारित इंडिकेटर पिलरों का हिस्सा। भविष्य की चाल की संभावना नहीं।", "नियम-आधारित इंडिकेटर पिलरचा वाटा. भविष्यातील हालचालीची शक्यता नाही.")
@@ -229,14 +231,14 @@ object PlanText {
         val data = when (dq) { "EXCELLENT", "GOOD" -> t(l, "DATA USABLE", "डेटा ठीक", "डेटा वापरण्यायोग्य") to "OK"; "UNKNOWN" -> t(l, "DATA UNKNOWN", "डेटा अज्ञात", "डेटा अज्ञात") to "NA"; else -> t(l, "DATA $dq", "डेटा $dq", "डेटा $dq") to "WARN" }
         val signal = when {
             p.isTradeSetupActive -> t(l, "SIGNAL ELIGIBLE", "सिग्नल योग्य", "सिग्नल पात्र") to "OK"
-            p.finalSignal != Signal.WAIT && p.planStatus == PlanStamp.RESEARCH -> t(l, "RESEARCH SIGNAL (UNVERIFIED)", "रिसर्च सिग्नल (असत्यापित)", "रिसर्च सिग्नल (असत्यापित)") to "WARN"
+            p.finalSignal != Signal.WAIT && p.planStatus == PlanStamp.RESEARCH -> t(l, "RESEARCH SIGNAL — UNVERIFIED", "रिसर्च सिग्नल — असत्यापित", "रिसर्च सिग्नल — असत्यापित") to "WARN"
             p.planStatus == PlanStamp.NO_DATA -> t(l, "SIGNAL BLOCKED (DATA)", "सिग्नल रुका (डेटा)", "सिग्नल थांबला (डेटा)") to "BLOCK"
             p.finalSignal != Signal.WAIT -> t(l, "SIGNAL CLOSED", "सिग्नल बंद", "सिग्नल बंद") to "WARN"
             p.rawDiffersFromFinal || p.reasonCode in listOf("SOURCE", "DATA", "NO_KEY", "RANGE", "LEARNED") -> t(l, "SIGNAL BLOCKED", "सिग्नल रुका", "सिग्नल थांबला") to "BLOCK"
             else -> t(l, "NO SIGNAL", "कोई सिग्नल नहीं", "सिग्नल नाही") to "WARN"
         }
         val edge = if (p.provenEdge) t(l, "EDGE LIVE QUALIFIED", "बढ़त LIVE QUALIFIED", "आघाडी LIVE QUALIFIED") to "OK"
-            else t(l, "MODEL EDGE NOT PROVEN", "मॉडल बढ़त साबित नहीं", "मॉडेल आघाडी सिद्ध नाही") to "WARN"
+            else t(l, "PREDICTIVE EDGE NOT ESTABLISHED", "भविष्यवाणी बढ़त स्थापित नहीं", "अंदाज आघाडी स्थापित नाही") to "WARN"
         return listOf(data, signal, edge)
     }
 
@@ -254,4 +256,21 @@ object PlanText {
 
     /** "EMA21 $4039.56" -> "PAXG EMA21 $4039.56" (idempotent). */
     fun proxyLevel(level: String): String = if (level.isBlank() || level.startsWith("PAXG")) level else "PAXG $level"
+
+    // ================= V29E =================
+    fun nextCandleLabel(l: AppLanguage) = t(l, "Next-candle rule lean (separate, not evaluated, no track record): ",
+        "अगली कैंडल पर नियम झुकाव (अलग, जाँचा नहीं गया, कोई रिकॉर्ड नहीं): ", "पुढील कँडलवर नियम कल (वेगळा, तपासलेला नाही, रेकॉर्ड नाही): ")
+
+    /** "Time remaining: 22m 51s · Expires at 11:52:00 UTC" from a FIXED expiry. */
+    fun remainingLine(expiresAtMs: Long, now: Long, l: AppLanguage): String {
+        val ms = (expiresAtMs - now).coerceAtLeast(0L); val m = ms / 60_000; val s = (ms / 1000) % 60
+        val rem = if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m ${s}s"
+        return t(l, "Time remaining: ", "बचा समय: ", "उरलेला वेळ: ") + rem + " · " + t(l, "Expires at ", "समाप्ति ", "मुदत ") + time(expiresAtMs)
+    }
+
+    fun dataHealthCaption(l: AppLanguage) = t(l, "MARKET DATA HEALTH", "मार्केट डेटा की सेहत", "मार्केट डेटा आरोग्य")
+    fun evidenceCaption(l: AppLanguage) = t(l, "PREDICTIVE EVIDENCE", "भविष्यवाणी का सबूत", "अंदाजाचा पुरावा")
+    fun healthVsEdgeNote(l: AppLanguage) = t(l, "Good data does not mean accurate predictions. Pillar agreement is not a win chance; 7 rules on the same chart are not 7 independent models.",
+        "अच्छा डेटा मतलब सही भविष्यवाणी नहीं। पिलर सहमति जीत की संभावना नहीं; एक ही चार्ट पर 7 नियम 7 अलग मॉडल नहीं।",
+        "चांगला डेटा म्हणजे अचूक अंदाज नाही. पिलर सहमती म्हणजे जिंकण्याची शक्यता नाही; एकाच चार्टवरील 7 नियम म्हणजे 7 स्वतंत्र मॉडेल नाहीत.")
 }

@@ -79,9 +79,11 @@ fun V8ForecastScreen(
             }
             Spacer(modifier = Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text(text = tr(lang, "Up ", "ऊपर ", "वर ") + "${split.bullish}%", color = V8.Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                // V29E: with history these are outcomes RELATIVE to each past call (with / against), not price directions
+                val withCall = tr(lang, "With call ", "कॉल के साथ ", "कॉलसोबत "); val against = tr(lang, "Against ", "उल्टा ", "उलट ")
+                Text(text = (if (split.fromHistory) (if (sig == Signal.BUY) withCall else against) else tr(lang, "Up ", "ऊपर ", "वर ")) + "${split.bullish}%", color = V8.Green, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text(text = tr(lang, "Flat ", "सपाट ", "सपाट ") + "${split.sideways}%", color = V8.Text2, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text(text = tr(lang, "Down ", "नीचे ", "खाली ") + "${split.bearish}%", color = V8.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(text = (if (split.fromHistory) (if (sig == Signal.SELL) withCall else against) else tr(lang, "Down ", "नीचे ", "खाली ")) + "${split.bearish}%", color = V8.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             V8ThreeWayBar(split.bullish, split.sideways, split.bearish)
             Text(

@@ -220,14 +220,14 @@ fun PredictionBigCard(
 
     val verdictLocalized = when (verdict) {
         Signal.BUY -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "STRONG BUY (Bullish Trend 🟢)"
-            AppLanguage.HINDI -> "मजबूत खरीदारी (बुलिश तेजी 🟢)"
-            AppLanguage.MARATHI -> "मजबूत खरेदी (बुलिश तेजी 🟢)"
+            AppLanguage.ENGLISH -> "RULES: BUY (RESEARCH)"
+            AppLanguage.HINDI -> "नियम: BUY (रिसर्च)"
+            AppLanguage.MARATHI -> "नियम: BUY (रिसर्च)"
         }
         Signal.SELL -> when (currentLanguage) {
-            AppLanguage.ENGLISH -> "STRONG SELL (Bearish Trend 🔴)"
-            AppLanguage.HINDI -> "मजबूत बिकवाली (बेयरिश मंदी 🔴)"
-            AppLanguage.MARATHI -> "मजबूत विक्री (बेअरिश मंदी 🔴)"
+            AppLanguage.ENGLISH -> "RULES: SELL (RESEARCH)"
+            AppLanguage.HINDI -> "नियम: SELL (रिसर्च)"
+            AppLanguage.MARATHI -> "नियम: SELL (रिसर्च)"
         }
         Signal.WAIT -> when (currentLanguage) {
             AppLanguage.ENGLISH -> "WAIT / NEUTRAL (Range-Bound 🟡)"
@@ -970,23 +970,23 @@ fun PredictionBigCard(
 
                     val adviceText = prediction?.getWhatToDo(currentLanguage) ?: when (currentLanguage) {
                         AppLanguage.ENGLISH -> if (verdict == Signal.BUY) {
-                            "Gold shows strong buying pressure holding above support. Look for buy confirmation on dips towards support, and take profit at TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)})."
+                            "Rules lean BUY (unverified research, not a trade instruction). Research level TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}."
                         } else if (verdict == Signal.SELL) {
-                            "Gold faces heavy selling pressure beneath resistance. Look to enter short on bounces near resistance, maintaining strict Stop Loss."
+                            "Rules lean SELL (unverified research, not a trade instruction)."
                         } else {
                             "Market is in range-bound compression. Avoid fresh entries and wait for a clear structural breakout."
                         }
                         AppLanguage.HINDI -> if (verdict == Signal.BUY) {
-                            "गोल्ड में खरीदारी का मजबूत दबाव है। सपोर्ट की ओर पुलबैक पर BUY करें और TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) पर सुरक्षित मुनाफा बुक करें।"
+                            "नियमों का झुकाव BUY (असत्यापित रिसर्च, ट्रेड निर्देश नहीं)। रिसर्च लेवल TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}।"
                         } else if (verdict == Signal.SELL) {
-                            "गोल्ड में ऊपरी स्तरों पर बिकवाली का दबाव है। रेजिस्टेंस के पास SELL करें और सख्त Stop Loss बनाए रखें।"
+                            "नियमों का झुकाव SELL (असत्यापित रिसर्च, ट्रेड निर्देश नहीं)।"
                         } else {
                             "मार्केट अभी सीमित दायरे (रेंज) में फंसा है। स्पष्ट ब्रेकआउट मिलने तक नई ट्रेड से बचें।"
                         }
                         AppLanguage.MARATHI -> if (verdict == Signal.BUY) {
-                            "गोल्डमध्ये खरेदीचा मोठा जोर दिसून येत आहे. सपोर्टजवळ पुलबॅक मिळाल्यावर BUY करा आणि TP1 ($${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}) वर सुरक्षित नफा बुक करा."
+                            "नियमांचा कल BUY (असत्यापित रिसर्च, ट्रेड सूचना नाही). रिसर्च लेव्हल TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}."
                         } else if (verdict == Signal.SELL) {
-                            "गोल्डवर वरच्या पातळीवर विक्रीचा दबाव आहे. रेझिस्टन्सजवळ SELL करा आणि कडक Stop Loss पाळा."
+                            "नियमांचा कल SELL (असत्यापित रिसर्च, ट्रेड सूचना नाही)."
                         } else {
                             "सध्या मार्केट एका ठराविक कक्षेत अडकले आहे. जोपर्यंत स्पष्ट ब्रेकआउट होत नाही, तोपर्यंत वाट पहा."
                         }
@@ -1219,9 +1219,9 @@ fun IndicatorsOverallBigCard(
     val (overallStatusText, overallColor, overallBg, overallBorder) = when (analysis.overallSignal) {
         Signal.BUY -> Tuple4(
             when (currentLanguage) {
-                AppLanguage.ENGLISH -> "OVERALL INDICATORS: STRONG BUY 🟢"
-                AppLanguage.HINDI -> "सभी इंडिकेटर्स: मजबूत खरीदारी 🟢"
-                AppLanguage.MARATHI -> "सर्व इंडिकेटर्स: जोरदार खरेदी 🟢"
+                AppLanguage.ENGLISH -> "INDICATORS LEAN: BUY (not a proven edge)"
+                AppLanguage.HINDI -> "इंडिकेटर झुकाव: BUY (साबित बढ़त नहीं)"
+                AppLanguage.MARATHI -> "इंडिकेटर कल: BUY (सिद्ध आघाडी नाही)"
             },
             SignalBuy,
             SignalBuyContainer,
@@ -1229,9 +1229,9 @@ fun IndicatorsOverallBigCard(
         )
         Signal.SELL -> Tuple4(
             when (currentLanguage) {
-                AppLanguage.ENGLISH -> "OVERALL INDICATORS: STRONG SELL 🔴"
-                AppLanguage.HINDI -> "सभी इंडिकेटर्स: मजबूत बिकवाली 🔴"
-                AppLanguage.MARATHI -> "सर्व इंडिकेटर्स: जोरदार विक्री 🔴"
+                AppLanguage.ENGLISH -> "INDICATORS LEAN: SELL (not a proven edge)"
+                AppLanguage.HINDI -> "इंडिकेटर झुकाव: SELL (साबित बढ़त नहीं)"
+                AppLanguage.MARATHI -> "इंडिकेटर कल: SELL (सिद्ध आघाडी नाही)"
             },
             SignalSell,
             SignalSellContainer,

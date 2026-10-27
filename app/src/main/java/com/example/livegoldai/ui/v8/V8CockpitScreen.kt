@@ -165,7 +165,8 @@ fun V8CockpitScreen(
             KalankarBrandEmblem(mode = EmblemMode.WATERMARK, modifier = Modifier.align(Alignment.Center), watermarkAlpha = 0.045f)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    V8Label(tr(lang, "Next move", "अगली चाल", "पुढील हालचाल") + "  •  " + selectedInterval.uppercase())
+                    // V29E: the candle size and the evaluation horizon are different things; this is not a next-candle forecast
+                    V8Label(com.example.livegoldai.data.ForecastState.intervalLine(selectedInterval, com.example.livegoldai.data.TechnicalEngine.calculateValidityMinutes(selectedInterval), lang))
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(text = arrowOf(sig), color = signalColor(sig), fontSize = 30.sp, fontWeight = FontWeight.Light)
                     Text(text = when (sig) {
@@ -229,13 +230,13 @@ fun V8CockpitScreen(
                     V8Ring(
                         percent = if (isWait) -1 else calibrated ?: rawConf,
                         color = signalColor(sig),
-                        label = if (isWait) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else if (calibrated != null) tr(lang, "historical hit-rate", "पिछला हिट-रेट", "मागील हिट-रेट") else tr(lang, "agreement", "सहमति", "सहमती")
+                        label = if (isWait) tr(lang, "no call", "कोई कॉल नहीं", "कॉल नाही") else if (calibrated != null) tr(lang, "similar-setup hit-rate", "मिलते सेटअप हिट-रेट", "सारखे सेटअप हिट-रेट") else tr(lang, "agreement", "सहमति", "सहमती")
                     )
                     // V29A: agreement of indicators is not a probability of winning
                     val band = RealityEngine.bandRecord(analysis.learning, rawConf)
                     Text(
                         text = if (isWait) tr(lang, "WAIT has no\nwin chance to show", "WAIT की कोई\nजीत-संभावना नहीं", "WAIT ला\nजिंकण्याची शक्यता नाही")
-                        else if (band != null) tr(lang, "past calls N=${band.decided}\nnot a forecast probability", "पिछली कॉल्स N=${band.decided}\nअनुमान की संभावना नहीं", "मागील कॉल्स N=${band.decided}\nअंदाजाची शक्यता नाही")
+                        else if (band != null) (pres?.metrics?.firstOrNull { it.id == com.example.livegoldai.data.Metrics.SIMILAR_SETUP }?.let { com.example.livegoldai.data.Metrics.short(it, lang) } ?: "N=${band.decided}") + tr(lang, "\nnot a forecast probability", "\nअनुमान की संभावना नहीं", "\nअंदाजाची शक्यता नाही")
                         else tr(lang, "evidence agreement\nnot a win probability", "संकेतों की सहमति\nजीत की संभावना नहीं", "संकेतांची सहमती\nजिंकण्याची शक्यता नाही"),
                         color = V8.Text3, fontSize = 8.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 10.sp
                     )
@@ -245,18 +246,28 @@ fun V8CockpitScreen(
             // Four different things, shown side by side so they are never read as one number.
             V8Hairline(V8.Line)
             // V29B: above the fold only four independent dimensions; every other number is one tap away
+            // V29E: two clearly separate groups: market-data health (left) and predictive evidence (right)
+            val PTx = com.example.livegoldai.data.PlanText
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(text = PTx.dataHealthCaption(lang), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                Text(text = PTx.evidenceCaption(lang), color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 val p0 = analysis.pulse
                 val unc = analysis.brain?.totalUncertainty ?: "--"
+                // the verified number comes from the same metrics provider as the scorecard and the Decision Trace
+                val closeDir = pres?.metrics?.firstOrNull { it.id == com.example.livegoldai.data.Metrics.ALL_CLOSE_DIRECTION }
+                HomeTile(tr(lang, "DATA", "डेटा", "डेटा"), p0?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"), Modifier.weight(1f))
                 HomeTile(tr(lang, "REGIME", "स्थिति", "स्थिती"), analysis.brain?.regime?.replace('_', ' ') ?: "--", tr(lang, "measured now", "अभी मापा", "आत्ता मोजलेले"), Modifier.weight(1f))
+                HomeTile(tr(lang, "VERIFIED", "जाँचा", "तपासलेले"),
+                    if (closeDir == null || !closeDir.sufficient) tr(lang, "INSUFF.", "कम सबूत", "कमी पुरावा") else "${closeDir.pct}%",
+                    if (closeDir == null) "--" else "N=${closeDir.n}" + tr(lang, " • close dir.", " • क्लोज़ दिशा", " • क्लोज दिशा"),
+                    Modifier.weight(1f))
                 HomeTile(tr(lang, "UNCERTAINTY", "अनिश्चितता", "अनिश्चितता"), unc, tr(lang, "model + market", "मॉडल + मार्केट", "मॉडेल + मार्केट"), Modifier.weight(1f),
                     when (unc) { "HIGH" -> V8.Red; "MODERATE" -> V8.Amber; "LOW" -> V8.Green; else -> V8.Text1 })
-                HomeTile(tr(lang, "DATA", "डेटा", "डेटा"), p0?.dataQuality ?: "--", tr(lang, "quality", "क्वालिटी", "गुणवत्ता"), Modifier.weight(1f))
-                HomeTile(tr(lang, "VERIFIED", "जाँचा", "तपासलेले"),
-                    if (p0 == null || p0.directionN < p0.directionMinN) "--" else "${p0.directionPct}%",
-                    if (p0 == null) "" else "N=${p0.directionN}" + if (p0.directionN < p0.directionMinN) "/${p0.directionMinN}" else tr(lang, " • close dir.", " • क्लोज़ दिशा", " • क्लोज दिशा"),
-                    Modifier.weight(1f))
             }
+            Text(text = PTx.healthVsEdgeNote(lang), color = V8.Text3, fontSize = 9.sp, lineHeight = 12.sp, modifier = Modifier.padding(top = 6.dp))
             var moreNumbers by remember { mutableStateOf(false) }
             Text(
                 text = if (moreNumbers) tr(lang, "LESS  ▴", "कम  ▴", "कमी  ▴") else tr(lang, "MORE NUMBERS (heuristics, ranges)  ▾", "और संख्याएँ (अनुमान, दायरा)  ▾", "अधिक आकडे (अंदाज, पल्ला)  ▾"),
@@ -479,7 +490,7 @@ fun V8CockpitScreen(
         // ---------------- multi-horizon matrix (real candles)
         val rows = analysis.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
         V8Card(level = 2) {
-            V8Label(tr(lang, "Multi-timeframe • PAXG/USDT proxy", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी", "मल्टी-टाइमफ्रेम • PAXG/USDT प्रॉक्सी"))
+            V8Label(tr(lang, "PAXG/USDT proxy — context only", "PAXG/USDT प्रॉक्सी — सिर्फ़ संदर्भ", "PAXG/USDT प्रॉक्सी — फक्त संदर्भ"))
             if (rows.isEmpty()) {
                 Text(text = tr(lang, "MULTI-TIMEFRAME CONTEXT UNAVAILABLE • optional context, the XAU/USD decision does not use it", "मल्टी-टाइमफ़्रेम संदर्भ उपलब्ध नहीं • वैकल्पिक, XAU/USD फ़ैसला इसे इस्तेमाल नहीं करता", "मल्टी-टाइमफ्रेम संदर्भ उपलब्ध नाही • पर्यायी, XAU/USD निर्णय तो वापरत नाही"), color = V8.Text3, fontSize = 11.sp)
             } else {

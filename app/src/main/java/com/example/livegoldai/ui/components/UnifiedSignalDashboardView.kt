@@ -456,14 +456,14 @@ fun UnifiedSignalDashboardView(
 
                         val verdictText = when (analysis.overallSignal) {
                             Signal.BUY -> when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "STRONG BUY"
-                                AppLanguage.HINDI -> "मजबूत BUY (खरीदारी)"
-                                AppLanguage.MARATHI -> "मजबूत BUY (खरेदी)"
+                                AppLanguage.ENGLISH -> "RULES: BUY (RESEARCH)"
+                                AppLanguage.HINDI -> "नियम: BUY (रिसर्च)"
+                                AppLanguage.MARATHI -> "नियम: BUY (रिसर्च)"
                             }
                             Signal.SELL -> when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "STRONG SELL"
-                                AppLanguage.HINDI -> "मजबूत SELL (बिकवाली)"
-                                AppLanguage.MARATHI -> "मजबूत SELL (विक्री)"
+                                AppLanguage.ENGLISH -> "RULES: SELL (RESEARCH)"
+                                AppLanguage.HINDI -> "नियम: SELL (रिसर्च)"
+                                AppLanguage.MARATHI -> "नियम: SELL (रिसर्च)"
                             }
                             Signal.WAIT -> when (currentLanguage) {
                                 AppLanguage.ENGLISH -> "HOLD / STANDBY"

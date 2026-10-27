@@ -117,14 +117,14 @@ fun TradeSetupCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         val signalLabel = when (setup.signal) {
                             Signal.BUY -> when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "STRONG BUY"
-                                AppLanguage.HINDI -> "मजबूत खरीदारी (BUY)"
-                                AppLanguage.MARATHI -> "मजबूत खरेदी (BUY)"
+                                AppLanguage.ENGLISH -> "RULES: BUY (RESEARCH)"
+                                AppLanguage.HINDI -> "नियम: BUY (रिसर्च)"
+                                AppLanguage.MARATHI -> "नियम: BUY (रिसर्च)"
                             }
                             Signal.SELL -> when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "STRONG SELL"
-                                AppLanguage.HINDI -> "मजबूत बिकवाली (SELL)"
-                                AppLanguage.MARATHI -> "मजबूत विक्री (SELL)"
+                                AppLanguage.ENGLISH -> "RULES: SELL (RESEARCH)"
+                                AppLanguage.HINDI -> "नियम: SELL (रिसर्च)"
+                                AppLanguage.MARATHI -> "नियम: SELL (रिसर्च)"
                             }
                             Signal.WAIT -> when (currentLanguage) {
                                 AppLanguage.ENGLISH -> "WAIT / NEUTRAL"

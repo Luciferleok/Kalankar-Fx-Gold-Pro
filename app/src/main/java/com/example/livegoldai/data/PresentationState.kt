@@ -80,7 +80,13 @@ data class PredictionPresentationState(
     val closeDirectionN: Int = 0,
     val coverage: String = "",              // share of checked predictions that took a side
     val ledgerFirstAtMs: Long = 0L,
-    val ledgerLastAtMs: Long = 0L
+    val ledgerLastAtMs: Long = 0L,
+    // ---- V29E: one forecast state + the snapshot's own clock and statistics
+    val forecastState: String = "",
+    val horizonMin: Int = 0,
+    val expiresAtMs: Long = 0L,
+    val outcome: String = "",                       // ledger outcome of this forecast once checked ("" = not yet)
+    val metrics: List<MetricStat> = emptyList()
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -99,7 +105,9 @@ object PresentationBuilder {
         val provider = when (id.provider) {
             ProviderId.TWELVE_DATA -> "TWELVE DATA"; ProviderId.BINANCE -> "BINANCE"; ProviderId.YAHOO -> "YAHOO"; else -> "NONE"
         }
-        val rec = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && now < it.expiresAt }
+        // V29E: the record of THIS snapshot (same candle) first, so an expired forecast keeps its identity and outcome
+        val rec = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated }
+            ?: state?.records?.lastOrNull { it.interval.equals(a.interval, true) && now < it.expiresAt }
         val (code, text) = RealityEngine.waitReason(a).let { if (it.first.isEmpty()) "ELIGIBLE" to "Published: passed the source, data and filter checks" else it }
         val raw = a.agreementPercent.roundToInt()
         val band = RealityEngine.bandRecord(a.learning, raw)
@@ -174,6 +182,11 @@ object PresentationBuilder {
             publishedAtMs = rec?.createdAt ?: 0L,
             provenEdge = researchStatus == "LIVE QUALIFIED",
             planStatus = a.tradeSetup.planStatus,
+            forecastState = ForecastState.resolve(a.tradeSetup, a.overallSignal, researchStatus),
+            horizonMin = TechnicalEngine.calculateValidityMinutes(a.interval),
+            expiresAtMs = a.tradeSetup.expiresAtMs.takeIf { it > 0 } ?: (rec?.expiresAt ?: 0L),
+            outcome = rec?.let { state?.resultOf(it.id)?.outcome?.name } ?: "",
+            metrics = Metrics.build(a, state),
             freshness = a.tradeSetup.freshness.ifBlank { Freshness.assess(a, now) },
             closeDirectionPct = a.pulse?.directionPct ?: -1,
             closeDirectionN = a.pulse?.directionN ?: 0,
