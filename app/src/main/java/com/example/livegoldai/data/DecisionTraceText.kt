@@ -6,7 +6,7 @@ import java.util.Locale
 
 /** Pure text of the trace (no Compose), so it can be tested in all three languages. */
 object DecisionTraceText {
-    data class Section(val title: String, val rows: List<Pair<String, String>>, val note: String? = null)
+    data class Section(val title: String, val rows: List<Pair<String, String>>, val note: String? = null, val collapsed: Boolean = false)
 
     private fun t(lang: AppLanguage, en: String, hi: String, mr: String) = when (lang) {
         AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr
@@ -34,15 +34,20 @@ object DecisionTraceText {
 
     private fun pts(x: Double) = String.format(Locale.US, "%+.1f", x)
 
-    fun sections(p: PredictionPresentationState, lang: AppLanguage, now: Long = System.currentTimeMillis()): List<Section> {
+    /**
+     * V29C.1 order: 1 decision + primary reason, 2 source / timeframe / next review, 3 up to three reasons,
+     * 4 historical evidence, 5 research details (collapsed), 6 audit trail (collapsed).
+     * [why] = PlanText.whyReasons for the same analysis.
+     */
+    fun sections(p: PredictionPresentationState, lang: AppLanguage, now: Long = System.currentTimeMillis(), why: List<String> = emptyList()): List<Section> {
         val unknown = t(lang, "UNKNOWN", "अज्ञात", "अज्ञात")
         fun u(v: String) = if (v == "UNKNOWN" || v == "UNAVAILABLE") unknown else v
         val decision = Section(
             t(lang, "Decision", "फ़ैसला", "निर्णय"),
             listOf(
-                t(lang, "Raw quant", "रॉ क्वांट", "रॉ क्वांट") to signal(p.rawSignal, lang),
                 t(lang, "Final decision", "अंतिम फ़ैसला", "अंतिम निर्णय") to p.finalSignal.name,
                 t(lang, "Primary reason", "मुख्य कारण", "मुख्य कारण") to reason(p, lang),
+                t(lang, "Raw quant", "रॉ क्वांट", "रॉ क्वांट") to signal(p.rawSignal, lang),
                 t(lang, "Timeframe", "टाइमफ़्रेम", "टाइमफ्रेम") to p.timeframe,
                 t(lang, "Newest candle", "नई कैंडल", "नवीन कँडल") to u(p.candleTime)
             ),
@@ -61,9 +66,12 @@ object DecisionTraceText {
                     (if (p.compatibleWithModel) t(lang, "YES", "हाँ", "होय") else "⚠ " + t(lang, "NO (proxy / unknown)", "नहीं (प्रॉक्सी / अज्ञात)", "नाही (प्रॉक्सी / अज्ञात)")),
                 t(lang, "Source state", "स्रोत स्थिति", "स्रोत स्थिती") to (if (p.restorationPending.isNotEmpty()) "⚠ RESTORING ${p.restorationPending}" else u(p.sourceState)),
                 t(lang, "Data age", "डेटा की उम्र", "डेटाचे वय") to age(p.analysisAtMs, now, lang),
-                t(lang, "Data quality", "डेटा क्वालिटी", "डेटा गुणवत्ता") to u(p.dataQuality)
+                t(lang, "Data quality", "डेटा क्वालिटी", "डेटा गुणवत्ता") to u(p.dataQuality),
+                t(lang, "Next review", "अगली जाँच", "पुढील तपासणी") to PlanText.reviewLine(p.nextReviewAtMs, now, lang).ifBlank { unknown }
             )
         )
+        val whySection = Section(PlanText.whyTitle(lang),
+            if (why.isEmpty()) listOf(t(lang, "Reasons", "कारण", "कारणे") to unknown) else why.mapIndexed { i, w -> "${i + 1}" to w })
         val evidenceRows = ArrayList<Pair<String, String>>()
         if (!p.attributionAvailable) evidenceRows.add(t(lang, "Factors", "कारक", "घटक") to t(lang, "Detailed factor attribution unavailable", "विस्तृत कारक जानकारी उपलब्ध नहीं", "तपशीलवार घटक माहिती उपलब्ध नाही"))
         else {
@@ -72,6 +80,8 @@ object DecisionTraceText {
             if (p.neutral.isNotEmpty()) evidenceRows.add(t(lang, "No vote", "कोई वोट नहीं", "मत नाही") to p.neutral.joinToString(", "))
         }
         evidenceRows.add(t(lang, "Pillar agreement", "पिलर सहमति", "पिलर सहमती") to "${p.evidenceAgreementPct}%")
+        evidenceRows.add(t(lang, "Rule setup strength", "नियम सेटअप ताकत", "नियम सेटअप ताकद") to (if (p.ruleSetupStrength < 0) unknown else "${p.ruleSetupStrength}/100 " + t(lang, "(heuristic)", "(अनुमानित)", "(अंदाजी)")))
+        evidenceRows.add(t(lang, "Regime", "रेजीम", "रेजीम") to u(p.regime))
         evidenceRows.add(t(lang, "Rule bots", "नियम बॉट", "नियम बॉट") to p.botsSummary)
         evidenceRows.add("AI" to when (p.aiStatus) {
             "AVAILABLE" -> t(lang, "AVAILABLE (advisory)", "उपलब्ध (सलाह)", "उपलब्ध (सल्ला)")
@@ -83,12 +93,12 @@ object DecisionTraceText {
              else t(lang, "UNAVAILABLE (optional, not in the decision)", "उपलब्ध नहीं (वैकल्पिक, फ़ैसले में नहीं)", "उपलब्ध नाही (पर्यायी, निर्णयात नाही)")))
         evidenceRows.add(t(lang, "Cross-market", "क्रॉस-मार्केट", "क्रॉस-मार्केट") to
             (if (p.crossMarketAvailable) t(lang, "available (context)", "उपलब्ध (संदर्भ)", "उपलब्ध (संदर्भ)") else t(lang, "UNAVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही")))
-        val evidence = Section(t(lang, "Evidence", "सबूत", "पुरावा"), evidenceRows,
+        val evidence = Section(t(lang, "Research details", "रिसर्च विवरण", "रिसर्च तपशील"), evidenceRows,
             t(lang, "Factors are the 7 pillars' weighted votes. Agreement is not a probability.",
-                "कारक 7 पिलरों के भारित वोट हैं। सहमति संभावना नहीं है।", "घटक म्हणजे 7 पिलरची भारित मते. सहमती म्हणजे शक्यता नाही."))
+                "कारक 7 पिलरों के भारित वोट हैं। सहमति संभावना नहीं है।", "घटक म्हणजे 7 पिलरची भारित मते. सहमती म्हणजे शक्यता नाही."), collapsed = true)
 
         val trust = Section(
-            t(lang, "Model trust", "मॉडल भरोसा", "मॉडेल विश्वास"),
+            t(lang, "Historical evidence", "पिछला सबूत", "मागील पुरावा"),
             listOf(
                 t(lang, "Production engine", "प्रोडक्शन इंजन", "प्रोडक्शन इंजिन") to t(lang, "Rules (not a trained model)", "नियम (प्रशिक्षित मॉडल नहीं)", "नियम (प्रशिक्षित मॉडेल नाही)"),
                 t(lang, "Verified record audit", "जाँचा रिकॉर्ड ऑडिट", "तपासलेला रेकॉर्ड ऑडिट") to u(p.ledgerAudit),
@@ -105,10 +115,8 @@ object DecisionTraceText {
                     "UNRELIABLE" -> "⚠ " + t(lang, "UNRELIABLE", "भरोसेमंद नहीं", "विश्वासार्ह नाही") + String.format(Locale.US, " (%.1f pts)", p.calibrationErrorPts)
                     else -> t(lang, "UNAVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही")
                 },
-                t(lang, "Rule setup strength", "नियम सेटअप ताकत", "नियम सेटअप ताकद") to (if (p.ruleSetupStrength < 0) unknown else "${p.ruleSetupStrength}/100 " + t(lang, "(heuristic)", "(अनुमानित)", "(अंदाजी)")),
                 t(lang, "Proven edge", "साबित बढ़त", "सिद्ध आघाडी") to (if (p.provenEdge) t(lang, "LIVE QUALIFIED (research model)", "LIVE QUALIFIED (रिसर्च मॉडल)", "LIVE QUALIFIED (रिसर्च मॉडेल)") else "⚠ " + t(lang, "NO PROVEN PREDICTIVE EDGE", "कोई साबित बढ़त नहीं", "सिद्ध आघाडी नाही")),
-                t(lang, "Uncertainty", "अनिश्चितता", "अनिश्चितता") to u(p.uncertainty),
-                t(lang, "Regime", "रेजीम", "रेजीम") to u(p.regime)
+                t(lang, "Uncertainty", "अनिश्चितता", "अनिश्चितता") to u(p.uncertainty)
             ),
             if (p.confidenceInverted) "⚠ " + t(lang, "Calls with higher agreement were right LESS often. Do not trust a high % more.",
                 "ज़्यादा सहमति वाली कॉल्स कम बार सही निकलीं। ऊँचे % पर ज़्यादा भरोसा मत करो।", "जास्त सहमतीच्या कॉल्स कमी वेळा बरोबर ठरल्या. जास्त % वर जास्त विश्वास ठेवू नका.") else null
@@ -124,8 +132,9 @@ object DecisionTraceText {
                 t(lang, "Newest candle (open)", "नई कैंडल (शुरुआत)", "नवीन कँडल (सुरुवात)") to u(p.candleTime),
                 t(lang, "Analysis built", "विश्लेषण बना", "विश्लेषण तयार") to PlanText.utcTime(p.builtAtMs),
                 t(lang, "Decision published", "फ़ैसला दर्ज", "निर्णय नोंदवला") to (if (p.publishedAtMs > 0) PlanText.utcTime(p.publishedAtMs) else t(lang, "NOT RECORDED", "दर्ज नहीं", "नोंदवलेले नाही"))
-            )
+            ),
+            collapsed = true
         )
-        return listOf(decision, source, evidence, trust, audit)
+        return listOf(decision, source, whySection, trust, evidence, audit)
     }
 }

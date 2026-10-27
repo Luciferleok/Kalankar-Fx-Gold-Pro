@@ -77,7 +77,7 @@ fun V8CockpitScreen(
     // V29B: the shared decision description and its trace sheet
     val pres = analysis.presentation
     var showTrace by remember { mutableStateOf(false) }
-    if (showTrace && pres != null) DecisionTraceSheet(pres, lang) { showTrace = false }
+    if (showTrace && pres != null) DecisionTraceSheet(pres, lang, com.example.livegoldai.data.PlanText.whyReasons(analysis, lang)) { showTrace = false }
     val calibrated = RealityEngine.calibratedConfidence(analysis.learning, rawConf)
     val ins = analysis.insights
     val health = analysis.health
@@ -199,9 +199,13 @@ fun V8CockpitScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(text = tr(lang, "VALID ", "मान्य ", "वैध ") + fmtAge(until - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
                     } else if (sig == Signal.WAIT) {
-                        val review = com.example.livegoldai.data.PlanText.nextReviewMs(selectedInterval, now)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(text = tr(lang, "NEXT REVIEW ", "अगली जाँच ", "पुढील तपासणी ") + fmtAge(review - now), color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                        // V29C.1: one fixed review time from the decision's snapshot; REVIEW DUE when passed
+                        val review = pres?.nextReviewAtMs ?: 0L
+                        if (review > 0L) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(text = if (now >= review) tr(lang, "REVIEW DUE", "जाँच का समय हो गया", "तपासणीची वेळ झाली") else tr(lang, "NEXT REVIEW ", "अगली जाँच ", "पुढील तपासणी ") + fmtAge(review - now),
+                                color = if (now >= review) V8.Amber else V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                        }
                     }
                 }
                 // the ring shows exactly one real number: calibrated confidence if measured, else raw pillar agreement
@@ -429,7 +433,7 @@ fun V8CockpitScreen(
         }
 
         // ---------------- V10 market brain summary
-        analysis.brain?.let { V10BrainStrip(it, lang, onOpenForecast) }
+        analysis.brain?.let { V10BrainStrip(it, lang, onOpenForecast, pres) }
 
         // ---------------- early warnings
         if (ins != null && ins.warnings.isNotEmpty()) {
@@ -466,7 +470,7 @@ fun V8CockpitScreen(
                 Text(text = tr(lang, "MULTI-TIMEFRAME CONTEXT UNAVAILABLE • optional context, the XAU/USD decision does not use it", "मल्टी-टाइमफ़्रेम संदर्भ उपलब्ध नहीं • वैकल्पिक, XAU/USD फ़ैसला इसे इस्तेमाल नहीं करता", "मल्टी-टाइमफ्रेम संदर्भ उपलब्ध नाही • पर्यायी, XAU/USD निर्णय तो वापरत नाही"), color = V8.Text3, fontSize = 11.sp)
             } else {
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    listOf("TF" to 0.18f, "DIR" to 0.17f, "RSI" to 0.17f, tr(lang, "LEVEL", "लेवल", "लेव्हल") to 0.48f).forEach { (h, w) ->
+                    listOf("TF" to 0.18f, "DIR" to 0.17f, "RSI" to 0.17f, tr(lang, "PAXG LEVEL", "PAXG लेवल", "PAXG लेव्हल") to 0.48f).forEach { (h, w) ->
                         Text(text = h, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(w))
                     }
                 }
@@ -475,7 +479,8 @@ fun V8CockpitScreen(
                         Text(text = r.timeframe, color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.18f))
                         Text(text = arrowOf(r.signal) + " " + r.signal.name, color = signalColor(r.signal), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.17f))
                         Text(text = "${r.momentumPercent}", color = V8.Text2, fontSize = 11.sp, modifier = Modifier.weight(0.17f))
-                        Text(text = r.keyLevel, color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
+                        // V29C.1: a PAXG/USDT price, never shown as an XAU/USD level
+                        Text(text = com.example.livegoldai.data.PlanText.proxyLevel(r.keyLevel), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
                     }
                 }
                 Text(text = tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT, a different instrument: context only, not used in the XAU/USD decision", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT, अलग इंस्ट्रूमेंट: सिर्फ संदर्भ, XAU/USD फैसले में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT, वेगळे इन्स्ट्रुमेंट: फक्त संदर्भ, XAU/USD निर्णयात नाही"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
@@ -483,7 +488,7 @@ fun V8CockpitScreen(
         }
 
         V8Card(level = 3, onClick = onOpenPlaybook) {
-            Text(text = tr(lang, "Open full playbook (entry, SL, targets) →", "पूरा प्लेबुक खोलें (एंट्री, SL, टारगेट) →", "पूर्ण प्लेबुक उघडा (एंट्री, SL, टार्गेट) →"), color = V8.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = com.example.livegoldai.data.PlanText.playbookLink(sig == Signal.WAIT, lang), color = if (sig == Signal.WAIT) V8.Text2 else V8.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(16.dp))
     }

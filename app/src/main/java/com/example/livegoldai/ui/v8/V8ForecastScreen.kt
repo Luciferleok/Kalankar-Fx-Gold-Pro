@@ -53,7 +53,7 @@ fun V8ForecastScreen(
     val calibrated = RealityEngine.calibratedConfidence(analysis.learning, rawConf)
     var showTrace by remember { mutableStateOf(false) }
     var showDecisionTrace by remember { mutableStateOf(false) }
-    analysis.presentation?.let { pres -> if (showDecisionTrace) DecisionTraceSheet(pres, lang) { showDecisionTrace = false } }
+    analysis.presentation?.let { pres -> if (showDecisionTrace) DecisionTraceSheet(pres, lang, com.example.livegoldai.data.PlanText.whyReasons(analysis, lang)) { showDecisionTrace = false } }
 
     Column(
         modifier = Modifier

@@ -69,7 +69,10 @@ data class PredictionPresentationState(
     val scenarioAvailable: Boolean = false,
     val quoteAtMs: Long = 0L,                           // latest market quote arrived
     val publishedAtMs: Long = 0L,                       // this decision was recorded in the ledger (0 = not recorded)
-    val provenEdge: Boolean = false                     // true only when the research model is LIVE QUALIFIED
+    val provenEdge: Boolean = false,                    // true only when the research model is LIVE QUALIFIED
+    // V29C.1: when this decision is reviewed: the open of the decision's candle + one interval (0 = unknown).
+    // Fixed by the snapshot, so refreshing the price never moves it; once passed the screen says REVIEW DUE.
+    val nextReviewAtMs: Long = 0L
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -161,7 +164,8 @@ object PresentationBuilder {
                 SourceRegistry.compatibility(id.instrument) == Compatibility.COMPATIBLE,
             quoteAtMs = a.feed?.fetchedAtMs ?: 0L,
             publishedAtMs = rec?.createdAt ?: 0L,
-            provenEdge = researchStatus == "LIVE QUALIFIED"
+            provenEdge = researchStatus == "LIVE QUALIFIED",
+            nextReviewAtMs = ShadowLive.barMs(a.lastUpdated)?.let { it + RealityEngine.intervalMinutes(a.interval) * 60_000L } ?: 0L
         )
     }
 

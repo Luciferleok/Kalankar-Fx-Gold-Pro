@@ -36,14 +36,20 @@ private fun qualityColor(q: Int): Color = if (q >= 75) V8.Green else if (q >= 60
 
 /** Small brain summary for the cockpit. */
 @Composable
-fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit) {
-    V8Card(level = 2, onClick = onOpen, accent = qualityColor(b.qualityIndex).copy(alpha = 0.45f)) {
+fun V10BrainStrip(b: BrainReport, lang: AppLanguage, onOpen: () -> Unit, pres: com.example.livegoldai.data.PredictionPresentationState? = null) {
+    V8Card(level = 2, onClick = onOpen, accent = V8.Line) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             V8Label(tr(lang, "Market brain", "मार्केट ब्रेन", "मार्केट ब्रेन"))
             Spacer(modifier = Modifier.weight(1f))
-            Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-            Text(text = "  ›", color = V8.Text3, fontSize = 14.sp)
+            Text(text = "›", color = V8.Text3, fontSize = 14.sp)
         }
+        // V29C.1: three separately scoped statuses instead of one blended label
+        // stacked so the three badges never overflow a small (320dp) screen
+        if (pres != null) Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+            com.example.livegoldai.data.PlanText.brainStatus(pres, lang).forEach { (label, level) ->
+                V8Badge(label, when (level) { "OK" -> V8.Green; "BLOCK" -> V8.Red; "WARN" -> V8.Amber; else -> V8.Text3 })
+            }
+        } else Text(text = b.qualityClass, color = qualityColor(b.qualityIndex), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
             MiniStat(tr(lang, "SETUP", "सेटअप", "सेटअप"), "${b.qualityIndex}", qualityColor(b.qualityIndex), Modifier.weight(1f))
             MiniStat(tr(lang, "PILLAR SPLIT", "पिलर बँटवारा", "पिलर विभागणी"), b.edge, levelColor(b.edge), Modifier.weight(1.2f))

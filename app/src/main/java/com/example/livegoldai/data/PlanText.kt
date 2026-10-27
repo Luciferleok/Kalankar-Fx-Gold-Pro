@@ -158,4 +158,88 @@ object PlanText {
     }
     fun shareNote(l: AppLanguage) = t(l, "Shares of rule-based indicator pillars. Not probabilities of future market outcomes.",
         "नियम-आधारित इंडिकेटर पिलरों का हिस्सा। भविष्य की चाल की संभावना नहीं।", "नियम-आधारित इंडिकेटर पिलरचा वाटा. भविष्यातील हालचालीची शक्यता नाही.")
+
+    // ================= V29C.1 =================
+
+    /** "NEXT REVIEW: 12:15:00 UTC (in 4m)" or "REVIEW DUE" once the fixed review time has passed. */
+    fun reviewLine(reviewAtMs: Long, now: Long, l: AppLanguage): String = when {
+        reviewAtMs <= 0L -> ""
+        now >= reviewAtMs -> t(l, "REVIEW DUE", "जाँच का समय हो गया", "तपासणीची वेळ झाली")
+        else -> nextReview(reviewAtMs, l) + " (" + t(l, "in ", "", "") + mins(reviewAtMs - now) + t(l, ")", " में)", " मध्ये)")
+    }
+    private fun mins(ms: Long): String { val m = ms / 60_000; val s = (ms / 1000) % 60; return if (m >= 60) "${m / 60}h ${m % 60}m" else if (m > 0) "${m}m ${s}s" else "${s}s" }
+
+    /** Up to three reasons for THIS decision. A WAIT is explained by its gate first, never by a pillar count. */
+    fun whyReasons(a: GoldAnalysisResult, l: AppLanguage): List<String> {
+        val p = a.presentation
+        val raw = (a.rawSignal ?: a.overallSignal).name
+        if (a.overallSignal == Signal.WAIT && p != null) {
+            val first = when (p.reasonCode) {
+                "RANGE" -> t(l, "Range filter blocked the raw $raw signal: trend efficiency is below 20% (sideways market).",
+                    "रेंज फ़िल्टर ने रॉ $raw सिग्नल रोका: ट्रेंड एफिशिएंसी 20% से कम (साइडवेज़ मार्केट)।", "रेंज फिल्टरने रॉ $raw सिग्नल थांबवला: ट्रेंड एफिशियन्सी 20% पेक्षा कमी (साइडवेज मार्केट).")
+                "SOURCE" -> t(l, "Source switch: the price is not clean Twelve Data XAU/USD, so the raw $raw is not published.",
+                    "स्रोत बदला: भाव साफ़ Twelve Data XAU/USD का नहीं, इसलिए रॉ $raw प्रकाशित नहीं।", "स्रोत बदलला: भाव स्वच्छ Twelve Data XAU/USD चा नाही, म्हणून रॉ $raw प्रकाशित नाही.")
+                "DATA" -> t(l, "Market data check failed, so no BUY/SELL is published.", "मार्केट डेटा जाँच फेल, इसलिए BUY/SELL प्रकाशित नहीं।", "मार्केट डेटा तपासणी नापास, म्हणून BUY/SELL प्रकाशित नाही.")
+                "NO_KEY" -> t(l, "No Twelve Data key is saved, so no XAU/USD decision can be made.", "Twelve Data key नहीं, इसलिए XAU/USD फ़ैसला नहीं।", "Twelve Data key नाही, म्हणून XAU/USD निर्णय नाही.")
+                "LEARNED" -> t(l, "A learned filter blocked the raw $raw signal (${p.reasonText}).", "सीखे फ़िल्टर ने रॉ $raw रोका (${p.reasonText})।", "शिकलेल्या फिल्टरने रॉ $raw थांबवला (${p.reasonText}).")
+                "BELOW_GATE" -> t(l, "No side reached the 68% pillar gate (${p.reasonText}).", "कोई पक्ष 68% पिलर गेट तक नहीं पहुँचा (${p.reasonText})।", "कोणतीही बाजू 68% पिलर गेटपर्यंत पोहोचली नाही (${p.reasonText}).")
+                else -> t(l, "An engine safety rule held the signal.", "इंजन के सुरक्षा नियम ने सिग्नल रोका।", "इंजिनच्या सुरक्षा नियमाने सिग्नल थांबवला.")
+            }
+            val calErr = a.learning?.calibrationErrorPoints ?: -1.0
+            val more = p.secondaryReasons.mapNotNull { c -> when (c) {
+                "HIGH_UNCERTAINTY" -> t(l, "Uncertainty is HIGH" + (if (calErr >= 0) String.format(Locale.US, " (confidence off by %.0f pts)", calErr) else "") + ".",
+                    "अनिश्चितता ऊँची है" + (if (calErr >= 0) String.format(Locale.US, " (भरोसा %.0f अंक गलत)", calErr) else "") + "।",
+                    "अनिश्चितता उच्च आहे" + (if (calErr >= 0) String.format(Locale.US, " (विश्वास %.0f अंक चुकीचा)", calErr) else "") + ".")
+                "NO_PROVEN_EDGE" -> t(l, "No proven predictive edge: the research model is not LIVE QUALIFIED.", "कोई साबित बढ़त नहीं: रिसर्च मॉडल LIVE QUALIFIED नहीं।", "सिद्ध आघाडी नाही: रिसर्च मॉडेल LIVE QUALIFIED नाही.")
+                "ENGINE_NO_SIDE" -> t(l, "The engine itself also saw no side.", "इंजन को भी कोई पक्ष नहीं दिखा।", "इंजिनलाही बाजू दिसली नाही.")
+                "RANGE_REGIME" -> t(l, "The market regime is RANGE: trend rules are weaker.", "मार्केट RANGE में: ट्रेंड नियम कमज़ोर।", "मार्केट RANGE मध्ये: ट्रेंड नियम कमकुवत.")
+                else -> null   // optional MTF never explains a decision it is not part of
+            } }
+            return (listOf(first) + more).take(3)
+        }
+        val ins = a.insights
+        val sig = a.overallSignal
+        val votes = a.groups.count { it.verdict == sig }
+        val pillar = if (ins != null) t(l, String.format(Locale.US, "%d of %d pillars voted %s (weighted %.0f%%, gate %.0f%%).", votes, a.totalGroups, sig.name, if (sig == Signal.BUY) ins.bullishPoints else kotlin.math.abs(ins.bearishPoints), ins.gatePercent),
+            String.format(Locale.US, "%d में से %d पिलर %s (वेटेड %.0f%%, गेट %.0f%%)।", a.totalGroups, votes, sig.name, if (sig == Signal.BUY) ins.bullishPoints else kotlin.math.abs(ins.bearishPoints), ins.gatePercent),
+            String.format(Locale.US, "%d पैकी %d पिलर %s (वेटेड %.0f%%, गेट %.0f%%).", a.totalGroups, votes, sig.name, if (sig == Signal.BUY) ins.bullishPoints else kotlin.math.abs(ins.bearishPoints), ins.gatePercent))
+        else t(l, "$votes of ${a.totalGroups} pillars voted ${sig.name}.", "${a.totalGroups} में से $votes पिलर ${sig.name}।", "${a.totalGroups} पैकी $votes पिलर ${sig.name}.")
+        val smc = a.groups.firstOrNull { it.key == "smc" }?.verdict?.name ?: "--"
+        val reg = (a.brain?.regime ?: ins?.regime ?: "--").replace('_', ' ')
+        return listOf(pillar,
+            t(l, "SMC pillar (SuperTrend, VWAP/TWAP, structure): $smc.", "SMC पिलर (SuperTrend, VWAP/TWAP, संरचना): $smc।", "SMC पिलर (SuperTrend, VWAP/TWAP, रचना): $smc."),
+            t(l, "Market regime: $reg.", "मार्केट स्थिति: $reg।", "मार्केट स्थिती: $reg."))
+    }
+
+    fun whyTitle(l: AppLanguage) = t(l, "WHY? (UP TO 3 REASONS)", "क्यों? (अधिकतम 3 कारण)", "का? (जास्तीत जास्त 3 कारणे)")
+
+    /** Three separate statuses, never one blended "usable". */
+    fun brainStatus(p: PredictionPresentationState, l: AppLanguage): List<Pair<String, String>> {
+        val dq = p.dataQuality
+        val data = when (dq) { "EXCELLENT", "GOOD" -> t(l, "DATA USABLE", "डेटा ठीक", "डेटा वापरण्यायोग्य") to "OK"; "UNKNOWN" -> t(l, "DATA UNKNOWN", "डेटा अज्ञात", "डेटा अज्ञात") to "NA"; else -> t(l, "DATA $dq", "डेटा $dq", "डेटा $dq") to "WARN" }
+        val signal = when {
+            p.isTradeSetupActive -> t(l, "SIGNAL ELIGIBLE", "सिग्नल योग्य", "सिग्नल पात्र") to "OK"
+            p.finalSignal != Signal.WAIT -> t(l, "SIGNAL CLOSED", "सिग्नल बंद", "सिग्नल बंद") to "WARN"
+            p.rawDiffersFromFinal || p.reasonCode in listOf("SOURCE", "DATA", "NO_KEY", "RANGE", "LEARNED") -> t(l, "SIGNAL BLOCKED", "सिग्नल रुका", "सिग्नल थांबला") to "BLOCK"
+            else -> t(l, "NO SIGNAL", "कोई सिग्नल नहीं", "सिग्नल नाही") to "WARN"
+        }
+        val edge = if (p.provenEdge) t(l, "EDGE LIVE QUALIFIED", "बढ़त LIVE QUALIFIED", "आघाडी LIVE QUALIFIED") to "OK"
+            else t(l, "MODEL EDGE NOT PROVEN", "मॉडल बढ़त साबित नहीं", "मॉडेल आघाडी सिद्ध नाही") to "WARN"
+        return listOf(data, signal, edge)
+    }
+
+    // historical scorecard definitions
+    fun directionalTitle(l: AppLanguage) = t(l, "HISTORICAL DIRECTIONAL HIT-RATE", "पिछला दिशा हिट-रेट", "मागील दिशा हिट-रेट")
+    fun outcomeDefinition(horizonMin: Int, l: AppLanguage) = t(l,
+        "Window: each call's own horizon ($horizonMin min). Correct = target hit, or price closed the called way beyond the noise threshold. Incorrect = stop hit or wrong way. Small moves are excluded. Not profitability.",
+        "विंडो: हर कॉल का अपना समय ($horizonMin मिनट)। सही = टारगेट लगा, या भाव बताई दिशा में नॉइज़ सीमा से आगे बंद हुआ। गलत = स्टॉप लगा या उल्टी दिशा। छोटी चालें शामिल नहीं। मुनाफ़ा नहीं।",
+        "विंडो: प्रत्येक कॉलचा स्वतःचा कालावधी ($horizonMin मिनिटे). बरोबर = टार्गेट लागला, किंवा भाव सांगितलेल्या दिशेने नॉइज मर्यादेपलीकडे बंद झाला. चूक = स्टॉप लागला किंवा उलट दिशा. लहान हालचाली वगळल्या. नफा नाही.")
+
+    fun playbookLink(isWait: Boolean, l: AppLanguage) = if (isWait) t(l, "View research scenarios →", "रिसर्च परिदृश्य देखें →", "रिसर्च परिस्थिती पहा →")
+        else t(l, "Open full playbook (entry, SL, targets) →", "पूरा प्लेबुक खोलें (एंट्री, SL, टारगेट) →", "पूर्ण प्लेबुक उघडा (एंट्री, SL, टार्गेट) →")
+
+    fun proxyLevelNote(l: AppLanguage) = t(l, "Levels are PAXG/USDT prices, not XAU/USD levels.", "लेवल PAXG/USDT के भाव हैं, XAU/USD लेवल नहीं।", "लेव्हल PAXG/USDT चे भाव आहेत, XAU/USD लेव्हल नाहीत.")
+
+    /** "EMA21 $4039.56" -> "PAXG EMA21 $4039.56" (idempotent). */
+    fun proxyLevel(level: String): String = if (level.isBlank() || level.startsWith("PAXG")) level else "PAXG $level"
 }
