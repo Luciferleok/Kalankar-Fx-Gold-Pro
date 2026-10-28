@@ -83,6 +83,9 @@ data class GoldUiState(
     val isAlertTriggered: Boolean = false,
     val showLotCalculator: Boolean = false,
     val selectedSlPips: Double = 90.0,
+    // V33.1: the calculator exists only with a grant from ResearchGate for one snapshot; refusals are shown, never skipped
+    val lotGrant: com.example.livegoldai.data.ResearchGate.LotGrant? = null,
+    val lotRefusal: List<String> = emptyList(),
     val showPriceAlertDialog: Boolean = false,
     val amoled: Boolean = false,          // true black background on dark themes
     val themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
@@ -557,12 +560,21 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(themeMode = ThemeMode.ROYAL_OBSIDIAN, amoled = false, backgroundDepth = "SIGNATURE") }
     }
 
-    fun openLotCalculator(slPips: Double) {
-        _uiState.update { it.copy(showLotCalculator = true, selectedSlPips = slPips) }
+    /**
+     * V33.1 domain gate. [snapshotId] = the snapshot the user was looking at when they tapped. Without it, or when the
+     * plan is not an authorized ACTIVE plan of the current snapshot, the calculator does not open and the reasons are shown.
+     * The stop distance comes from the authorized plan, never from the caller.
+     */
+    fun openLotCalculator(slPips: Double, snapshotId: String? = null) {
+        val s = _uiState.value
+        val d = com.example.livegoldai.data.ResearchGate.authorize(s.data, snapshotId, s.selectedInterval, System.currentTimeMillis())
+        val g = d.grant
+        if (g == null) _uiState.update { it.copy(showLotCalculator = false, lotGrant = null, lotRefusal = d.refusals) }
+        else _uiState.update { it.copy(showLotCalculator = true, selectedSlPips = g.stopPips, lotGrant = g, lotRefusal = emptyList()) }
     }
 
     fun closeLotCalculator() {
-        _uiState.update { it.copy(showLotCalculator = false) }
+        _uiState.update { it.copy(showLotCalculator = false, lotGrant = null, lotRefusal = emptyList()) }
     }
 
     fun openPriceAlertDialog() {

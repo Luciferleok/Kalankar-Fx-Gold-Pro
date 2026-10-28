@@ -44,6 +44,8 @@ import java.util.Locale
 fun QuantBotCard(
     botSignal: QuantBotTradeSignal?,
     onOpenCalculator: (Double) -> Unit = {},
+    // V33.1: the bot's number with its real name; null = not shown (never as "confidence")
+    scoreText: String? = null,
     modifier: Modifier = Modifier
 ) {
     if (botSignal == null) return
@@ -121,13 +123,13 @@ fun QuantBotCard(
                                 color = GoldLight
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
+                            if (scoreText != null) Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = GoldPrimary.copy(alpha = 0.2f),
                                 border = BorderStroke(0.6.dp, GoldPrimary)
                             ) {
                                 Text(
-                                    text = "${botSignal.winProbabilityPercent}% CONFIDENCE",
+                                    text = scoreText,
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,

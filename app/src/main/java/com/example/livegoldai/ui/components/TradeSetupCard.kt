@@ -37,6 +37,9 @@ import java.util.Locale
 fun TradeSetupCard(
     setup: TradeSetup,
     onOpenCalculator: (stopLossPips: Double) -> Unit,
+    // V33.1: the score is shown only with its real name (rule agreement or similar-setup hit-rate); null = not shown
+    scoreTag: String? = null,
+    scoreValue: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -217,13 +220,9 @@ fun TradeSetupCard(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PillBadge(label = "R:R", value = setup.riskRewardRatio, color = GoldPrimary)
-                    PillBadge(
-                        label = when (currentLanguage) {
-                            AppLanguage.ENGLISH -> "CONFIDENCE"
-                            AppLanguage.HINDI -> "कॉन्फिडेंस"
-                            AppLanguage.MARATHI -> "विश्वास पातळी"
-                        },
-                        value = "${setup.confidencePercent}%",
+                    if (scoreTag != null && scoreValue != null) PillBadge(
+                        label = scoreTag,
+                        value = scoreValue,
                         color = signalColor
                     )
                 }

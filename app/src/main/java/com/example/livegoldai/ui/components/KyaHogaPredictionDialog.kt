@@ -1156,11 +1156,7 @@ fun KyaHogaPredictionDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = when (currentLanguage) {
-                                        AppLanguage.ENGLISH -> "Calculate Safe Lot Size For My Account"
-                                        AppLanguage.HINDI -> "अपने अकाउंट के लिए सुरक्षित लॉट साइज निकालें"
-                                        AppLanguage.MARATHI -> "आपल्या खात्यासाठी सुरक्षित लॉट साईझ कॅल्क्युलेट करा"
-                                    },
+                                    text = com.example.livegoldai.data.HonestText.lotButton(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup), currentLanguage),
                                     color = GoldLight,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp

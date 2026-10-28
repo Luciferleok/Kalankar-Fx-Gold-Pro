@@ -143,11 +143,24 @@ fun GoldHomeScreen(
         }
     }
 
-    if (uiState.showLotCalculator && uiState.data != null) {
+    // V33.1: drawn only with a grant that is still valid for the CURRENT snapshot (a refresh, expiry or status change voids it)
+    val lotGrant = uiState.lotGrant
+    if (uiState.showLotCalculator && lotGrant != null &&
+        com.example.livegoldai.data.ResearchGate.stillValid(lotGrant, uiState.data, System.currentTimeMillis())) {
         LotCalculatorDialog(
-            initialStopLossPips = uiState.selectedSlPips,
-            currentGoldPrice = uiState.data!!.currentPrice,
+            grant = lotGrant,
+            lang = uiState.language,
             onDismiss = { viewModel.closeLotCalculator() }
+        )
+    } else if (uiState.showLotCalculator) {
+        LaunchedEffect(lotGrant?.snapshotId) { viewModel.closeLotCalculator() }
+    }
+    if (uiState.lotRefusal.isNotEmpty()) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.closeLotCalculator() },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { viewModel.closeLotCalculator() }) { Text("OK") } },
+            title = { Text(com.example.livegoldai.data.ResearchGate.refusalTitle(uiState.language)) },
+            text = { Text(com.example.livegoldai.data.ResearchGate.refusalText(uiState.lotRefusal, uiState.language).joinToString("\n") { "• $it" }) }
         )
     }
 
@@ -176,7 +189,7 @@ fun GoldHomeScreen(
     if (uiState.showPredictionDialog && uiState.data != null) {
         KyaHogaPredictionDialog(
             analysis = uiState.data!!,
-            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips, uiState.data?.tradeSetup?.snapshotId) },
             onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
             onDismiss = { viewModel.closePredictionDialog() }
         )
@@ -195,7 +208,7 @@ fun GoldHomeScreen(
             group = uiState.selectedPillarForDeepDive!!,
             currentPrice = uiState.data!!.currentPrice,
             onDismiss = { viewModel.closePillarDeepDive() },
-            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+            onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips, uiState.data?.tradeSetup?.snapshotId) },
             learning = uiState.data!!.learning
         )
     }
@@ -656,7 +669,7 @@ fun GoldHomeScreen(
                                         analysis = analysis,
                                         selectedInterval = uiState.selectedInterval,
                                         onIntervalSelected = { viewModel.setInterval(it) },
-                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
                                         onOpenPredictionDialog = { viewModel.openPredictionDialog() },
                                         onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
                                         onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
@@ -679,7 +692,7 @@ fun GoldHomeScreen(
                                         analysis = analysis,
                                         selectedInterval = uiState.selectedInterval,
                                         onIntervalSelected = { viewModel.setInterval(it) },
-                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
                                         onOpenPredictionDialog = { viewModel.openPredictionDialog() },
                                         onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
                                         onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
@@ -760,8 +773,9 @@ fun GoldHomeScreen(
                                 analysis.quantBotSignal?.let { botSignal ->
                                     item(key = "cockpit_quant_bot_signal") {
                                         QuantBotCard(
+                                            scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
-                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                         )
                                     }
                                 }
@@ -770,7 +784,7 @@ fun GoldHomeScreen(
                                 item(key = "cockpit_dual_prediction_indicators") {
                                     DualPredictionAndIndicatorsSection(
                                         analysis = analysis,
-                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) },
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
                                         onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
                                         onPillarClick = { group -> viewModel.openPillarDeepDive(group) }
                                     )
@@ -811,8 +825,9 @@ fun GoldHomeScreen(
                                 analysis.quantBotSignal?.let { botSignal ->
                                     item(key = "tab1_quant_bot_signal") {
                                         QuantBotCard(
+                                            scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
-                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                         )
                                     }
                                 }
@@ -853,7 +868,7 @@ fun GoldHomeScreen(
                                     PreNewsIntelligenceCard(
                                         currentPrice = analysis.currentPrice,
                                         upcomingEvents = analysis.macroRadar?.upcomingEvents ?: emptyList(),
-                                        onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                        onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                     )
                                 }
 
@@ -901,8 +916,9 @@ fun GoldHomeScreen(
                                 analysis.multiBotEnsemble?.let { ensemble ->
                                     item(key = "tab4_multi_bot_arsenal") {
                                         MultiBotArsenalCard(
+                                            actionable = com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup),
                                             ensemble = ensemble,
-                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                            onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                         )
                                     }
                                 }
@@ -920,13 +936,16 @@ fun GoldHomeScreen(
                                 item(key = "trade_setup_tricks") {
                                     TradeSetupCard(
                                         setup = analysis.tradeSetup,
-                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips) }
+                                        scoreTag = com.example.livegoldai.data.HonestText.scoreTag(analysis, uiState.language),
+                                        scoreValue = com.example.livegoldai.data.HonestText.scoreValue(analysis),
+                                        onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                     )
                                 }
 
                                 if (analysis.candleInsight != null && analysis.mtfMatrix != null) {
                                     item(key = "candle_mtf_page") {
                                         CandleMtfOracleCard(
+                                            scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             candleInsight = analysis.candleInsight!!,
                                             mtfMatrix = analysis.mtfMatrix!!,
                                             tradingTricks = analysis.tradingTricks

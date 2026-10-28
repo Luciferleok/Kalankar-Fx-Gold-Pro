@@ -539,6 +539,7 @@ fun UnifiedSignalDashboardView(
 
         // --- 3. 🤖 KALANKAR QUANT AI BOT (AUTONOMOUS SIGNAL & EXECUTION) ---
         QuantBotCard(
+            scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator
         )
@@ -546,6 +547,7 @@ fun UnifiedSignalDashboardView(
         // --- 3B. 🤖 MULTI-BOT ARSENAL (6 SPECIALIZED BOTS ENSEMBLE) ---
         analysis.multiBotEnsemble?.let { ensemble ->
             MultiBotArsenalCard(
+                actionable = com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup),
                 ensemble = ensemble,
                 onOpenCalculator = onOpenCalculator
             )
@@ -988,11 +990,7 @@ fun UnifiedSignalDashboardView(
                     Icon(imageVector = Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(16.dp), tint = GoldLight)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = when (currentLanguage) {
-                            AppLanguage.ENGLISH -> "Calculate Safe Lot Size"
-                            AppLanguage.HINDI -> "सुरक्षित लॉट साइज निकालें"
-                            AppLanguage.MARATHI -> "सुरक्षित लॉट साइज काढा"
-                        },
+                        text = com.example.livegoldai.data.HonestText.lotButton(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup), currentLanguage),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )

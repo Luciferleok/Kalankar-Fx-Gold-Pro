@@ -545,7 +545,7 @@ fun MultiAiCouncilCard(
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                         val reportText = buildString {
                             appendLine("🏆 KALANKAR FX RULE COUNCIL REPORT:")
-                            appendLine("Consensus Verdict: ${consensus.consensusSignal.name} (${consensus.consensusConfidence}% Win Confidence)")
+                            appendLine("Consensus Verdict: ${consensus.consensusSignal.name} (${consensus.consensusConfidence}% rule agreement, not a probability)")
                             appendLine("Agreeing Models: ${consensus.agreeingModelsCount}/${consensus.totalModelsCount}")
                             appendLine("• Rule 1: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.GEMINI }?.signal?.name}")
                             appendLine("• Rule 2: ${consensus.modelInsights.firstOrNull { it.provider == AiModelProvider.CHAT_GPT }?.signal?.name}")

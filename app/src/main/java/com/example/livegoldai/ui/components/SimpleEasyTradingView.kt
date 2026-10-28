@@ -240,11 +240,7 @@ fun SimpleEasyTradingView(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "RECOMMENDED ACTION"
-                                AppLanguage.HINDI -> "स्पष्ट ट्रेडिंग सुझाव"
-                                AppLanguage.MARATHI -> "स्पष्ट ट्रेडिंग सल्ला"
-                            },
+                            text = com.example.livegoldai.data.HonestText.planHeadline(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup), currentLanguage),
                             fontWeight = FontWeight.Black,
                             fontSize = 12.sp,
                             letterSpacing = 0.5.sp,
@@ -526,11 +522,7 @@ fun SimpleEasyTradingView(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "Safe Lot Size"
-                                AppLanguage.HINDI -> "लॉट साइज निकालें"
-                                AppLanguage.MARATHI -> "लॉट साइज काढा"
-                            },
+                            text = com.example.livegoldai.data.HonestText.lotButton(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup), currentLanguage),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -636,6 +628,7 @@ fun SimpleEasyTradingView(
 
         // --- 2.5 🤖 KALANKAR QUANT BOT (HIGH-ACCURACY ALGORITHMIC TRADING) ---
         QuantBotCard(
+            scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator
         )

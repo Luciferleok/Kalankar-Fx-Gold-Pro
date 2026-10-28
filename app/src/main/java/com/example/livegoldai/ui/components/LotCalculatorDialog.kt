@@ -26,15 +26,20 @@ import com.example.livegoldai.theme.*
 import java.util.Locale
 import kotlin.math.max
 
+/**
+ * V33.1: cannot be shown without a [grant] from ResearchGate.authorize (one ACTIVE plan of one snapshot).
+ * The stop distance and price come from that plan and are not editable; targets use the plan's own reward/risk.
+ */
 @Composable
 fun LotCalculatorDialog(
-    initialStopLossPips: Double = 90.0,
-    currentGoldPrice: Double = 2748.0,
+    grant: com.example.livegoldai.data.ResearchGate.LotGrant,
+    lang: com.example.livegoldai.localization.AppLanguage = com.example.livegoldai.localization.AppLanguage.ENGLISH,
     onDismiss: () -> Unit
 ) {
     var balanceText by remember { mutableStateOf("5000") }
     var riskPercentText by remember { mutableStateOf("2.0") }
-    var slPipsText by remember { mutableStateOf(String.format(Locale.US, "%.0f", initialStopLossPips)) }
+    val slPipsText = String.format(Locale.US, "%.0f", grant.stopPips)
+    val currentGoldPrice = grant.price
 
     val balance = balanceText.toDoubleOrNull() ?: 5000.0
     val riskPercent = riskPercentText.toDoubleOrNull() ?: 2.0
@@ -47,8 +52,9 @@ fun LotCalculatorDialog(
 
     // Estimated margin required assuming 1:100 leverage
     val marginRequired = (currentGoldPrice * 100.0 * calculatedLot) / 100.0
-    val tp1Profit = riskDollar * 1.0
-    val tp2Profit = riskDollar * 2.0
+    // V33.1: from THIS plan's levels (before: always 1:1 and 1:2 whatever the plan said)
+    val tp1Profit = com.example.livegoldai.data.ResearchGate.hypotheticalAtTarget(grant, riskDollar, grant.tp1)
+    val tp2Profit = com.example.livegoldai.data.ResearchGate.hypotheticalAtTarget(grant, riskDollar, grant.tp2)
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -81,7 +87,7 @@ fun LotCalculatorDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "XAU/USD LOT CALCULATOR",
+                            text = "XAU/USD • " + com.example.livegoldai.data.HonestText.planHeadline(true, lang) + " • " + grant.interval.uppercase(),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Black,
                             color = GoldLight,
@@ -117,7 +123,7 @@ fun LotCalculatorDialog(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "RECOMMENDED LOT SIZE",
+                            text = com.example.livegoldai.data.HonestText.lotResultTitle(lang),
                             style = MaterialTheme.typography.labelSmall,
                             color = TextMuted,
                             letterSpacing = 0.8.sp
@@ -229,7 +235,8 @@ fun LotCalculatorDialog(
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = slPipsText,
-                            onValueChange = { slPipsText = it },
+                            onValueChange = { },
+                            readOnly = true,    // the plan's stop, not a free input
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
@@ -253,11 +260,14 @@ fun LotCalculatorDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        CalcRow(label = "TP1 Profit (1:1 R:R)", value = "+$${String.format(Locale.US, "%.2f", tp1Profit)}", color = SignalBuy)
+                        CalcRow(label = "TP1 (hypothetical)", value = tp1Profit?.let { "+$" + String.format(Locale.US, "%.2f", it) } ?: "--", color = SignalBuy)
                         Spacer(modifier = Modifier.height(4.dp))
-                        CalcRow(label = "TP2 Profit (1:2 R:R)", value = "+$${String.format(Locale.US, "%.2f", tp2Profit)}", color = GoldLight)
+                        CalcRow(label = "TP2 (hypothetical)", value = tp2Profit?.let { "+$" + String.format(Locale.US, "%.2f", it) } ?: "--", color = GoldLight)
                         Spacer(modifier = Modifier.height(4.dp))
                         CalcRow(label = "Est. Margin (1:100)", value = "$${String.format(Locale.US, "%.2f", marginRequired)}", color = TextSecondary)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(text = com.example.livegoldai.data.HonestText.hypotheticalNote(lang) + " • snapshot " + grant.snapshotId,
+                            style = MaterialTheme.typography.labelSmall, color = TextMuted)
                     }
                 }
 

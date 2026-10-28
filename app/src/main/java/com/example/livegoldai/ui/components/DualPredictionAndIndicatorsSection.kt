@@ -195,7 +195,6 @@ fun PredictionBigCard(
     val currentLanguage = LocalAppLanguage.current
     val prediction = analysis.nextPrediction
     val verdict = prediction?.verdict ?: analysis.tradeSetup.signal
-    val winProb = prediction?.winProbabilityPercent ?: analysis.tradeSetup.confidencePercent
 
     val (verdictColor, verdictBg, verdictBorder, verdictIcon) = when (verdict) {
         Signal.BUY -> Tuple4(
@@ -507,7 +506,7 @@ fun PredictionBigCard(
                                 )
                             }
                             Text(
-                                text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% REAL WIN RATE (N=${audit.totalSignalsTested})",
+                                text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else com.example.livegoldai.data.HonestText.hitRateLine(audit.winRatePercent, audit.totalSignalsTested, currentLanguage),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
                                 color = SignalBuy
@@ -841,7 +840,7 @@ fun PredictionBigCard(
                             fontSize = 16.sp
                         )
                         Text(
-                            text = "Confidence: $winProb% • see Learning Center for real accuracy",
+                            text = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = verdictColor,
@@ -862,14 +861,14 @@ fun PredictionBigCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "SAMBHAVNA (PROBABILITY BREAKDOWN):",
+                        text = com.example.livegoldai.data.HonestText.splitTitle(split.fromHistory, currentLanguage),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondary,
                         fontSize = 10.sp
                     )
                     Text(
-                        text = "$bullishProb% Bullish",
+                        text = com.example.livegoldai.data.HonestText.splitUp(bullishProb, split.fromHistory, currentLanguage),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Black,
                         color = if (bullishProb > 50) SignalBuy else TextSecondary,
@@ -1169,13 +1168,13 @@ fun PredictionBigCard(
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                                 val clip = ClipData.newPlainText(
                                     "Kalankar FX Gold Signal",
-                                    "🏆 KALANKAR FX GOLD SIGNAL:\n" +
+                                    com.example.livegoldai.data.HonestText.shareHeader(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup)) + "\n" +
                                             "Direction: ${verdict.name}\n" +
                                             "Entry: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryPrice)}\n" +
                                             "Stop Loss: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} (-${analysis.tradeSetup.stopLossPips.toInt()} Pips)\n" +
                                             "Target 1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)} (+${analysis.tradeSetup.takeProfit1Pips.toInt()} Pips)\n" +
                                             "Target 2: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)} (+${analysis.tradeSetup.takeProfit2Pips.toInt()} Pips)\n" +
-                                            "Confidence: $winProb%\n" +
+                                            "Score: " + com.example.livegoldai.data.HonestText.scoreShort(analysis, AppLanguage.ENGLISH) + "\n" +
                                             "R:R Ratio: ${analysis.tradeSetup.riskRewardRatio}"
                                 )
                                 clipboard?.setPrimaryClip(clip)

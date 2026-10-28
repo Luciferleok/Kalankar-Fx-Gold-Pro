@@ -48,6 +48,8 @@ import com.example.livegoldai.theme.*
 fun MultiBotArsenalCard(
     ensemble: MultiBotEnsemble?,
     onOpenCalculator: (Double) -> Unit = {},
+    // V33.1: only an ACTIVE plan may be copied as an order; otherwise the text says research levels
+    actionable: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (ensemble == null) return
@@ -134,11 +136,7 @@ fun MultiBotArsenalCard(
                             }
                         }
                         Text(
-                            text = when (currentLang) {
-                                AppLanguage.ENGLISH -> "Win rates below are real (from checked predictions)"
-                                AppLanguage.HINDI -> "नीचे की जीत दर असली है (जाँची गई प्रेडिक्शन से)"
-                                AppLanguage.MARATHI -> "खालील यश दर खरे आहेत (तपासलेल्या अंदाजांवरून)"
-                            },
+                            text = com.example.livegoldai.data.HonestText.botHitRateHeader(currentLang),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextMuted
@@ -341,7 +339,7 @@ fun MultiBotArsenalCard(
                                             )
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Text(
-                                                    text = if (bot.backtestedWinRate < 0) "Win-rate: untested (needs 10 checked)" else "Win-rate: ${String.format(java.util.Locale.US, "%.1f", bot.backtestedWinRate)}% • PF: ${if (bot.profitFactor < 0) "--" else String.format(java.util.Locale.US, "%.2f", bot.profitFactor)}",
+                                                    text = if (bot.backtestedWinRate < 0) "Hit-rate: untested (needs 10 checked)" else "Hit-rate: ${String.format(java.util.Locale.US, "%.1f", bot.backtestedWinRate)}% • PF before costs: ${if (bot.profitFactor < 0) "--" else String.format(java.util.Locale.US, "%.2f", bot.profitFactor)}",
                                                     fontSize = 9.5.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = GoldLight
@@ -416,7 +414,10 @@ fun MultiBotArsenalCard(
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val command = if (ensemble.ensembleSignal == Signal.BUY) {
+                            val command = if (!actionable && ensemble.ensembleSignal != Signal.WAIT) {
+                                com.example.livegoldai.data.HonestText.shareHeader(false) + "\n" +
+                                    "${ensemble.ensembleSignal.name} research levels: entry ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
+                            } else if (ensemble.ensembleSignal == Signal.BUY) {
                                 "BUY LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
                             } else if (ensemble.ensembleSignal == Signal.SELL) {
                                 "SELL LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
@@ -439,9 +440,9 @@ fun MultiBotArsenalCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = when (currentLang) {
-                                AppLanguage.ENGLISH -> "COPY ENSEMBLE MT4/MT5 ORDER"
-                                AppLanguage.HINDI -> "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करें"
-                                AppLanguage.MARATHI -> "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करा"
+                                AppLanguage.ENGLISH -> if (actionable) "COPY ENSEMBLE MT4/MT5 ORDER" else "COPY RESEARCH LEVELS (not an order)"
+                                AppLanguage.HINDI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करें" else "रिसर्च लेवल कॉपी करें (ऑर्डर नहीं)"
+                                AppLanguage.MARATHI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करा" else "रिसर्च लेव्हल कॉपी करा (ऑर्डर नाही)"
                             },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,

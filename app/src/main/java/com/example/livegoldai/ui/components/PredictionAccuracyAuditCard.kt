@@ -188,11 +188,7 @@ fun PredictionAccuracyAuditCard(
                             color = SignalBuy
                         )
                         Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "WIN RATE (${audit.timeframe})"
-                                AppLanguage.HINDI -> "सफलता दर (${audit.timeframe})"
-                                AppLanguage.MARATHI -> "यशाचा दर (${audit.timeframe})"
-                            },
+                            text = com.example.livegoldai.data.HonestText.hitRateTitle(audit.timeframe, currentLanguage),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextSecondary
                         )

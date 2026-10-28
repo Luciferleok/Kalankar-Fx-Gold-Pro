@@ -86,7 +86,7 @@ fun ExecutiveSummaryBar(
                     color = sigColor.copy(alpha = 0.16f)
                 ) {
                     Text(
-                        text = "${prediction?.winProbabilityPercent ?: analysis.tradeSetup.confidencePercent}% AGREEMENT",
+                        text = com.example.livegoldai.data.HonestText.scoreShort(analysis, com.example.livegoldai.localization.LocalAppLanguage.current),
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
@@ -238,14 +238,14 @@ fun ExecutiveSummaryBar(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "🕯️ Next Candle: ",
+                            text = "🕯️ Next-candle rule lean (unvalidated): ",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = GoldLight
                         )
                         Text(
-                            text = if (analysis.overallSignal == Signal.BUY) "Green Expansion Projected" else if (analysis.overallSignal == Signal.SELL) "Red Breakdown Projected" else "Inside-Bar Testing",
+                            text = if (analysis.overallSignal == Signal.BUY) "rules lean up" else if (analysis.overallSignal == Signal.SELL) "rules lean down" else "no lean",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,

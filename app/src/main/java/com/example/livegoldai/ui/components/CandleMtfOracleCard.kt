@@ -34,6 +34,8 @@ fun CandleMtfOracleCard(
     candleInsight: CandleReadingInsight,
     mtfMatrix: MultiTimeframeMatrix,
     tradingTricks: List<TradingTrick>,
+    // V33.1: score with its real name; null = not shown
+    scoreText: String? = null,
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -91,7 +93,7 @@ fun CandleMtfOracleCard(
                     )
                 }
 
-                Surface(
+                if (scoreText != null) Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = NeonGreen.copy(alpha = 0.16f),
                     border = CardDefaults.outlinedCardBorder().copy(
@@ -99,7 +101,7 @@ fun CandleMtfOracleCard(
                     )
                 ) {
                     Text(
-                        text = "${candleInsight.confidencePercent}% AGREEMENT",
+                        text = scoreText,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = NeonGreen,
@@ -256,7 +258,7 @@ fun CandleMtfOracleCard(
                                     Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = GoldLight, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "NEXT CANDLE PROJECTION (AI FORECAST)",
+                                        text = com.example.livegoldai.data.HonestText.nextCandleTitle(currentLanguage),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Black,
                                         color = GoldLight,
@@ -472,7 +474,8 @@ fun CandleMtfOracleCard(
                                                 )
                                             }
                                             Text(
-                                                text = "${trick.winRate} • Target ${trick.expectedPipGain}",
+                                                // V33.1: the stored "91% Precision" / "+25 to +50 Pips" are fixed texts, not measured: never shown
+                                                text = com.example.livegoldai.data.HonestText.noTrackRecord(currentLanguage),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontSize = 10.sp,
                                                 color = GoldLight
