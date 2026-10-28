@@ -119,9 +119,10 @@ class LearningCoordinator(
         analysis: GoldAnalysisResult,
         interval: String,
         mtfCandles: Map<String, List<PathBar>>,
-        now: Long = System.currentTimeMillis()
+        now: Long = System.currentTimeMillis(),
+        mtfSource: String = "PAXG"
     ): GoldAnalysisResult {
-        val mtf = RealityEngine.buildMtf(mtfCandles)
+        val mtf = RealityEngine.buildMtf(mtfCandles, mtfSource)
         // V29A source gate: only Twelve Data XAU/USD with clean data may publish or record an XAU/USD call
         val src = (analysis.chartCandles.ifEmpty { analysis.recentCandles }).map { SourceStateMachine.Candle(it.datetime, it.open, it.high, it.low, it.close) }
         val gate = sourceGate.evaluate(interval, analysis.feed?.source, src, RealityEngine.intervalMinutes(interval) * 60_000L,

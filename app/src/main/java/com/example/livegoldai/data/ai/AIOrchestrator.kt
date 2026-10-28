@@ -73,7 +73,7 @@ class AIOrchestrator(
         if (m == "FULL") return Route("FULL", "Chosen by you", Int.MAX_VALUE)
         val newsSoon = a.newsMode != null || a.newsTradingPlan?.isNewsActive == true || a.isNewsModeTriggered
         val bots = a.multiBotEnsemble?.ensembleSignal
-        val mtf = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
+        val mtf = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } ?: emptyList()
         val mtfConflict = mtf.any { it.signal == Signal.BUY } && mtf.any { it.signal == Signal.SELL }
         val regime = a.insights?.regime ?: ""
         return when {

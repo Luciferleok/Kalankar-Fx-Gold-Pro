@@ -86,7 +86,9 @@ data class PredictionPresentationState(
     val horizonMin: Int = 0,
     val expiresAtMs: Long = 0L,
     val outcome: String = "",                       // ledger outcome of this forecast once checked ("" = not yet)
-    val metrics: List<MetricStat> = emptyList()
+    val metrics: List<MetricStat> = emptyList(),
+    // V32: true when the multi-timeframe context is XAU/USD itself (OANDA), false for the PAXG/USDT proxy
+    val mtfXau: Boolean = false
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -162,7 +164,8 @@ object PresentationBuilder {
             conflicting = conflicting,
             neutral = neutral,
             attributionAvailable = contrib.isNotEmpty(),
-            mtfAvailable = a.mtfMatrix?.timeframes?.any { it.label.startsWith("PAXG") } == true,
+            mtfAvailable = a.mtfMatrix?.timeframes?.any { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } == true,
+            mtfXau = RealityEngine.mtfIsXau(a.mtfMatrix),
             crossMarketAvailable = b?.crossMarket?.available == true,
             aiStatus = ai,
             botsSummary = bots,
@@ -209,7 +212,7 @@ object PresentationBuilder {
         if (researchStatus != "LIVE QUALIFIED") out.add("NO_PROVEN_EDGE")
         else if (SourceRegistry.identify(a.feed?.source).provider != ProviderId.TWELVE_DATA) out.add("QUALIFIED_OTHER_FEED")
         if (a.brain?.totalUncertainty == "HIGH") out.add("HIGH_UNCERTAINTY")
-        if (a.mtfMatrix?.timeframes?.any { it.label.startsWith("PAXG") } != true) out.add("MTF_UNAVAILABLE")
+        if (a.mtfMatrix?.timeframes?.any { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } != true) out.add("MTF_UNAVAILABLE")
         return out
     }
 

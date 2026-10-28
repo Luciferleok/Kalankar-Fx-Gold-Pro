@@ -43,6 +43,7 @@ object AppEngine {
             learning = learning,
             fetchAnalysis = { iv -> api.fetchAnalysis(interval = iv, maxAgeMs = 15_000L).getOrNull() },
             fetchMtf = { api.fetchMtfCandles() },
+            mtfSource = { api.mtfSourceOf(it) },
             onAnalysis = { a, iv, now -> shadow.observe(a, iv, now) },
             onRecorded = { a, rec, now ->
                 // same feature snapshot the screen would store
@@ -65,6 +66,7 @@ class BackgroundRecorder(
     private val learning: LearningCoordinator,
     private val fetchAnalysis: suspend (String) -> GoldAnalysisResult?,
     private val fetchMtf: suspend () -> Map<String, List<PathBar>>,
+    private val mtfSource: (Map<String, List<PathBar>>) -> String = { "PAXG" },
     private val onRecorded: (GoldAnalysisResult, LedgerRecord, Long) -> Unit = { _, _, _ -> },
     private val onAnalysis: suspend (GoldAnalysisResult, String, Long) -> List<String> = { _, _, _ -> emptyList() }
 ) {
@@ -125,7 +127,7 @@ class BackgroundRecorder(
                 if (a == null || a.isSimulatedFallback) { failed++; continue }
                 if (mtf == null) mtf = try { fetchMtf() } catch (_: Exception) { emptyMap() }
                 val n0 = learning.currentState().records.size
-                val learned = try { learning.process(a, iv, mtf ?: emptyMap(), now) } catch (_: Exception) { null }
+                val learned = try { learning.process(a, iv, mtf ?: emptyMap(), now, mtf?.let { mtfSource(it) } ?: "PAXG") } catch (_: Exception) { null }
                 val st = learning.currentState()
                 try { proven.addAll(onAnalysis(learned ?: a, iv, now)) } catch (_: Exception) { }
                 if (learned != null && st.records.size > n0) {

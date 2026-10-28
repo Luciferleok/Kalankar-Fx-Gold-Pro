@@ -91,7 +91,8 @@ object DecisionTraceText {
             else -> t(lang, "NOT CONNECTED", "जुड़ा नहीं", "जोडलेले नाही")
         })
         evidenceRows.add(t(lang, "Multi-timeframe", "मल्टी-टाइमफ़्रेम", "मल्टी-टाइमफ्रेम") to
-            (if (p.mtfAvailable) t(lang, "PAXG/USDT proxy, context only", "PAXG/USDT प्रॉक्सी, सिर्फ़ संदर्भ", "PAXG/USDT प्रॉक्सी, फक्त संदर्भ")
+            (if (p.mtfAvailable && p.mtfXau) t(lang, "XAU/USD (OANDA), context only", "XAU/USD (OANDA), सिर्फ़ संदर्भ", "XAU/USD (OANDA), फक्त संदर्भ")
+             else if (p.mtfAvailable) t(lang, "PAXG/USDT proxy, context only", "PAXG/USDT प्रॉक्सी, सिर्फ़ संदर्भ", "PAXG/USDT प्रॉक्सी, फक्त संदर्भ")
              else t(lang, "UNAVAILABLE (optional, not in the decision)", "उपलब्ध नहीं (वैकल्पिक, फ़ैसले में नहीं)", "उपलब्ध नाही (पर्यायी, निर्णयात नाही)")))
         evidenceRows.add(t(lang, "Cross-market", "क्रॉस-मार्केट", "क्रॉस-मार्केट") to
             (if (p.crossMarketAvailable) t(lang, "available (context)", "उपलब्ध (संदर्भ)", "उपलब्ध (संदर्भ)") else t(lang, "UNAVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही")))

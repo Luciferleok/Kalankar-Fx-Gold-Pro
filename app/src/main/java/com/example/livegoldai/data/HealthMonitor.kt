@@ -49,7 +49,7 @@ class HealthMonitor {
 
         // ---------------- TIMEFRAMES
         val tfChecks = listOf("5M", "15M", "1H", "4H", "1D").map { tf ->
-            val ok = a.mtfMatrix?.timeframes?.any { it.timeframe == tf && it.label.startsWith("PAXG") } == true
+            val ok = a.mtfMatrix?.timeframes?.any { it.timeframe == tf && com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } == true
             HealthCheck(tf, if (ok) "OK" else "WARN", if (ok) "Real candles loaded" else "Not loaded")
         }
         categories.add(category("TIMEFRAMES", "Timeframes", tfChecks))
@@ -216,7 +216,7 @@ object CockpitInsightsBuilder {
         val last = candles.lastOrNull()
         val rangeVsAtr = if (last != null && atr > 0) (last.high - last.low) / atr else 0.0
 
-        val rows = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") }?.associateBy { it.timeframe } ?: emptyMap()
+        val rows = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) }?.associateBy { it.timeframe } ?: emptyMap()
         fun story(keys: List<String>): String {
             val present = keys.mapNotNull { k -> rows[k]?.let { k to it.signal } }
             if (present.isEmpty()) return "No data"
@@ -235,7 +235,7 @@ object CockpitInsightsBuilder {
         if (a.quantBotSignal?.statusText?.contains("FILTER") == true) warnings.add(if (a.quantBotSignal?.statusText?.contains("DATA FILTER") == true) "Forecast paused: market data integrity issue" else if (a.quantBotSignal?.statusText?.contains("RANGE FILTER") == true) "Sideways market: BUY/SELL is shown as WAIT (range filter)" else "A learned filter changed this signal to WAIT")
         val ivMin = RealityEngine.intervalMinutes(a.interval)
         val htf = RealityEngine.higherTimeframeSignal(a.mtfMatrix, ivMin)
-        if (htf != null && PredictionLedger.opposite(htf, a.overallSignal)) warnings.add("Higher timeframe (PAXG/USDT proxy, context only) points ${htf.name}, against this ${a.overallSignal.name}")
+        if (htf != null && PredictionLedger.opposite(htf, a.overallSignal)) warnings.add("Higher timeframe (${RealityEngine.mtfSourceName(a.mtfMatrix)}, context only) points ${htf.name}, against this ${a.overallSignal.name}")
         if (newsActive) warnings.add("High-impact news window: spreads and spikes likely")
         if (rangeVsAtr > 1.5) warnings.add(String.format(Locale.US, "Volatility rising: last candle %.1f× ATR", rangeVsAtr))
         rsiValue(a)?.let { r ->

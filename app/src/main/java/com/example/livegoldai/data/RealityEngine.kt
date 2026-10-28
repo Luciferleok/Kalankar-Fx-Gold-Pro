@@ -63,8 +63,16 @@ object RealityEngine {
         }
     }
 
-    fun buildMtf(candles: Map<String, List<PathBar>>): MultiTimeframeMatrix? {
+    /** V32: MTF rows start with one of these, so every screen can tell real context rows from placeholders. */
+    const val MTF_XAU_LABEL = "XAU/USD OANDA"
+    fun isMtfRow(label: String): Boolean = label.startsWith("PAXG") || label.startsWith(MTF_XAU_LABEL)
+    /** true when the MTF context is the real XAU/USD (OANDA), false for the PAXG/USDT proxy. */
+    fun mtfIsXau(m: MultiTimeframeMatrix?): Boolean = m?.timeframes?.any { it.label.startsWith(MTF_XAU_LABEL) } == true
+    fun mtfSourceName(m: MultiTimeframeMatrix?): String = if (mtfIsXau(m)) "XAU/USD (OANDA)" else "PAXG/USDT proxy"
+
+    fun buildMtf(candles: Map<String, List<PathBar>>, source: String = "PAXG"): MultiTimeframeMatrix? {
         if (candles.isEmpty()) return null
+        val xau = source == "OANDA"
         val rows = mtfOrder.mapNotNull { (tf, _) ->
             val bars = candles[tf] ?: return@mapNotNull null
             val closes = bars.map { it.c }
@@ -73,7 +81,7 @@ object RealityEngine {
             val r = rsi(closes)
             TimeframeStatus(
                 timeframe = tf.uppercase(),
-                label = "PAXG/USDT ${bars.size} candles • PROXY CONTEXT",   // must start with "PAXG": screens filter on it
+                label = if (xau) "$MTF_XAU_LABEL ${bars.size} candles • CONTEXT" else "PAXG/USDT ${bars.size} candles • PROXY CONTEXT",   // see isMtfRow
                 signal = sig,
                 keyLevel = "EMA21 $${f2(e21)}",
                 momentumPercent = r.roundToInt(),
@@ -93,7 +101,8 @@ object RealityEngine {
             if (list.isEmpty()) "no data" else list.joinToString(" • ") { "${it.timeframe} ${it.signal.name}" }
         return MultiTimeframeMatrix(
             timeframes = rows,
-            alignmentSummary = "PROXY CONTEXT: $up of ${rows.size} timeframes UP, $down DOWN on PAXG/USDT (a different instrument; not used in the XAU/USD decision)",
+            alignmentSummary = if (xau) "CONTEXT: $up of ${rows.size} timeframes UP, $down DOWN on XAU/USD (OANDA, same instrument; context, not the decision rule)"
+                else "PROXY CONTEXT: $up of ${rows.size} timeframes UP, $down DOWN on PAXG/USDT (a different instrument; not used in the XAU/USD decision)",
             scalpRecommendation = "Short timeframes: ${describe(small)}",
             swingRecommendation = "Higher timeframes: ${describe(big)}"
         )

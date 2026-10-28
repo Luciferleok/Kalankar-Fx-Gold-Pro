@@ -86,7 +86,7 @@ object MarketSnapshotBuilder {
         fact("pivot", pv.pivot); fact("r1", pv.r1); fact("r2", pv.r2); fact("s1", pv.s1); fact("s2", pv.s2)
 
         // ---- other timeframes (real PAXG/USDT candles, EMA rule state only)
-        val mtf = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
+        val mtf = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } ?: emptyList()
         snap["timeframes"] = if (mtf.isEmpty()) UNAVAILABLE else mtf.map {
             linkedMapOf(
                 "timeframe" to it.timeframe,

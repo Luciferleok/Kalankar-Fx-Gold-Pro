@@ -92,6 +92,8 @@ class GoldApiService(
         }
 
         const val OANDA_SOURCE = "OANDA XAU_USD (practice)"
+        const val MTF_OANDA = "OANDA"
+        const val MTF_PAXG = "PAXG"
         const val SPOT_MIN_GAP_MS = 15 * 60_000L     // Twelve Data quota: verification history at most 4x per hour
         const val PROXY_AFTER_MS = 60 * 60_000L      // fall back to a proxy instrument only when an hour overdue
     }
@@ -855,15 +857,34 @@ class GoldApiService(
     private var mtfCache: Pair<Long, Map<String, List<PathBar>>>? = null
 
     /** Real candles for 5m / 15m / 1h / 4h / 1d (PAXG/USDT). Cached for 60 seconds. */
+    /**
+     * V32: multi-timeframe context. OANDA XAU/USD (the real instrument) when a token is saved; otherwise Binance
+     * PAXG/USDT (proxy). One source per set: rows from the two are never mixed. [mtfSourceOf] tells which one.
+     */
     suspend fun fetchMtfCandles(): Map<String, List<PathBar>> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         mtfCache?.let { if (now - it.first < 60_000L) return@withContext it.second }
         val tfs = listOf("5m", "15m", "1h", "4h", "1d")
+        if (oandaConfigured()) {
+            val oa = tfs.mapNotNull { tf ->
+                val mins = OandaGranularity.minutesOf(tf) ?: return@mapNotNull null
+                val g = OandaGranularity.NATIVE[mins] ?: return@mapNotNull null
+                val f = oandaStore.candles(g, 120)
+                if (f.status != OandaStatus.CONNECTED) return@mapNotNull null
+                val bars = CandleAggregator.aggregate(f.bars, mins, mins, now).bars.map { PathBar(it.bar.startMs, it.bar.open, it.bar.high, it.bar.low, it.bar.close) }
+                if (bars.size < 30) null else tf to bars
+            }.toMap()
+            if (oa.isNotEmpty()) { mtfCache = now to oa; mtfSource = oa to MTF_OANDA; return@withContext oa }
+        }
         val jobs = tfs.map { tf -> async { tf to fetchBinanceKlines(tf, 120) } }
         val result = jobs.mapNotNull { j -> val (tf, bars) = j.await(); if (bars.isNullOrEmpty()) null else tf to bars }.toMap()
-        if (result.isNotEmpty()) mtfCache = now to result
+        if (result.isNotEmpty()) { mtfCache = now to result; mtfSource = result to MTF_PAXG }
         result
     }
+
+    @Volatile private var mtfSource: Pair<Map<String, List<PathBar>>, String>? = null
+    /** Source of a set returned by [fetchMtfCandles] (checked by identity, so a set is never mislabelled). */
+    fun mtfSourceOf(m: Map<String, List<PathBar>>): String = mtfSource?.let { if (it.first === m) it.second else null } ?: MTF_PAXG
 
     // ---------------- NEWS MODE ----------------
     // High-impact USD news ke 30 min pehle se 30 min baad tak app "News Mode" mein rehta hai.

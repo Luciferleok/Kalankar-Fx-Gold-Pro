@@ -107,7 +107,7 @@ object AiConsensus {
         val rsi = a.groups.flatMap { it.indicators }.firstOrNull { it.name.startsWith("RSI") }
             ?.let { MarketSnapshotBuilder.extractFacts(it.name, it.valueDisplay).values.firstOrNull() }
         val against = a.groups.filter { PredictionLedger.opposite(it.verdict, sig) }.map { it.title }
-        val mtfAgainst = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") && PredictionLedger.opposite(it.signal, sig) }?.map { it.timeframe } ?: emptyList()
+        val mtfAgainst = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) && PredictionLedger.opposite(it.signal, sig) }?.map { it.timeframe } ?: emptyList()
         val ts = a.tradeSetup
         when (sig) {
             Signal.BUY -> {

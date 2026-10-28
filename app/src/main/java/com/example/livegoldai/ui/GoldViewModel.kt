@@ -246,7 +246,7 @@ class GoldViewModel @JvmOverloads constructor(
                 val analysis = try {
                     withContext(Dispatchers.IO) {
                         val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
-                        val learned = learning.process(rawAnalysis, currentInterval, mtfCandles)
+                        val learned = learning.process(rawAnalysis, currentInterval, mtfCandles, mtfSource = apiService.mtfSourceOf(mtfCandles))
                         try { shadowLive.observe(learned, currentInterval) } catch (_: Exception) { }
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }

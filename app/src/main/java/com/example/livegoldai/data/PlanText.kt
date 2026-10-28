@@ -258,6 +258,12 @@ object PlanText {
 
     fun proxyLevelNote(l: AppLanguage) = t(l, "Levels are PAXG/USDT prices, not XAU/USD levels.", "लेवल PAXG/USDT के भाव हैं, XAU/USD लेवल नहीं।", "लेव्हल PAXG/USDT चे भाव आहेत, XAU/USD लेव्हल नाहीत.")
 
+    /** V32: Home SOURCE tile names the provider: "OANDA", "TWELVE DATA", "TD BACKUP"; proxies keep their type. */
+    fun sourceTile(source: String?, sourceType: String): String {
+        val b = SourceRegistry.badge(source).split(" • ")
+        return if (b.size >= 3 && b[0] == "XAU/USD") (if (b[2] == "BACKUP") "TD BACKUP" else b[1]) else sourceType.ifBlank { "--" }
+    }
+
     /** "EMA21 $4039.56" -> "PAXG EMA21 $4039.56" (idempotent). */
     fun proxyLevel(level: String): String = if (level.isBlank() || level.startsWith("PAXG")) level else "PAXG $level"
 

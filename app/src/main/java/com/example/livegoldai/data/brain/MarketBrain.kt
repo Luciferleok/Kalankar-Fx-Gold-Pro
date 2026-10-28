@@ -141,7 +141,7 @@ object MarketBrain {
         val fam = AnalogEngine.familiarity(features, fs, state, a.interval, now)
 
         // ---- summaries
-        val mtf = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
+        val mtf = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } ?: emptyList()
         val up = mtf.count { it.signal == Signal.BUY }; val dn = mtf.count { it.signal == Signal.SELL }
         val mtfSummary = when {
             mtf.isEmpty() -> "NOT LOADED"
@@ -165,7 +165,7 @@ object MarketBrain {
         val base = cal ?: raw
         val budget = ArrayList<BudgetLine>()
         val htf = RealityEngine.higherTimeframeSignal(a.mtfMatrix, RealityEngine.intervalMinutes(a.interval))
-        if (sig != Signal.WAIT && htf != null && PredictionLedger.opposite(htf, sig)) budget.add(BudgetLine("Higher timeframe (PAXG/USDT proxy) points the other way", -5))
+        if (sig != Signal.WAIT && htf != null && PredictionLedger.opposite(htf, sig)) budget.add(BudgetLine("Higher timeframe (${RealityEngine.mtfSourceName(a.mtfMatrix)}) points the other way", -5))
         when (anomaly.level) {
             "MODERATE" -> budget.add(BudgetLine("Anomaly risk moderate", -3))
             "HIGH" -> budget.add(BudgetLine("Anomaly risk high", -6))

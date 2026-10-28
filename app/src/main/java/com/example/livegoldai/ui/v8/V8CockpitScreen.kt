@@ -115,7 +115,7 @@ fun V8CockpitScreen(
             V8Hairline()
             Row(modifier = Modifier.fillMaxWidth()) {
                 listOf(
-                    tr(lang, "SOURCE", "स्रोत", "स्रोत") to (feed?.let { if (it.sourceType == "PRIMARY") "PRIMARY" else it.sourceType.ifBlank { "--" } } ?: "--"),
+                    tr(lang, "SOURCE", "स्रोत", "स्रोत") to (feed?.let { com.example.livegoldai.data.PlanText.sourceTile(it.source, it.sourceType) } ?: "--"),
                     tr(lang, "AGE", "उम्र", "वय") to fmtAge(ageMs),
                     tr(lang, "FETCH", "लोड", "लोड") to (feed?.latencyMs?.let { "$it ms" } ?: "--")
                 ).forEach { (k, v) ->
@@ -488,14 +488,16 @@ fun V8CockpitScreen(
         }
 
         // ---------------- multi-horizon matrix (real candles)
-        val rows = analysis.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
+        val rows = analysis.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } ?: emptyList()
         V8Card(level = 2) {
-            V8Label(tr(lang, "PAXG/USDT proxy — context only", "PAXG/USDT प्रॉक्सी — सिर्फ़ संदर्भ", "PAXG/USDT प्रॉक्सी — फक्त संदर्भ"))
+            val mtfXau = com.example.livegoldai.data.RealityEngine.mtfIsXau(analysis.mtfMatrix)
+            V8Label(if (mtfXau) tr(lang, "XAU/USD (OANDA) — context only", "XAU/USD (OANDA) — सिर्फ़ संदर्भ", "XAU/USD (OANDA) — फक्त संदर्भ")
+                else tr(lang, "PAXG/USDT proxy — context only", "PAXG/USDT प्रॉक्सी — सिर्फ़ संदर्भ", "PAXG/USDT प्रॉक्सी — फक्त संदर्भ"))
             if (rows.isEmpty()) {
                 Text(text = tr(lang, "MULTI-TIMEFRAME CONTEXT UNAVAILABLE • optional context, the XAU/USD decision does not use it", "मल्टी-टाइमफ़्रेम संदर्भ उपलब्ध नहीं • वैकल्पिक, XAU/USD फ़ैसला इसे इस्तेमाल नहीं करता", "मल्टी-टाइमफ्रेम संदर्भ उपलब्ध नाही • पर्यायी, XAU/USD निर्णय तो वापरत नाही"), color = V8.Text3, fontSize = 11.sp)
             } else {
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                    listOf("TF" to 0.18f, "DIR" to 0.17f, "RSI" to 0.17f, tr(lang, "PAXG LEVEL", "PAXG लेवल", "PAXG लेव्हल") to 0.48f).forEach { (h, w) ->
+                    listOf("TF" to 0.18f, "DIR" to 0.17f, "RSI" to 0.17f, (if (mtfXau) tr(lang, "LEVEL", "लेवल", "लेव्हल") else tr(lang, "PAXG LEVEL", "PAXG लेवल", "PAXG लेव्हल")) to 0.48f).forEach { (h, w) ->
                         Text(text = h, color = V8.Text3, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(w))
                     }
                 }
@@ -505,7 +507,7 @@ fun V8CockpitScreen(
                         Text(text = arrowOf(r.signal) + " " + r.signal.name, color = signalColor(r.signal), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.17f))
                         Text(text = "${r.momentumPercent}", color = V8.Text2, fontSize = 11.sp, modifier = Modifier.weight(0.17f))
                         // V29C.1: a PAXG/USDT price, never shown as an XAU/USD level
-                        Text(text = com.example.livegoldai.data.PlanText.proxyLevel(r.keyLevel), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
+                        Text(text = if (mtfXau) r.keyLevel else com.example.livegoldai.data.PlanText.proxyLevel(r.keyLevel), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
                     }
                 }
                 Text(text = tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT, a different instrument: context only, not used in the XAU/USD decision", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT, अलग इंस्ट्रूमेंट: सिर्फ संदर्भ, XAU/USD फैसले में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT, वेगळे इन्स्ट्रुमेंट: फक्त संदर्भ, XAU/USD निर्णयात नाही"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))

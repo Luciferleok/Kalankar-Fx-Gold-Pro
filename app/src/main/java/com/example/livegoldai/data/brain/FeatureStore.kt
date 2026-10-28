@@ -55,6 +55,7 @@ object FeatureCatalog {
         FeatureDef("pillar_bull_v1", "weighted share of pillars voting BUY (%)", "7 pillars"),
         FeatureDef("pillar_bear_v1", "weighted share of pillars voting SELL (%)", "7 pillars"),
         FeatureDef("mtf_net_v1", "timeframes up − timeframes down (EMA rule)", "PAXG candles 5M-1D"),
+        FeatureDef("mtf_net_xau_v1", "timeframes up − timeframes down (EMA rule)", "XAU/USD OANDA candles 5M-1D"),
         FeatureDef("bots_net_v1", "bots BUY − bots SELL", "6 rule bots"),
         FeatureDef("anomaly_v1", "anomaly severity 0-3", "anomaly engine"),
         FeatureDef("xm_net_v1", "cross-market assets implying up − implying down", "cross-market"),
@@ -106,8 +107,10 @@ object FeatureCatalog {
             put("pillar_bear_v1", ins.bearishPoints)
         }
         put("atr_pct_v1", if (atr != null && px > 0) atr / px * 100.0 else null)
-        val mtf = a.mtfMatrix?.timeframes?.filter { it.label.startsWith("PAXG") } ?: emptyList()
-        if (mtf.isNotEmpty()) put("mtf_net_v1", (mtf.count { it.signal == Signal.BUY } - mtf.count { it.signal == Signal.SELL }).toDouble())
+        val mtf = a.mtfMatrix?.timeframes?.filter { com.example.livegoldai.data.RealityEngine.isMtfRow(it.label) } ?: emptyList()
+        // V32: XAU/USD (OANDA) context is a different input than the PAXG proxy, so it is stored under its own name
+        if (mtf.isNotEmpty()) put(if (com.example.livegoldai.data.RealityEngine.mtfIsXau(a.mtfMatrix)) "mtf_net_xau_v1" else "mtf_net_v1",
+            (mtf.count { it.signal == Signal.BUY } - mtf.count { it.signal == Signal.SELL }).toDouble())
         a.multiBotEnsemble?.let { put("bots_net_v1", (it.buyVotes - it.sellVotes).toDouble()) }
         anomaly?.let { put("anomaly_v1", it.severity.toDouble()) }
         if (xm != null && xm.available) {
