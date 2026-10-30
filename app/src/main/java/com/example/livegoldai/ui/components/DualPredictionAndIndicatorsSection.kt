@@ -245,6 +245,8 @@ fun PredictionBigCard(
     }
     val remainingMillis = (validUntil - nowMillis).coerceAtLeast(0L)
     val isValid = remainingMillis > 0L || validUntil == 0L
+    // V33.1R: the one scenario of this snapshot (levels from tradeSetup; actionable only if ResearchGate authorizes it)
+    val scenario = com.example.livegoldai.data.ResearchScenario.of(analysis, nowMillis)
     val remTotalSeconds = remainingMillis / 1000L
     val remHours = remTotalSeconds / 3600L
     val remMinutes = (remTotalSeconds % 3600L) / 60L
@@ -388,11 +390,7 @@ fun PredictionBigCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> if (isValid) "PREDICTION VALIDITY (ACTIVE)" else "VALIDITY EXPIRED (EVALUATING)"
-                                    AppLanguage.HINDI -> if (isValid) "प्रेडिक्शन वैधता (समय सीमा सक्रिय)" else "वैधता समाप्त (नया विश्लेषण)"
-                                    AppLanguage.MARATHI -> if (isValid) "प्रेडिक्शन वैधता (सक्रिय कालावधी)" else "मुदत संपली (पुढील चक्र)"
-                                },
+                                text = com.example.livegoldai.data.ResearchScenario.windowTitle(scenario, !isValid, currentLanguage),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Black,
                                 color = if (isValid) GoldLight else TextMuted,
@@ -418,7 +416,7 @@ fun PredictionBigCard(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isValid) "⏳ $countdownStr" else "EXPIRED",
+                                    text = if (isValid) "⏳ $countdownStr" else "ENDED",
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                     fontWeight = FontWeight.ExtraBold,
                                     color = if (isValid) NeonGreen else SignalSell
@@ -448,23 +446,19 @@ fun PredictionBigCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "⏱️ ${prediction?.getValidityFormatted(currentLanguage) ?: "Active for this interval"}",
+                            text = "⏱️ " + com.example.livegoldai.data.ResearchScenario.durationLine(scenario, analysis.interval, validUntil, currentLanguage),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = TextPrimary,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "Target / SL = Auto Closed"
-                                AppLanguage.HINDI -> "TP1 / SL पर स्वतः क्लोज़"
-                                AppLanguage.MARATHI -> "TP1 / SL वर आपोआप पूर्ण"
-                            },
+                            text = com.example.livegoldai.data.ResearchScenario.outcomeNote(scenario, currentLanguage),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = TextMuted
                         )
                     }
 
-                    val ruleText = prediction?.getInvalidationRule(currentLanguage) ?: ""
+                    val ruleText = scenario?.let { com.example.livegoldai.data.ResearchScenario.invalidationLine(it, currentLanguage) } ?: ""
                     if (ruleText.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -955,11 +949,7 @@ fun PredictionBigCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = when (currentLanguage) {
-                                AppLanguage.ENGLISH -> "ACTION PLAN & EXECUTION RULES"
-                                AppLanguage.HINDI -> "ट्रेड एक्शन प्लान (कार्रवाई निर्देश)"
-                                AppLanguage.MARATHI -> "ट्रेड अ‍ॅक्शन प्लॅन (कृती आराखडा)"
-                            },
+                            text = com.example.livegoldai.data.HonestText.planHeadline(scenario?.actionable == true, currentLanguage),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Black,
                             color = GoldLight,
@@ -967,7 +957,7 @@ fun PredictionBigCard(
                         )
                     }
 
-                    val adviceText = prediction?.getWhatToDo(currentLanguage) ?: when (currentLanguage) {
+                    val adviceText = scenario?.let { com.example.livegoldai.data.ResearchScenario.steps(it, currentLanguage) } ?: when (currentLanguage) {
                         AppLanguage.ENGLISH -> if (verdict == Signal.BUY) {
                             "Rules lean BUY (unverified research, not a trade instruction). Research level TP1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}."
                         } else if (verdict == Signal.SELL) {
@@ -1120,7 +1110,7 @@ fun PredictionBigCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = prediction?.getInvalidationRule(currentLanguage) ?: when (currentLanguage) {
+                                text = scenario?.let { com.example.livegoldai.data.ResearchScenario.invalidationLine(it, currentLanguage) } ?: when (currentLanguage) {
                                     AppLanguage.ENGLISH -> "Cancellation Rule: If candle closes beyond $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)}, the trade setup is invalidated."
                                     AppLanguage.HINDI -> "रद्दीकरण नियम: यदि कैंडल $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} के पार बंद होती है, तो ट्रेड को अमान्य समझें।"
                                     AppLanguage.MARATHI -> "रद्दीकरण नियम: जर कॅन्डल $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} च्या पलीकडे बंद झाली, तर ट्रेड रद्द समजावा."
@@ -1152,11 +1142,7 @@ fun PredictionBigCard(
                             Icon(imageVector = Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "Lot Size Calculator"
-                                    AppLanguage.HINDI -> "लॉट साइज कैलकुलेटर"
-                                    AppLanguage.MARATHI -> "लॉट साईझ कॅल्क्युलेटर"
-                                },
+                                text = com.example.livegoldai.data.HonestText.lotButton(scenario?.actionable == true, currentLanguage),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 11.sp
                             )
@@ -1165,20 +1151,15 @@ fun PredictionBigCard(
                         val context = LocalContext.current
                         OutlinedButton(
                             onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                                val clip = ClipData.newPlainText(
-                                    "Kalankar FX Gold Signal",
-                                    com.example.livegoldai.data.HonestText.shareHeader(com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup)) + "\n" +
-                                            "Direction: ${verdict.name}\n" +
-                                            "Entry: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryPrice)}\n" +
-                                            "Stop Loss: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)} (-${analysis.tradeSetup.stopLossPips.toInt()} Pips)\n" +
-                                            "Target 1: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)} (+${analysis.tradeSetup.takeProfit1Pips.toInt()} Pips)\n" +
-                                            "Target 2: $${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)} (+${analysis.tradeSetup.takeProfit2Pips.toInt()} Pips)\n" +
-                                            "Score: " + com.example.livegoldai.data.HonestText.scoreShort(analysis, AppLanguage.ENGLISH) + "\n" +
-                                            "R:R Ratio: ${analysis.tradeSetup.riskRewardRatio}"
-                                )
-                                clipboard?.setPrimaryClip(clip)
-                                Toast.makeText(context, "✅ Trade Setup Copied to Clipboard!", Toast.LENGTH_SHORT).show()
+                                // V33.1R: only an authorized ACTIVE plan is copied, with the same levels as the cards
+                                val copyText = com.example.livegoldai.data.ResearchScenario.clipboard(com.example.livegoldai.data.ResearchScenario.of(analysis, System.currentTimeMillis()))
+                                if (copyText == null) {
+                                    Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.copyRefused(currentLanguage), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                    clipboard?.setPrimaryClip(ClipData.newPlainText("Kalankar FX Gold plan", copyText))
+                                    Toast.makeText(context, "✅ Copied", Toast.LENGTH_SHORT).show()
+                                }
                             },
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.7f)),

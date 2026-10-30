@@ -203,11 +203,7 @@ fun HighImpactNewsDefenseBanner(
 
             // Defensive Status Text
             Text(
-                text = when (currentLang) {
-                    AppLanguage.ENGLISH -> "🛡️ Spread Guard Armed: Wider anti-slippage stop loss (+3.5 pips) & straddle pending orders ready."
-                    AppLanguage.HINDI -> "🛡️ स्प्रेड शील्ड सक्रिय: अनपेक्षित विक्स से बचने के लिए +3.5 पिप्स अतिरिक्त SL बफर और स्ट्रैडल ऑर्डर्स तैयार हैं।"
-                    AppLanguage.MARATHI -> "🛡️ स्प्रेड शील्ड सक्रिय: अनपेक्षित हालचाली टाळण्यासाठी अतिरिक्त SL बफर तयार आहे."
-                },
+                text = com.example.livegoldai.data.HonestText.newsGuard(currentLang),
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
                 color = alertAmber
@@ -274,11 +270,7 @@ fun HighImpactNewsDefenseBanner(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = when (currentLang) {
-                            AppLanguage.ENGLISH -> "STRADDLE PLAN"
-                            AppLanguage.HINDI -> "स्ट्रैडल प्लान देखें"
-                            AppLanguage.MARATHI -> "स्ट्रॅडल प्लॅन पहा"
-                        },
+                        text = com.example.livegoldai.data.HonestText.newsPlanButton(currentLang),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = TextPrimary

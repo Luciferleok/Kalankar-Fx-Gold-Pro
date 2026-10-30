@@ -628,6 +628,7 @@ fun SimpleEasyTradingView(
 
         // --- 2.5 🤖 KALANKAR QUANT BOT (HIGH-ACCURACY ALGORITHMIC TRADING) ---
         QuantBotCard(
+            executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator

@@ -293,7 +293,9 @@ fun KyaHogaPredictionDialog(
                                 fontWeight = FontWeight.SemiBold
                             )
 
-                            val whatToDoStr = prediction?.getWhatToDo(currentLanguage) ?: ""
+                            // V33.1R: generated from tradeSetup (the cards' levels), never the engine's separately anchored text
+                            val whatToDoStr = com.example.livegoldai.data.ResearchScenario.of(analysis, System.currentTimeMillis())
+                                ?.let { com.example.livegoldai.data.ResearchScenario.steps(it, currentLanguage) } ?: ""
                             if (actionable && whatToDoStr.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Surface(

@@ -773,6 +773,7 @@ fun GoldHomeScreen(
                                 analysis.quantBotSignal?.let { botSignal ->
                                     item(key = "cockpit_quant_bot_signal") {
                                         QuantBotCard(
+                                            executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
                                             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
@@ -825,6 +826,7 @@ fun GoldHomeScreen(
                                 analysis.quantBotSignal?.let { botSignal ->
                                     item(key = "tab1_quant_bot_signal") {
                                         QuantBotCard(
+                                            executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
                                             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
@@ -916,7 +918,7 @@ fun GoldHomeScreen(
                                 analysis.multiBotEnsemble?.let { ensemble ->
                                     item(key = "tab4_multi_bot_arsenal") {
                                         MultiBotArsenalCard(
-                                            actionable = com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup),
+                                            actionable = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
                                             ensemble = ensemble,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                         )

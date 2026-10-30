@@ -46,6 +46,8 @@ fun QuantBotCard(
     onOpenCalculator: (Double) -> Unit = {},
     // V33.1: the bot's number with its real name; null = not shown (never as "confidence")
     scoreText: String? = null,
+    // V33.1R P0-A: the order command exists only for an authorized ACTIVE plan (ResearchGate.executionAllowed)
+    executionAllowed: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     if (botSignal == null) return
@@ -185,7 +187,7 @@ fun QuantBotCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = botSignal.statusText,
+                            text = if (botSignal.isTradeActive && !executionAllowed) com.example.livegoldai.data.HonestText.botResearchStatus(botSignal.signal.name, currentLanguage) else botSignal.statusText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
                             color = signalColor
@@ -213,8 +215,14 @@ fun QuantBotCard(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     if (botSignal.isTradeActive) {
-                        // --- 1. DIRECT COPYABLE EXECUTION COMMAND ---
-                        Surface(
+                        // --- 1. DIRECT COPYABLE EXECUTION COMMAND (authorized ACTIVE plan only) ---
+                        if (!executionAllowed) Text(
+                            text = com.example.livegoldai.data.HonestText.executionLocked(currentLanguage),
+                            fontSize = 10.sp,
+                            color = TextMuted,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                        )
+                        if (executionAllowed) Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = ObsidianSurfaceElevated,
                             border = BorderStroke(1.dp, signalColor.copy(alpha = 0.4f)),
@@ -312,11 +320,11 @@ fun QuantBotCard(
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
                                     Text(
-                                        text = when (currentLanguage) {
+                                        text = if (executionAllowed) when (currentLanguage) {
                                             AppLanguage.ENGLISH -> "🎯 LIMIT ENTRY"
                                             AppLanguage.HINDI -> "🎯 लिमिट एंट्री"
                                             AppLanguage.MARATHI -> "🎯 लिमिट एंट्री"
-                                        },
+                                        } else com.example.livegoldai.data.HonestText.researchEntryLabel(currentLanguage),
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextMuted

@@ -539,6 +539,7 @@ fun UnifiedSignalDashboardView(
 
         // --- 3. 🤖 KALANKAR QUANT AI BOT (AUTONOMOUS SIGNAL & EXECUTION) ---
         QuantBotCard(
+            executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator
@@ -547,7 +548,7 @@ fun UnifiedSignalDashboardView(
         // --- 3B. 🤖 MULTI-BOT ARSENAL (6 SPECIALIZED BOTS ENSEMBLE) ---
         analysis.multiBotEnsemble?.let { ensemble ->
             MultiBotArsenalCard(
-                actionable = com.example.livegoldai.data.PlanStamp.isActionable(analysis.tradeSetup),
+                actionable = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
                 ensemble = ensemble,
                 onOpenCalculator = onOpenCalculator
             )

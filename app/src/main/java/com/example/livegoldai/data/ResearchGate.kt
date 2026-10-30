@@ -71,6 +71,13 @@ object ResearchGate {
             t.takeProfit1, t.takeProfit2, t.stopLossPips, a.currentPrice, t.expiresAtMs, now), emptyList())
     }
 
+    /**
+     * V33.1R P0-A: the ONE policy for every execution-linked feature (MT4/MT5 command, copyable order, lot size, news
+     * straddle, ACTIVE badge). True only when the current snapshot itself is an authorized ACTIVE plan.
+     */
+    fun executionAllowed(a: GoldAnalysisResult?, now: Long): Boolean =
+        a != null && authorize(a, a.tradeSetup.snapshotId, a.interval, now).allowed
+
     /** A grant is used only while the snapshot it came from is still the current, still-authorized one. */
     fun stillValid(g: LotGrant?, a: GoldAnalysisResult?, now: Long): Boolean =
         g != null && authorize(a, g.snapshotId, g.interval, now).allowed
@@ -159,6 +166,27 @@ object HonestText {
     fun shareHeader(actionable: Boolean) =
         if (actionable) "KALANKAR FX GOLD — ACTIVE PLAN (approved by the app's gate; not financial advice)"
         else "KALANKAR FX GOLD — RESEARCH SCENARIO (unverified, NOT a trade instruction)"
+
+    /** Rule bot status when its own conditions are met but the plan is not authorized. */
+    fun botResearchStatus(side: String, l: AppLanguage) = t(l, "RULE CONDITIONS MET ($side) · RESEARCH, not approved", "नियम शर्तें पूरी ($side) · रिसर्च, मंज़ूर नहीं", "नियम अटी पूर्ण ($side) · रिसर्च, मंजूर नाही")
+    fun executionLocked(l: AppLanguage) = t(l, "No order command: available only for an authorized ACTIVE plan. Levels below are research.",
+        "कोई ऑर्डर कमांड नहीं: सिर्फ़ अधिकृत ACTIVE प्लान के लिए। नीचे के लेवल रिसर्च हैं।", "ऑर्डर कमांड नाही: फक्त अधिकृत ACTIVE प्लॅनसाठी. खालील लेव्हल रिसर्च आहेत.")
+    fun researchEntryLabel(l: AppLanguage) = t(l, "🎯 RESEARCH ENTRY", "🎯 रिसर्च एंट्री", "🎯 रिसर्च एंट्री")
+
+    // ---- news: no armed orders, no invented direction or size
+    fun newsGuard(l: AppLanguage) = t(l, "🛡️ High-impact event: spreads widen and slippage is likely. The app arms no orders; any level shown is research.",
+        "🛡️ हाई-इम्पैक्ट इवेंट: स्प्रेड बढ़ता है और स्लिपेज संभव है। ऐप कोई ऑर्डर तैयार नहीं करता; दिखाए लेवल रिसर्च हैं।",
+        "🛡️ हाय-इम्पॅक्ट इव्हेंट: स्प्रेड वाढतो व स्लिपेज शक्य. ॲप कोणताही ऑर्डर तयार करत नाही; दाखवलेले लेव्हल रिसर्च आहेत.")
+    fun newsPlanButton(l: AppLanguage) = t(l, "NEWS RISK LEVELS", "न्यूज़ रिस्क लेवल", "न्यूज रिस्क लेव्हल")
+    fun newsRangeHeader(bufferPips: Double, l: AppLanguage) = t(l, "PRE-NEWS RANGE EDGES · research, not orders (spread buffer +${bufferPips}p)",
+        "न्यूज़ से पहले रेंज की सीमाएँ · रिसर्च, ऑर्डर नहीं (स्प्रेड बफर +${bufferPips}p)", "न्यूजपूर्वी रेंजच्या कडा · रिसर्च, ऑर्डर नाही (स्प्रेड बफर +${bufferPips}p)")
+    fun upperEdge(l: AppLanguage) = t(l, "UPPER RANGE EDGE", "ऊपरी रेंज सीमा", "वरची रेंज कडा")
+    fun lowerEdge(l: AppLanguage) = t(l, "LOWER RANGE EDGE", "निचली रेंज सीमा", "खालची रेंज कडा")
+    fun newsDirectionTitle(l: AppLanguage) = t(l, "BEFORE THE RELEASE: DIRECTION NOT KNOWN", "रिलीज़ से पहले: दिशा पता नहीं", "प्रसिद्धीपूर्वी: दिशा माहीत नाही")
+    fun newsDirectionChip() = "PRE-BIAS: NOT MEASURED"
+    fun newsDirectionBody(l: AppLanguage) = t(l, "The direction of a news move is not known before the number is out, and this app has no measured record of news moves. The levels below are the current range edges, for research only.",
+        "नंबर आने से पहले न्यूज़ मूव की दिशा पता नहीं होती, और इस ऐप के पास न्यूज़ मूव का कोई मापा रिकॉर्ड नहीं। नीचे के लेवल अभी की रेंज की सीमाएँ हैं, सिर्फ़ रिसर्च के लिए।",
+        "आकडा येण्यापूर्वी न्यूज मूव्हची दिशा माहीत नसते, आणि या ॲपकडे न्यूज मूव्हचा मोजलेला रेकॉर्ड नाही. खालील लेव्हल सध्याच्या रेंजच्या कडा आहेत, फक्त रिसर्चसाठी.")
 
     fun nextCandleTitle(l: AppLanguage) = t(l, "NEXT-CANDLE RULE LEAN · unvalidated, no track record", "अगली कैंडल पर नियम झुकाव · अप्रमाणित, कोई रिकॉर्ड नहीं", "पुढील कँडलवर नियम कल · अप्रमाणित, रेकॉर्ड नाही")
     fun noTrackRecord(l: AppLanguage) = t(l, "No measured track record in this app", "इस ऐप में कोई मापा हुआ रिकॉर्ड नहीं", "या ॲपमध्ये मोजलेला रेकॉर्ड नाही")

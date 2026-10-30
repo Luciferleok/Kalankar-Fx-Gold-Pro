@@ -414,18 +414,20 @@ fun MultiBotArsenalCard(
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val command = if (!actionable && ensemble.ensembleSignal != Signal.WAIT) {
-                                com.example.livegoldai.data.HonestText.shareHeader(false) + "\n" +
-                                    "${ensemble.ensembleSignal.name} research levels: entry ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
-                            } else if (ensemble.ensembleSignal == Signal.BUY) {
-                                "BUY LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
-                            } else if (ensemble.ensembleSignal == Signal.SELL) {
-                                "SELL LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
+                            // V33.1R P0-A: nothing is copied unless the plan is authorized (no research levels as orders either)
+                            if (!actionable) {
+                                Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.copyRefused(currentLang), Toast.LENGTH_SHORT).show()
                             } else {
-                                "STANDBY: XAUUSD IN CONSOLIDATION TRAP ZONE"
+                                val command = if (ensemble.ensembleSignal == Signal.BUY) {
+                                    "BUY LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
+                                } else if (ensemble.ensembleSignal == Signal.SELL) {
+                                    "SELL LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
+                                } else {
+                                    "STANDBY: XAUUSD IN CONSOLIDATION TRAP ZONE"
+                                }
+                                clipboard.setPrimaryClip(ClipData.newPlainText("MultiBotTrade", command))
+                                Toast.makeText(context, "Ensemble Order Command Copied! 📋", Toast.LENGTH_SHORT).show()
                             }
-                            clipboard.setPrimaryClip(ClipData.newPlainText("MultiBotTrade", command))
-                            Toast.makeText(context, "Ensemble Order Command Copied! 📋", Toast.LENGTH_SHORT).show()
                         },
                         shape = RoundedCornerShape(10.dp),
                         border = BorderStroke(1.dp, GoldPrimary),
@@ -440,9 +442,9 @@ fun MultiBotArsenalCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = when (currentLang) {
-                                AppLanguage.ENGLISH -> if (actionable) "COPY ENSEMBLE MT4/MT5 ORDER" else "COPY RESEARCH LEVELS (not an order)"
-                                AppLanguage.HINDI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करें" else "रिसर्च लेवल कॉपी करें (ऑर्डर नहीं)"
-                                AppLanguage.MARATHI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करा" else "रिसर्च लेव्हल कॉपी करा (ऑर्डर नाही)"
+                                AppLanguage.ENGLISH -> if (actionable) "COPY ENSEMBLE MT4/MT5 ORDER" else "ORDER COPY: ACTIVE PLAN ONLY"
+                                AppLanguage.HINDI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करें" else "ऑर्डर कॉपी: सिर्फ़ ACTIVE प्लान"
+                                AppLanguage.MARATHI -> if (actionable) "मल्टी-बॉट MT4/MT5 ऑर्डर कॉपी करा" else "ऑर्डर कॉपी: फक्त ACTIVE प्लॅन"
                             },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,

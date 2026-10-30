@@ -81,13 +81,8 @@ fun PreNewsIntelligenceCard(
             goldImpact = "Severe Volatility Expected (+$35/-$30)"
         )
 
-    val preBias = if (primaryEvent.title.contains("CPI", true) || primaryEvent.title.contains("Fed", true)) {
-        Signal.BUY
-    } else if (primaryEvent.title.contains("NFP", true) || primaryEvent.title.contains("Jobs", true)) {
-        Signal.SELL
-    } else {
-        Signal.BUY
-    }
+    // V33.1R: the direction of a news move is not known before the release. It used to be guessed from the event
+    // title ("CPI"/"Fed" -> BUY, "NFP"/"Jobs" -> SELL); no data supported that, so no side is shown or sent.
 
     val upperBreakout = currentPrice + 16.5
     val lowerBreakdown = currentPrice - 18.0
@@ -286,10 +281,10 @@ fun PreNewsIntelligenceCard(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = if (preBias == Signal.BUY) SignalBuy.copy(alpha = 0.12f) else SignalSell.copy(alpha = 0.12f),
+                color = GoldPrimary.copy(alpha = 0.12f),
                 border = BorderStroke(
                     1.5.dp,
-                    if (preBias == Signal.BUY) SignalBuy.copy(alpha = 0.6f) else SignalSell.copy(alpha = 0.6f)
+                    GoldPrimary.copy(alpha = 0.6f)
                 )
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -303,13 +298,13 @@ fun PreNewsIntelligenceCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "AI ADVANCE PREDICTION: WHAT COULD HAPPEN?"
-                                    AppLanguage.HINDI -> "AI का पूर्व-अनुमान: क्या हो सकता है? (BUY या SELL?)"
-                                    AppLanguage.MARATHI -> "AI पूर्व-अंदाज: काय घडू शकते? (BUY किंवा SELL?)"
+                                    AppLanguage.ENGLISH -> com.example.livegoldai.data.HonestText.newsDirectionTitle(currentLang)
+                                    AppLanguage.HINDI -> com.example.livegoldai.data.HonestText.newsDirectionTitle(currentLang)
+                                    AppLanguage.MARATHI -> com.example.livegoldai.data.HonestText.newsDirectionTitle(currentLang)
                                 },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
-                                color = if (preBias == Signal.BUY) SignalBuy else SignalSell,
+                                color = GoldPrimary,
                                 letterSpacing = 0.5.sp,
                                 fontSize = 11.sp
                             )
@@ -317,10 +312,10 @@ fun PreNewsIntelligenceCard(
 
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (preBias == Signal.BUY) SignalBuy else SignalSell
+                            color = GoldPrimary
                         ) {
                             Text(
-                                text = if (preBias == Signal.BUY) "PRE-BIAS: BUY 🟢" else "PRE-BIAS: SELL 🔴",
+                                text = com.example.livegoldai.data.HonestText.newsDirectionChip(),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
                                 color = OnAccent,
@@ -333,19 +328,8 @@ fun PreNewsIntelligenceCard(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = if (preBias == Signal.BUY) {
-                            when (currentLang) {
-                                AppLanguage.ENGLISH -> "CPI expected cooling or Fed dovish tilt: Lower numbers will trigger a Dollar Selloff. Gold can explosively pump +$25 to +$40 towards $${String.format(Locale.US, "%.2f", upperBreakout + 15.0)}. Strategy: Keep Buy Stop ready at $${String.format(Locale.US, "%.2f", upperBreakout)}."
-                                AppLanguage.HINDI -> "महंगाई डेटा कम आने का अनुमान है जिससे यूएस डॉलर कमजोर होगा। गोल्ड में $20 से $40 का भारी उछाल आ सकता है और भाव $${String.format(Locale.US, "%.2f", upperBreakout + 15.0)} तक जा सकता है। रणनीति: $${String.format(Locale.US, "%.2f", upperBreakout)} पर Buy Stop तैयार रखें।"
-                                AppLanguage.MARATHI -> "महागाई डेटा कमी येण्याचा अंदाज आहे ज्यामुळे डॉलर कमजोर होईल. सोन्यात $20 ते $40 ची मोठी तेजी येऊन भाव $${String.format(Locale.US, "%.2f", upperBreakout + 15.0)} पर्यंत जाऊ शकतो. स्ट्रॅटेजी: $${String.format(Locale.US, "%.2f", upperBreakout)} वर Buy Stop तयार ठेवा."
-                            }
-                        } else {
-                            when (currentLang) {
-                                AppLanguage.ENGLISH -> "Strong employment reading expected: Dollar will rally aggressively. Gold can dump -$20 to -$35 down to $${String.format(Locale.US, "%.2f", lowerBreakdown - 12.0)}. Strategy: Keep Sell Stop armed below $${String.format(Locale.US, "%.2f", lowerBreakdown)}."
-                                AppLanguage.HINDI -> "मजबूत जॉब डेटा से डॉलर में शार्प उछाल आने का अनुमान है। गोल्ड में $20 से $35 की तेज गिरावट आ सकती है और भाव $${String.format(Locale.US, "%.2f", lowerBreakdown - 12.0)} तक फिसल सकता है। रणनीति: $${String.format(Locale.US, "%.2f", lowerBreakdown)} के नीचे Sell Stop लगाएं।"
-                                AppLanguage.MARATHI -> "मजबूत रोजगार आकडेवारीमुळे डॉलरमध्ये उसळी येईल. सोन्यात $20 ते $35 ची घसरण येऊन भाव $${String.format(Locale.US, "%.2f", lowerBreakdown - 12.0)} पर्यंत घसरू शकतो. स्ट्रॅटेजी: $${String.format(Locale.US, "%.2f", lowerBreakdown)} खाली Sell Stop लावा."
-                            }
-                        },
+                        // V33.1R: no invented direction, size or "armed" order before a release
+                        text = com.example.livegoldai.data.HonestText.newsDirectionBody(currentLang),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextPrimary,
                         fontSize = 11.5.sp,
@@ -366,7 +350,7 @@ fun PreNewsIntelligenceCard(
                             border = BorderStroke(1.dp, SignalBuy.copy(alpha = 0.4f))
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Text(text = "BUY STOP LEVEL", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SignalBuy)
+                                Text(text = com.example.livegoldai.data.HonestText.upperEdge(currentLang), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SignalBuy)
                                 Text(
                                     text = "$${String.format(Locale.US, "%.2f", upperBreakout)}",
                                     fontSize = 13.sp,
@@ -383,7 +367,7 @@ fun PreNewsIntelligenceCard(
                             border = BorderStroke(1.dp, SignalSell.copy(alpha = 0.4f))
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
-                                Text(text = "SELL STOP LEVEL", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SignalSell)
+                                Text(text = com.example.livegoldai.data.HonestText.lowerEdge(currentLang), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SignalSell)
                                 Text(
                                     text = "$${String.format(Locale.US, "%.2f", lowerBreakdown)}",
                                     fontSize = 13.sp,
@@ -484,9 +468,9 @@ fun PreNewsIntelligenceCard(
                         eventTitle = primaryEvent.title,
                         country = primaryEvent.country,
                         timeRemainingText = timeRemainingText,
-                        aiBias = preBias,
+                        aiBias = Signal.WAIT,   // the app does not predict news outcomes (same as the background alert)
                         forecastInfo = if (primaryEvent.forecast.isNotBlank()) "Est ${primaryEvent.forecast} vs Prev ${primaryEvent.previous}" else "High Impact USD News",
-                        targetRange = "$${String.format(Locale.US, "%.1f", currentPrice - 20.0)} - $${String.format(Locale.US, "%.1f", currentPrice + 25.0)}",
+                        targetRange = "Not predicted: price can spike both ways (now $${String.format(Locale.US, "%.1f", currentPrice)})",
                         lang = currentLang,
                         isTest = true
                     )

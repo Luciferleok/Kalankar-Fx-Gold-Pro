@@ -329,7 +329,7 @@ fun NewsTradingModeCard(
 
             // 2. News Straddle Levels (Both-way OCO Pending Orders)
             Text(
-                text = "⚡ PRE-NEWS STRADDLE PENDING SETUP (SPREAD BUFFER: +${newsPlan.spreadWarningBufferPips}p):",
+                text = com.example.livegoldai.data.HonestText.newsRangeHeader(newsPlan.spreadWarningBufferPips.toDouble(), currentLang),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                 fontWeight = FontWeight.Black,
                 color = TextMuted,
@@ -354,7 +354,7 @@ fun NewsTradingModeCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "BUY STOP PENDING",
+                            text = com.example.livegoldai.data.HonestText.upperEdge(currentLang),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             fontWeight = FontWeight.Bold,
                             color = SignalBuy
@@ -385,7 +385,7 @@ fun NewsTradingModeCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "SELL STOP PENDING",
+                            text = com.example.livegoldai.data.HonestText.lowerEdge(currentLang),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             fontWeight = FontWeight.Bold,
                             color = SignalSell
