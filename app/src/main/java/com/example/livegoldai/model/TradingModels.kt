@@ -372,7 +372,9 @@ data class TradeSetup(
     // ---- V29D
     val horizonMin: Int = 0,                 // the call's horizon (several candles on short timeframes)
     val expiresAtMs: Long = 0L,              // stable UTC expiry (ledger record, else candle open + horizon)
-    val freshness: String = ""               // LIVE / DELAYED / STALE / OFFLINE / MARKET CLOSED
+    val freshness: String = "",              // LIVE / DELAYED / STALE / OFFLINE / MARKET CLOSED
+    // ---- V33.1R.2: when these levels were first seen in this plan window (LevelFreeze); 0 = not kept
+    val levelsFixedAtMs: Long = 0L
 ) {
     fun getStrategyNote(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> strategyNote

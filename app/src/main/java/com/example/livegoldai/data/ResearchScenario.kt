@@ -26,7 +26,9 @@ object ResearchScenario {
         val expiresAtMs: Long, val horizonMin: Int,
         val planStatus: String, val state: String,
         /** true only when ResearchGate authorizes this exact snapshot now */
-        val actionable: Boolean
+        val actionable: Boolean,
+        /** V33.1R.2: when these levels were first seen in this window (0 = unknown) */
+        val fixedAtMs: Long = 0L
     )
 
     /** null when there is no side (WAIT) or no usable levels. */
@@ -39,7 +41,7 @@ object ResearchScenario {
         return Levels(t.snapshotId, a.interval, t.signal, t.entryPrice, t.stopLoss, t.takeProfit1, t.takeProfit2,
             t.stopLossPips, t.takeProfit1Pips, t.takeProfit2Pips, t.expiresAtMs,
             if (t.horizonMin > 0) t.horizonMin else PlanStamp.horizonMin(a.interval), t.planStatus, state,
-            ResearchGate.executionAllowed(a, now))
+            ResearchGate.executionAllowed(a, now), t.levelsFixedAtMs)
     }
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
@@ -52,7 +54,8 @@ object ResearchScenario {
         val head = if (lv.actionable) t(l, "1. ACTIVE PLAN: $s (authorized for this snapshot).", "1. सक्रिय प्लान: $s (इस स्नैपशॉट के लिए अधिकृत)।", "1. सक्रिय प्लॅन: $s (या स्नॅपशॉटसाठी अधिकृत).")
             else t(l, "1. Rules lean $s. Research scenario, not a trade instruction.", "1. नियमों का झुकाव $s। रिसर्च परिदृश्य, ट्रेड निर्देश नहीं।", "1. नियमांचा कल $s. रिसर्च परिस्थिती, ट्रेड सूचना नाही.")
         return listOf(head,
-            t(l, "2. Entry reference: ${money(lv.entry)} (pullback level of this snapshot).", "2. एंट्री संदर्भ: ${money(lv.entry)} (इस स्नैपशॉट का पुलबैक लेवल)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (या स्नॅपशॉटचा पुलबॅक लेव्हल)."),
+            if (lv.fixedAtMs > 0) t(l, "2. Entry reference: ${money(lv.entry)} (pullback level, fixed at ${utc(lv.fixedAtMs)} for this window).", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबैक लेवल, इस विंडो के लिए ${utc(lv.fixedAtMs)} पर तय)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबॅक लेव्हल, या विंडोसाठी ${utc(lv.fixedAtMs)} ला निश्चित).")
+            else t(l, "2. Entry reference: ${money(lv.entry)} (pullback level of this snapshot).", "2. एंट्री संदर्भ: ${money(lv.entry)} (इस स्नैपशॉट का पुलबैक लेवल)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (या स्नॅपशॉटचा पुलबॅक लेव्हल)."),
             t(l, "3. Invalidation: ${money(lv.stop)}. Reaching it ends the scenario.", "3. अमान्य स्तर: ${money(lv.stop)}। यहाँ पहुँचते ही परिदृश्य खत्म।", "3. अवैध स्तर: ${money(lv.stop)}. येथे पोहोचल्यावर परिस्थिती संपते."),
             t(l, "4. Research targets: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}.", "4. रिसर्च टारगेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}।", "4. रिसर्च टार्गेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}."),
             if (lv.expiresAtMs > 0) t(l, "5. Evaluation ends ${utc(lv.expiresAtMs)} (fixed).", "5. मूल्यांकन ${utc(lv.expiresAtMs)} पर खत्म (तय)।", "5. मूल्यमापन ${utc(lv.expiresAtMs)} ला संपते (निश्चित).")

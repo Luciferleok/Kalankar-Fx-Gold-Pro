@@ -630,6 +630,9 @@ fun PredictionBigCard(
             // 🧠 AI ERROR SELF-CORRECTION (गलतियों से आगे का ऑटोमैटिक सुधार)
             prediction?.appliedCorrections?.takeIf { it.isNotEmpty() }?.let { corrections ->
                 var showCorrectionDetails by remember { mutableStateOf(false) }
+                // V33.1R.2: say what is really applied: fixed rules, and learned filters only when one is promoted
+                val learnedCount = corrections.count { it.badgeTag.startsWith("LEARNED") }
+                val ruleCount = corrections.count { it.badgeTag != "REAL LEDGER" }
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = ObsidianSurfaceCard,
@@ -661,9 +664,9 @@ fun PredictionBigCard(
                                 Column {
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "AI AUTO-CORRECTION ACTIVE"
-                                            AppLanguage.HINDI -> "AI गलतियों से स्वतः सुधार (सक्रिय)"
-                                            AppLanguage.MARATHI -> "AI चुकांमधून स्वयंचलित सुधारणा (सक्रिय)"
+                                            AppLanguage.ENGLISH -> "RULES IN USE + LEARNING STATUS"
+                                            AppLanguage.HINDI -> "लागू नियम + लर्निंग स्थिति"
+                                            AppLanguage.MARATHI -> "लागू नियम + लर्निंग स्थिती"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         fontWeight = FontWeight.Black,
@@ -671,9 +674,9 @@ fun PredictionBigCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Past mistakes fixed • Calibrated for next win"
-                                            AppLanguage.HINDI -> "पिछली गलतियों से सीखकर यह प्रेडिक्शन सुधारा गया"
-                                            AppLanguage.MARATHI -> "मागील चुकांमधून शिकून हा अंदाज सुधारला"
+                                            AppLanguage.ENGLISH -> if (learnedCount > 0) "$learnedCount learned filter(s) from checked calls in use · not a guarantee" else "Built-in rules only · no learned correction in use yet"
+                                            AppLanguage.HINDI -> if (learnedCount > 0) "जाँची गई कॉल से सीखे $learnedCount फ़िल्टर लागू · कोई गारंटी नहीं" else "सिर्फ़ तय नियम · अभी कोई सीखा हुआ सुधार लागू नहीं"
+                                            AppLanguage.MARATHI -> if (learnedCount > 0) "तपासलेल्या कॉलमधून शिकलेले $learnedCount फिल्टर लागू · हमी नाही" else "फक्त ठरलेले नियम · अजून शिकलेली सुधारणा लागू नाही"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         color = TextSecondary
@@ -687,7 +690,7 @@ fun PredictionBigCard(
                                     color = NeonGreen.copy(alpha = 0.15f)
                                 ) {
                                     Text(
-                                        text = "${corrections.size} GUARDS 🛡️",
+                                        text = "$ruleCount RULES",
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         fontWeight = FontWeight.Bold,

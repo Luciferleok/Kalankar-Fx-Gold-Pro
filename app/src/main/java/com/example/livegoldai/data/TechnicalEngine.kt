@@ -1535,46 +1535,8 @@ object TechnicalEngine {
         )
     }
 
-    fun calculateMarketSessions(): List<MarketSession> {
-        val nowUtc = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
-        val utcHour = nowUtc.hour
-        val isGoldenOverlap = utcHour in 13..16
-
-        return listOf(
-            MarketSession(
-                name = "London",
-                city = "London (LSE)",
-                timeWindowUtc = "08:00 - 17:00 UTC",
-                isOpen = utcHour in 8..16,
-                volatilityLevel = if (isGoldenOverlap) "Extreme (Overlap)" else "High",
-                isGoldenOverlap = isGoldenOverlap
-            ),
-            MarketSession(
-                name = "New York",
-                city = "New York (COMEX)",
-                timeWindowUtc = "13:00 - 22:00 UTC",
-                isOpen = utcHour in 13..21,
-                volatilityLevel = if (isGoldenOverlap) "Extreme (Overlap)" else "High",
-                isGoldenOverlap = isGoldenOverlap
-            ),
-            MarketSession(
-                name = "Tokyo",
-                city = "Tokyo (Tocom)",
-                timeWindowUtc = "00:00 - 09:00 UTC",
-                isOpen = utcHour in 0..8,
-                volatilityLevel = "Moderate",
-                isGoldenOverlap = false
-            ),
-            MarketSession(
-                name = "Sydney",
-                city = "Sydney (ASX)",
-                timeWindowUtc = "22:00 - 07:00 UTC",
-                isOpen = utcHour >= 22 || utcHour < 7,
-                volatilityLevel = "Normal",
-                isGoldenOverlap = false
-            )
-        )
-    }
+    /** V33.1R.2: hours follow each city's own clock (summer/winter time); see SessionClock. Display only. */
+    fun calculateMarketSessions(): List<MarketSession> = SessionClock.sessions(System.currentTimeMillis())
 
     private fun decide(signals: List<Signal>): Signal {
         val buy = signals.count { it == Signal.BUY }

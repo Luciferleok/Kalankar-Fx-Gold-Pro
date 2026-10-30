@@ -233,6 +233,9 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(language = language) }
     }
 
+    /** V33.1R.2: levels kept per plan window (snapshot id + side), in memory only */
+    private val frozenLevels = mutableMapOf<String, com.example.livegoldai.data.LevelFreeze.Frozen>()
+
     fun loadData(isInitial: Boolean = false) {
         viewModelScope.launch {
             if (isInitial) {
@@ -268,7 +271,9 @@ class GoldViewModel @JvmOverloads constructor(
                         val research = try { shadowLive.stats(currentInterval).status } catch (_: Exception) { null }
                         val st = learning.currentState()
                         // V31: stamp the plan (status + provenance) from this same snapshot before anything shows it
-                        val stamped = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st, researchStatus = research) } catch (_: Exception) { withBrain }
+                        val stamped0 = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st, researchStatus = research) } catch (_: Exception) { withBrain }
+                        // V33.1R.2: keep the levels first seen in this plan window (the engine rebuilds them from the live price)
+                        val stamped = try { synchronized(frozenLevels) { com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis()) } } catch (_: Exception) { stamped0 }
                         stamped.copy(presentation = try {
                             com.example.livegoldai.data.PresentationBuilder.build(stamped, st, research)
                         } catch (_: Exception) { null })
