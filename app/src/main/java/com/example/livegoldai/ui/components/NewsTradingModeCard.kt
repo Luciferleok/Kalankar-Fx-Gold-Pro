@@ -180,7 +180,7 @@ fun NewsTradingModeCard(
                         Text(
                             text = if (isNewsModeActive) {
                                 when (currentLang) {
-                                    AppLanguage.ENGLISH -> "Auto-Sentinel Triggered: Live volatility spike window in progress. High-frequency algorithms active."
+                                    AppLanguage.ENGLISH -> "News window: a high-impact release is due or live. Spreads and price swings can be large; the app shows WAIT."
                                     AppLanguage.HINDI -> "ऑटो-सेंसर सक्रिय: लाइव न्यूज़ स्पाइक चल रही है। मार्केट में भारी उतार-चढ़ाव जारी है।"
                                     AppLanguage.MARATHI -> "ऑटो-सेन्सर सक्रिय: लाईव्ह न्यूज स्पाइक सुरू आहे. मार्केटमध्ये मोठी हालचाल सुरू आहे."
                                 }
@@ -366,7 +366,7 @@ fun NewsTradingModeCard(
                             color = SignalBuy
                         )
                         Text(
-                            text = "Trigger on bullish CPI drop",
+                            text = "Range edge (research, not an order)",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                             color = TextSecondary
                         )
@@ -397,7 +397,7 @@ fun NewsTradingModeCard(
                             color = SignalSell
                         )
                         Text(
-                            text = "Trigger on hot inflation spike",
+                            text = "Range edge (research, not an order)",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                             color = TextSecondary
                         )

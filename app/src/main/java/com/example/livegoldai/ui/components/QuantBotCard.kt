@@ -48,11 +48,15 @@ fun QuantBotCard(
     scoreText: String? = null,
     // V33.1R P0-A: the order command exists only for an authorized ACTIVE plan (ResearchGate.executionAllowed)
     executionAllowed: Boolean = false,
+    // V33.1R.1: asked again at the moment COPY is pressed (current snapshot, current time); null = refuse
+    commandProvider: () -> String? = { null },
     modifier: Modifier = Modifier
 ) {
     if (botSignal == null) return
 
     val currentLanguage = LocalAppLanguage.current
+    // V33.1R.1: the command on screen is the scenario's, for the snapshot drawn now; COPY re-asks and compares
+    val shownCommand = if (executionAllowed) commandProvider() else null
     val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(true) }
 
@@ -249,14 +253,20 @@ fun QuantBotCard(
                                     Button(
                                         onClick = {
                                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                            val clip = ClipData.newPlainText("Bot Command", botSignal.executionCommandEng)
-                                            clipboard.setPrimaryClip(clip)
-                                            val msg = when (currentLanguage) {
-                                                AppLanguage.ENGLISH -> "Bot order command copied!"
-                                                AppLanguage.HINDI -> "बॉट ऑर्डर कमांड कॉपी हो गया!"
-                                                AppLanguage.MARATHI -> "बॉट ऑर्डर कमांड कॉपी झाले!"
+                                            val nowCmd = commandProvider()
+                                            if (nowCmd == null) {
+                                                Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.copyRefused(currentLanguage), Toast.LENGTH_SHORT).show()
+                                            } else if (nowCmd != shownCommand) {
+                                                Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.planChanged(currentLanguage), Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                clipboard.setPrimaryClip(ClipData.newPlainText("Bot Command", nowCmd))
+                                                val msg = when (currentLanguage) {
+                                                    AppLanguage.ENGLISH -> "Order text copied (authorized ACTIVE plan)"
+                                                    AppLanguage.HINDI -> "ऑर्डर टेक्स्ट कॉपी हुआ (अधिकृत ACTIVE प्लान)"
+                                                    AppLanguage.MARATHI -> "ऑर्डर टेक्स्ट कॉपी झाले (अधिकृत ACTIVE प्लॅन)"
+                                                }
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                             }
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                         },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = GoldPrimary.copy(alpha = 0.2f),
@@ -293,7 +303,7 @@ fun QuantBotCard(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        text = botSignal.executionCommandEng,
+                                        text = shownCommand ?: "",
                                         modifier = Modifier.padding(10.dp),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,

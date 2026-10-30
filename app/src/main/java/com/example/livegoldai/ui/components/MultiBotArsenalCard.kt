@@ -50,6 +50,8 @@ fun MultiBotArsenalCard(
     onOpenCalculator: (Double) -> Unit = {},
     // V33.1: only an ACTIVE plan may be copied as an order; otherwise the text says research levels
     actionable: Boolean = false,
+    // V33.1R.1: asked at click time; null unless the CURRENT snapshot is an authorized plan on the ensemble's side
+    commandProvider: () -> String? = { null },
     modifier: Modifier = Modifier
 ) {
     if (ensemble == null) return
@@ -273,9 +275,9 @@ fun MultiBotArsenalCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when (currentLang) {
-                                    AppLanguage.ENGLISH -> "Why 6 Bots? Each bot has a unique edge (FVG, Liquidity sweeps, Squeeze, Trend, Scalping, News). When all bots align, false signals and traps drop to near zero!"
-                                    AppLanguage.HINDI -> "6 बॉट्स क्यों? हर बॉट की अलग ताकत है (FVG डिस्काउंट, लिक्विडिटी ट्रैप्स, स्क्वीज ब्रेकआउट, ट्रेंड रिबन, स्कैल्पिंग, न्यूज़ स्ट्रैडल)। जब सब बॉट्स एक साथ वोट करते हैं तो गलत ट्रेड का जोखिम न के बराबर रह जाता है।"
-                                    AppLanguage.MARATHI -> "6 बॉट्स का? प्रत्येक बॉटची वेगळी ताकद आहे. सर्व बॉट्स एकत्र आल्यावर खोटे सिग्नल्स आणि नुकसान पूर्णपणे टळते."
+                                    AppLanguage.ENGLISH -> "Why 6 bots? Six separate rules look at different things. Agreement between them is shown, but it has not been shown to reduce false signals: see each bot's hit-rate."
+                                    AppLanguage.HINDI -> "6 बॉट क्यों? छह अलग नियम अलग चीज़ें देखते हैं। उनकी सहमति दिखाई जाती है, पर इससे गलत सिग्नल कम होते हैं यह साबित नहीं: हर बॉट का हिट-रेट देखें।"
+                                    AppLanguage.MARATHI -> "6 बॉट का? सहा वेगळे नियम वेगवेगळ्या गोष्टी पाहतात. त्यांची सहमती दाखवली जाते, पण त्यामुळे चुकीचे सिग्नल कमी होतात हे सिद्ध नाही: प्रत्येक बॉटचा हिट-रेट पहा."
                                 },
                                 fontSize = 10.sp,
                                 lineHeight = 14.sp,
@@ -397,7 +399,7 @@ fun MultiBotArsenalCard(
                                                 color = GoldLight
                                             )
                                             Text(
-                                                text = "SL: ${bot.stopLossPips} pips",
+                                                text = "SL: " + String.format(java.util.Locale.US, "%.1f", bot.stopLossPips) + " pips",
                                                 fontSize = 9.sp,
                                                 color = SignalSell
                                             )
@@ -415,18 +417,12 @@ fun MultiBotArsenalCard(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             // V33.1R P0-A: nothing is copied unless the plan is authorized (no research levels as orders either)
-                            if (!actionable) {
-                                Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.copyRefused(currentLang), Toast.LENGTH_SHORT).show()
+                            val command = if (actionable) commandProvider() else null
+                            if (command == null) {
+                                Toast.makeText(context, com.example.livegoldai.data.ResearchScenario.ensembleRefused(currentLang), Toast.LENGTH_SHORT).show()
                             } else {
-                                val command = if (ensemble.ensembleSignal == Signal.BUY) {
-                                    "BUY LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
-                                } else if (ensemble.ensembleSignal == Signal.SELL) {
-                                    "SELL LIMIT XAUUSD @ ${ensemble.recommendedEntry} SL ${ensemble.recommendedSl} TP1 ${ensemble.recommendedTp1} TP2 ${ensemble.recommendedTp2}"
-                                } else {
-                                    "STANDBY: XAUUSD IN CONSOLIDATION TRAP ZONE"
-                                }
                                 clipboard.setPrimaryClip(ClipData.newPlainText("MultiBotTrade", command))
-                                Toast.makeText(context, "Ensemble Order Command Copied! 📋", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Order text copied (authorized ACTIVE plan)", Toast.LENGTH_SHORT).show()
                             }
                         },
                         shape = RoundedCornerShape(10.dp),

@@ -52,6 +52,8 @@ fun SimpleEasyTradingView(
     selectedInterval: String,
     onIntervalSelected: (String) -> Unit,
     onOpenCalculator: (Double) -> Unit,
+    // V33.1R.1: the CURRENT snapshot, read at click time by order-copy buttons (default: none -> copy refused)
+    currentAnalysis: () -> GoldAnalysisResult? = { null },
     onOpenPredictionDialog: () -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
     onPillarClick: (GroupAnalysis) -> Unit,
@@ -629,6 +631,7 @@ fun SimpleEasyTradingView(
         // --- 2.5 🤖 KALANKAR QUANT BOT (HIGH-ACCURACY ALGORITHMIC TRADING) ---
         QuantBotCard(
             executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+            commandProvider = { com.example.livegoldai.data.ResearchScenario.orderCommand(currentAnalysis(), System.currentTimeMillis()) },
             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator

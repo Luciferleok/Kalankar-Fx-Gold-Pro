@@ -98,5 +98,30 @@ object ResearchScenario {
             "Ends: ${if (lv.expiresAtMs > 0) utc(lv.expiresAtMs) else "--"}"
     }
 
+    private fun p2(x: Double) = String.format(Locale.US, "%.2f", x)
+
+    /**
+     * V33.1R.1: order text for the CURRENT snapshot, built from the scenario at the moment it is asked for (a click).
+     * null unless that snapshot is an authorized ACTIVE plan right now.
+     */
+    fun orderCommand(a: GoldAnalysisResult?, now: Long): String? {
+        val lv = of(a, now) ?: return null
+        if (!lv.actionable) return null
+        return "${lv.side.name} LIMIT XAUUSD @ ${p2(lv.entry)} SL ${p2(lv.stop)} TP1 ${p2(lv.tp1)} TP2 ${p2(lv.tp2)}"
+    }
+
+    /** Ensemble copy: the authorized plan's order, and only when the six-bot ensemble is on the SAME side. */
+    fun ensembleCommand(a: GoldAnalysisResult?, now: Long): String? {
+        val e = a?.multiBotEnsemble ?: return null
+        val lv = of(a, now) ?: return null
+        if (e.ensembleSignal != lv.side) return null
+        return orderCommand(a, now)
+    }
+
+    fun ensembleRefused(l: AppLanguage) = t(l, "No order to copy: needs an authorized ACTIVE plan and bots on the same side.",
+        "कॉपी के लिए ऑर्डर नहीं: अधिकृत ACTIVE प्लान और उसी दिशा में बॉट चाहिए।", "कॉपीसाठी ऑर्डर नाही: अधिकृत ACTIVE प्लॅन व त्याच दिशेतील बॉट हवे.")
+    fun planChanged(l: AppLanguage) = t(l, "The plan changed since this screen was drawn. Review it again; nothing was copied.",
+        "स्क्रीन बनने के बाद प्लान बदल गया। फिर से देखें; कुछ कॉपी नहीं हुआ।", "स्क्रीन बनल्यानंतर प्लॅन बदलला. पुन्हा तपासा; काहीही कॉपी झाले नाही.")
+
     fun copyRefused(l: AppLanguage) = t(l, "Copy is available only for an authorized ACTIVE plan.", "कॉपी सिर्फ़ अधिकृत ACTIVE प्लान के लिए है।", "कॉपी फक्त अधिकृत ACTIVE प्लॅनसाठी आहे.")
 }

@@ -30,6 +30,8 @@ fun ExecutiveSummaryBar(
     modifier: Modifier = Modifier
 ) {
     val prediction = analysis.nextPrediction
+    // V33.1R.1: levels from the one scenario of this snapshot (tradeSetup), never the engine's price-anchored text
+    val scenario = com.example.livegoldai.data.ResearchScenario.of(analysis, System.currentTimeMillis())
     val sigColor = when (analysis.overallSignal) {
         Signal.BUY -> NeonGreen
         Signal.SELL -> NeonRed
@@ -150,7 +152,7 @@ fun ExecutiveSummaryBar(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = prediction?.recommendedEntryZone?.split("-")?.firstOrNull()?.trim() ?: "$${String.format(Locale.US, "%.1f", analysis.tradeSetup.entryPrice)}",
+                            text = scenario?.let { com.example.livegoldai.data.ResearchScenario.money(it.entry) } ?: "--",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Black,
                             color = TextPrimary,
@@ -159,7 +161,7 @@ fun ExecutiveSummaryBar(
                     }
                 }
 
-                // Pill 3: SEAL (Stop Loss)
+                // Pill 3: STOP (Stop Loss)
                 Surface(
                     modifier = Modifier
                         .weight(1.1f)
@@ -172,7 +174,7 @@ fun ExecutiveSummaryBar(
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Text(
-                            text = "SEAL (SL)",
+                            text = "STOP (SL)",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -180,7 +182,7 @@ fun ExecutiveSummaryBar(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = prediction?.stopLossLevel ?: "$${String.format(Locale.US, "%.1f", analysis.tradeSetup.stopLoss)}",
+                            text = scenario?.let { com.example.livegoldai.data.ResearchScenario.money(it.stop) + " (-" + String.format(Locale.US, "%.1f", it.stopPips) + " pips)" } ?: "--",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Black,
                             color = NeonRed,
@@ -210,7 +212,8 @@ fun ExecutiveSummaryBar(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = prediction?.takeProfit1 ?: "$${String.format(Locale.US, "%.1f", analysis.tradeSetup.takeProfit1)}",
+                            text = scenario?.let { sc -> com.example.livegoldai.data.ResearchScenario.money(sc.tp1) + " (+" + String.format(Locale.US, "%.1f", sc.tp1Pips) + " pips · " +
+                                com.example.livegoldai.data.RiskMath.rewardPerRisk(sc.entry, sc.stop, sc.tp1, sc.side).let { r -> if (r.isNaN()) "--" else String.format(Locale.US, "1:%.2f", r) } + ")" } ?: "--",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Black,
                             color = NeonGreen,

@@ -65,6 +65,8 @@ fun UnifiedSignalDashboardView(
     selectedInterval: String,
     onIntervalSelected: (String) -> Unit,
     onOpenCalculator: (Double) -> Unit,
+    // V33.1R.1: the CURRENT snapshot, read at click time by order-copy buttons (default: none -> copy refused)
+    currentAnalysis: () -> GoldAnalysisResult? = { null },
     onOpenPredictionDialog: () -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
     onPillarClick: (GroupAnalysis) -> Unit,
@@ -540,6 +542,7 @@ fun UnifiedSignalDashboardView(
         // --- 3. 🤖 KALANKAR QUANT AI BOT (AUTONOMOUS SIGNAL & EXECUTION) ---
         QuantBotCard(
             executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+            commandProvider = { com.example.livegoldai.data.ResearchScenario.orderCommand(currentAnalysis(), System.currentTimeMillis()) },
             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, currentLanguage),
             botSignal = analysis.quantBotSignal,
             onOpenCalculator = onOpenCalculator
@@ -549,6 +552,7 @@ fun UnifiedSignalDashboardView(
         analysis.multiBotEnsemble?.let { ensemble ->
             MultiBotArsenalCard(
                 actionable = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+                commandProvider = { com.example.livegoldai.data.ResearchScenario.ensembleCommand(currentAnalysis(), System.currentTimeMillis()) },
                 ensemble = ensemble,
                 onOpenCalculator = onOpenCalculator
             )

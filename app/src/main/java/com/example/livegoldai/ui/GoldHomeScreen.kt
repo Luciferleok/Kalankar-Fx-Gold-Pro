@@ -667,6 +667,7 @@ fun GoldHomeScreen(
                                 item(key = "unified_dashboard_content") {
                                     UnifiedSignalDashboardView(
                                         analysis = analysis,
+                                        currentAnalysis = { uiState.data },
                                         selectedInterval = uiState.selectedInterval,
                                         onIntervalSelected = { viewModel.setInterval(it) },
                                         onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
@@ -690,6 +691,7 @@ fun GoldHomeScreen(
                                 item(key = "easy_view_content") {
                                     SimpleEasyTradingView(
                                         analysis = analysis,
+                                        currentAnalysis = { uiState.data },
                                         selectedInterval = uiState.selectedInterval,
                                         onIntervalSelected = { viewModel.setInterval(it) },
                                         onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
@@ -774,6 +776,7 @@ fun GoldHomeScreen(
                                     item(key = "cockpit_quant_bot_signal") {
                                         QuantBotCard(
                                             executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+                                            commandProvider = { com.example.livegoldai.data.ResearchScenario.orderCommand(uiState.data, System.currentTimeMillis()) },
                                             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
@@ -827,6 +830,7 @@ fun GoldHomeScreen(
                                     item(key = "tab1_quant_bot_signal") {
                                         QuantBotCard(
                                             executionAllowed = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+                                            commandProvider = { com.example.livegoldai.data.ResearchScenario.orderCommand(uiState.data, System.currentTimeMillis()) },
                                             scoreText = com.example.livegoldai.data.HonestText.scoreShort(analysis, uiState.language),
                                             botSignal = botSignal,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
@@ -919,6 +923,7 @@ fun GoldHomeScreen(
                                     item(key = "tab4_multi_bot_arsenal") {
                                         MultiBotArsenalCard(
                                             actionable = com.example.livegoldai.data.ResearchGate.executionAllowed(analysis, System.currentTimeMillis()),
+                                            commandProvider = { com.example.livegoldai.data.ResearchScenario.ensembleCommand(uiState.data, System.currentTimeMillis()) },
                                             ensemble = ensemble,
                                             onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) }
                                         )

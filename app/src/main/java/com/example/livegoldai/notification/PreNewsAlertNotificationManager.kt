@@ -66,22 +66,11 @@ object PreNewsAlertNotificationManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val biasLabel = when (aiBias) {
-            Signal.BUY -> when (lang) {
-                AppLanguage.ENGLISH -> "BUY GOLD 🟢 (Bullish Surge Expected)"
-                AppLanguage.HINDI -> "BUY (गोल्ड में तेजी की संभावना 🟢)"
-                AppLanguage.MARATHI -> "BUY (सोन्यात तेजीची शक्यता 🟢)"
-            }
-            Signal.SELL -> when (lang) {
-                AppLanguage.ENGLISH -> "SELL GOLD 🔴 (Bearish Drop Expected)"
-                AppLanguage.HINDI -> "SELL (गोल्ड में मंदी की संभावना 🔴)"
-                AppLanguage.MARATHI -> "SELL (सोन्यात मंदीची शक्यता 🔴)"
-            }
-            Signal.WAIT -> when (lang) {
-                AppLanguage.ENGLISH -> "WAIT 🟡 (no new trade before the release)"
-                AppLanguage.HINDI -> "WAIT (रिलीज़ से पहले नया ट्रेड नहीं 🟡)"
-                AppLanguage.MARATHI -> "WAIT (रिलीजपूर्वी नवीन ट्रेड नाही 🟡)"
-            }
+        // V33.1R.1: the app never predicts a news outcome, whatever is passed in: one neutral label
+        val biasLabel = when (lang) {
+            AppLanguage.ENGLISH -> "WAIT 🟡 (direction not predicted; no new trade before the release)"
+            AppLanguage.HINDI -> "WAIT (दिशा का अनुमान नहीं; रिलीज़ से पहले नया ट्रेड नहीं 🟡)"
+            AppLanguage.MARATHI -> "WAIT (दिशेचा अंदाज नाही; रिलीजपूर्वी नवीन ट्रेड नाही 🟡)"
         }
 
         val title = when (lang) {
