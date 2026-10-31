@@ -83,6 +83,19 @@ object PositionSizer {
         return n.multiply(s).toDouble()
     }
 
+    /**
+     * V33.1R.4-c2: largest broker volume min + N × step that is <= [x]; null when even [min] is above [x].
+     * Brokers accept volumes on a grid that starts at the minimum. When min is itself a multiple of step (0.01 / 0.01)
+     * this gives exactly the same result as [floorToStep]; when it is not (min 0.05, step 0.02) only 0.05, 0.07 ... are
+     * valid and the old zero-anchored rounding could return an invalid 0.08.
+     */
+    fun floorToGrid(x: Double, min: Double, step: Double): Double? {
+        val bx = BigDecimal.valueOf(x); val bm = BigDecimal.valueOf(min)
+        if (bx < bm) return null
+        val n = bx.subtract(bm).divide(BigDecimal.valueOf(step), 0, RoundingMode.FLOOR)
+        return bm.add(n.multiply(BigDecimal.valueOf(step))).toDouble()
+    }
+
     fun size(inp: Input, spec: BrokerSpec): Result {
         val errors = ArrayList<String>()
         val balance = parse(inp.balanceText)
@@ -104,10 +117,12 @@ object PositionSizer {
         val lossPerLot = (dist + slippage!!) * spec.contractSize!! * rate          // account currency, at the stop + slippage
         val minRisk = spec.minVolume!! * lossPerLot
         val raw = budget / lossPerLot
-        var vol = floorToStep(minOf(raw, spec.maxVolume!!), spec.volumeStep!!)
-        // floating guard: never above the budget
-        while (vol > 0.0 && vol * lossPerLot > budget * (1 + 1e-12)) vol = floorToStep(vol - spec.volumeStep, spec.volumeStep)
-        if (vol + 1e-12 < spec.minVolume) return Result.NoSafeSize(budget, spec.minVolume, minRisk, cur)
+        // V33.1R.4-c2: on the broker's grid (min + N × step), never above the budget or the maximum volume
+        var vol = floorToGrid(minOf(raw, spec.maxVolume!!), spec.minVolume, spec.volumeStep!!)
+            ?: return Result.NoSafeSize(budget, spec.minVolume, minRisk, cur)
+        while (vol * lossPerLot > budget * (1 + 1e-12)) {        // floating guard
+            vol = floorToGrid(vol - spec.volumeStep, spec.minVolume, spec.volumeStep) ?: return Result.NoSafeSize(budget, spec.minVolume, minRisk, cur)
+        }
 
         val isLong = inp.stop < inp.entry
         fun profit(tp: Double): Double? {
