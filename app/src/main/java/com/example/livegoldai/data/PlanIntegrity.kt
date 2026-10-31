@@ -67,7 +67,12 @@ object PlanStamp {
      * @param researchStatus Shadow Lab live status of this timeframe. Only "LIVE QUALIFIED" makes a BUY/SELL actionable.
      */
     fun stamp(a: GoldAnalysisResult, state: LedgerState?, now: Long = System.currentTimeMillis(), researchStatus: String? = null): GoldAnalysisResult {
-        val rec = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated }
+        // V34.1a: a ledger record belongs to this plan only when it is the SAME provider's record of the same candle.
+        // Before: interval + candle only, so an OANDA plan took a Twelve Data record's id, expiry and stop check.
+        val sameCandle = state?.records?.filter { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated } ?: emptyList()
+        val provider = SourceRegistry.identify(a.feed?.source).provider
+        val rec = sameCandle.lastOrNull { provider != ProviderId.NONE && SourceRegistry.identify(it.dataSource).provider == provider }
+        val otherRec = if (rec == null) sameCandle.lastOrNull() else null
         val raw = a.rawSignal ?: a.overallSignal
         val fresh = Freshness.assess(a, now)
         val expiry = stableExpiry(a, rec)
@@ -102,6 +107,8 @@ object PlanStamp {
             generatedAtMs = now,
             modelVersion = "${PredictionLedger.ENGINE_VERSION} • ${a.learning?.modelVersion ?: "--"}",
             stopTouched = touched,
+            // V34.1a: this candle is already in the ledger from another provider (one record per candle; nothing hidden)
+            recordedByOtherProvider = otherRec?.let { SourceRegistry.badge(it.dataSource).ifBlank { it.dataSource.ifBlank { "an older app version" } } } ?: "",
             // V31-B: the ratio always matches the entry, stop and targets of this same snapshot
             riskRewardRatio = RiskMath.label(t.entryPrice, t.stopLoss, t.takeProfit1, t.takeProfit2, t.signal)
         ))

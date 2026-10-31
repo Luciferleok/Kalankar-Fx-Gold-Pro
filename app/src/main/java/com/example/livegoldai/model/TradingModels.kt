@@ -374,7 +374,9 @@ data class TradeSetup(
     val expiresAtMs: Long = 0L,              // stable UTC expiry (ledger record, else candle open + horizon)
     val freshness: String = "",              // LIVE / DELAYED / STALE / OFFLINE / MARKET CLOSED
     // ---- V33.1R.2: when these levels were first seen in this plan window (LevelFreeze); 0 = not kept
-    val levelsFixedAtMs: Long = 0L
+    val levelsFixedAtMs: Long = 0L,
+    // ---- V34.1a: non-empty when this candle was recorded in the ledger from ANOTHER provider (that record is not used here)
+    val recordedByOtherProvider: String = ""
 ) {
     fun getStrategyNote(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> strategyNote

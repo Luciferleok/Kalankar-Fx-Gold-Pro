@@ -28,7 +28,9 @@ object ResearchScenario {
         /** true only when ResearchGate authorizes this exact snapshot now */
         val actionable: Boolean,
         /** V33.1R.2: when these levels were first seen in this window (0 = unknown) */
-        val fixedAtMs: Long = 0L
+        val fixedAtMs: Long = 0L,
+        /** V34.1a: provider whose ledger record holds this candle, when it is NOT this plan's provider ("" = none) */
+        val recordedByOther: String = ""
     )
 
     /** null when there is no side (WAIT) or no usable levels. */
@@ -41,7 +43,7 @@ object ResearchScenario {
         return Levels(t.snapshotId, a.interval, t.signal, t.entryPrice, t.stopLoss, t.takeProfit1, t.takeProfit2,
             t.stopLossPips, t.takeProfit1Pips, t.takeProfit2Pips, t.expiresAtMs,
             if (t.horizonMin > 0) t.horizonMin else PlanStamp.horizonMin(a.interval), t.planStatus, state,
-            ResearchGate.executionAllowed(a, now), t.levelsFixedAtMs)
+            ResearchGate.executionAllowed(a, now), t.levelsFixedAtMs, t.recordedByOtherProvider)
     }
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
@@ -60,7 +62,12 @@ object ResearchScenario {
             t(l, "4. Research targets: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}.", "4. रिसर्च टारगेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}।", "4. रिसर्च टार्गेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}."),
             if (lv.expiresAtMs > 0) t(l, "5. Evaluation ends ${utc(lv.expiresAtMs)} (fixed).", "5. मूल्यांकन ${utc(lv.expiresAtMs)} पर खत्म (तय)।", "5. मूल्यमापन ${utc(lv.expiresAtMs)} ला संपते (निश्चित).")
             else t(l, "5. Evaluation end not stamped.", "5. मूल्यांकन का अंत दर्ज नहीं।", "5. मूल्यमापनाचा शेवट नोंदलेला नाही.")
-        ).joinToString("\n")
+        ).let { base ->
+            if (lv.recordedByOther.isBlank()) base else base + t(l,
+                "6. Not in the ledger as this feed's forecast: this candle was already recorded from ${lv.recordedByOther} (one record per candle).",
+                "6. इस फ़ीड का फ़ोरकास्ट लेजर में नहीं: यह कैंडल पहले ही ${lv.recordedByOther} से दर्ज हो चुकी है (हर कैंडल का एक रिकॉर्ड)।",
+                "6. या फीडचा अंदाज लेजरमध्ये नाही: ही कँडल आधीच ${lv.recordedByOther} कडून नोंदली गेली (प्रत्येक कँडलची एक नोंद).")
+        }.joinToString("\n")
     }
 
     /** "Ends 10:45 UTC (fixed) or at $4,052.64 (invalidation) or $4,038.69 (TP2)." */
