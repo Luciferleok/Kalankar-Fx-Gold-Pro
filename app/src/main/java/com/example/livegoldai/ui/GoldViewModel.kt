@@ -189,8 +189,11 @@ class GoldViewModel @JvmOverloads constructor(
     }
     private var aiJob: Job? = null
 
-    /** V33.1R.2: levels kept per plan window (snapshot id + side), in memory only */
-    private val frozenLevels = mutableMapOf<String, com.example.livegoldai.data.LevelFreeze.Frozen>()
+    /** V33.1R.2 / R.4-d: levels kept per plan window; read from the app's own file so a restart shows the same levels.
+     *  Declared BEFORE init (see loadGate). Not the ledger. */
+    private val levelStore = com.example.livegoldai.data.LevelFreezeStore(java.io.File(application.filesDir, "level_freeze_v1.tsv"))
+    private val frozenLevels: MutableMap<String, com.example.livegoldai.data.LevelFreeze.Frozen> =
+        try { levelStore.load(System.currentTimeMillis()) } catch (_: Exception) { mutableMapOf() }
     /** V33.1R.4-b: only the newest load for the selected timeframe may change the screen.
      *  Declared BEFORE init: init calls loadData(), and Kotlin initializes properties in source order (a property declared
      *  after init is still null while init runs, which crashed the app at start in fcc9675). */
@@ -285,7 +288,14 @@ class GoldViewModel @JvmOverloads constructor(
                         // V33.1R.2: keep the levels first seen in this plan window (the engine rebuilds them from the live price)
                         // V33.1R.4-c1: a load that is no longer current (newer load / other timeframe) does not touch the freeze map
                         val stamped = if (!isCurrentLoad(ticket)) stamped0 else
-                            try { synchronized(frozenLevels) { com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis()) } } catch (_: Exception) { stamped0 }
+                            try {
+                                synchronized(frozenLevels) {
+                                    val before = frozenLevels.keys.toSet()
+                                    val out = com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis())
+                                    if (frozenLevels.keys != before) levelStore.save(frozenLevels)   // a window was added or dropped
+                                    out
+                                }
+                            } catch (_: Exception) { stamped0 }
                         stamped.copy(presentation = try {
                             com.example.livegoldai.data.PresentationBuilder.build(stamped, st, research)
                         } catch (_: Exception) { null })

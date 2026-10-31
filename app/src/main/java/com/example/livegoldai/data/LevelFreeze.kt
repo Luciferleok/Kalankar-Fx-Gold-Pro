@@ -18,8 +18,8 @@ import java.util.Locale
  * side changes, or a new candle starts, the new levels are taken. Live indicator values are not frozen: only plan levels,
  * their pips, the risk/reward and the texts that quote those levels.
  *
- * Limit (stated, not hidden): the kept levels live in memory. After the app restarts inside a window, the first levels
- * seen after the restart are kept instead.
+ * V33.1R.4-d: the kept levels are also written to LevelFreezeStore (app storage, not the ledger), so an app restart
+ * inside a window shows the same levels.
  */
 object LevelFreeze {
 
