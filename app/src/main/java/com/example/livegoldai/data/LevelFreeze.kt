@@ -23,14 +23,19 @@ import java.util.Locale
  */
 object LevelFreeze {
 
-    data class Frozen(val key: String, val setup: TradeSetup, val fixedAtMs: Long, val botSlPips: Double?, val botTpPips: Double?)
+    data class Frozen(val key: String, val setup: TradeSetup, val fixedAtMs: Long, val botSlPips: Double?, val botTpPips: Double?,
+                      val interval: String = "", val barId: String = "")
 
-    /** null when there is nothing to keep (WAIT, no levels, no snapshot id). */
+    /**
+     * null when there is nothing to keep (WAIT, no levels, no snapshot id).
+     * V33.1R.4-c1: the provider and instrument are part of the key, so levels of one feed never carry over to another
+     * feed on the same candle (before: "snapshotId|side" only).
+     */
     fun key(a: GoldAnalysisResult): String? {
         val t = a.tradeSetup
         if (t.signal == Signal.WAIT || t.snapshotId.isBlank()) return null
         if (t.entryPrice <= 0.0 || t.stopLoss <= 0.0 || t.takeProfit1 <= 0.0) return null
-        return "${t.snapshotId}|${t.signal.name}"
+        return "${t.snapshotId}|${t.signal.name}|${t.dataSource}|${t.instrument}"
     }
 
     private fun f2(x: Double) = String.format(Locale.US, "%.2f", x)
@@ -49,11 +54,14 @@ object LevelFreeze {
         val k = key(a) ?: return a
         val f = store[k]
         if (f == null) {
-            // drop older windows of the same timeframe so the store stays small
-            val iv = a.tradeSetup.snapshotId.substringBeforeLast('-', "")
-            store.keys.removeAll { it != k && (store[it]?.setup?.snapshotId?.substringBeforeLast('-', "") == iv || store.size > 16) }
+            // V33.1R.4-c1: an older candle arriving late (a slow load) must not evict the current window or be kept itself
+            val iv = a.interval.lowercase(); val bar = a.lastUpdated
+            if (store.values.any { it.interval == iv && it.barId > bar }) return a
+            // drop only OLDER windows of the same timeframe (before: matched by a wrong prefix and could drop a newer one)
+            store.values.removeAll { (it.interval == iv && it.barId < bar) }
+            if (store.size >= 16) store.values.minByOrNull { it.fixedAtMs }?.let { old -> store.remove(old.key) }
             val bot = a.multiBotEnsemble?.allBots?.firstOrNull()
-            store[k] = Frozen(k, a.tradeSetup, now, bot?.stopLossPips, bot?.targetPips)
+            store[k] = Frozen(k, a.tradeSetup, now, bot?.stopLossPips, bot?.targetPips, iv, bar)
             return withFixedAt(a, now)
         }
         val s = f.setup

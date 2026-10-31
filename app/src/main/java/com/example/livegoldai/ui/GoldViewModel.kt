@@ -283,7 +283,9 @@ class GoldViewModel @JvmOverloads constructor(
                         // V31: stamp the plan (status + provenance) from this same snapshot before anything shows it
                         val stamped0 = try { com.example.livegoldai.data.PlanStamp.stamp(withBrain, st, researchStatus = research) } catch (_: Exception) { withBrain }
                         // V33.1R.2: keep the levels first seen in this plan window (the engine rebuilds them from the live price)
-                        val stamped = try { synchronized(frozenLevels) { com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis()) } } catch (_: Exception) { stamped0 }
+                        // V33.1R.4-c1: a load that is no longer current (newer load / other timeframe) does not touch the freeze map
+                        val stamped = if (!isCurrentLoad(ticket)) stamped0 else
+                            try { synchronized(frozenLevels) { com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis()) } } catch (_: Exception) { stamped0 }
                         stamped.copy(presentation = try {
                             com.example.livegoldai.data.PresentationBuilder.build(stamped, st, research)
                         } catch (_: Exception) { null })
