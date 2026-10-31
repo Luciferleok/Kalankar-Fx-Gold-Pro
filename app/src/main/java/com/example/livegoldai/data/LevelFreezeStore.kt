@@ -20,6 +20,8 @@ import java.util.Base64
 class LevelFreezeStore(private val file: File) {
 
     companion object {
+        private val locks = java.util.concurrent.ConcurrentHashMap<String, Any>()
+        private fun lockFor(f: File): Any = locks.getOrPut(f.absolutePath) { Any() }
         const val HEADER = "KFX-LEVEL-FREEZE v1"
         private const val FIELDS = 21
         private fun e(s: String) = Base64.getEncoder().encodeToString(s.toByteArray(Charsets.UTF_8))
@@ -74,11 +76,26 @@ class LevelFreezeStore(private val file: File) {
         return out
     }
 
-    /** Atomic replace of the whole file. false when it could not be written (the app keeps working from memory). */
-    fun save(store: Map<String, LevelFreeze.Frozen>): Boolean = try {
-        file.parentFile?.mkdirs()
-        val tmp = File(file.path + ".tmp")
-        tmp.writeText((listOf(HEADER) + store.values.map { encode(it) }).joinToString("\n") + "\n", Charsets.UTF_8)
-        if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) } else true
-    } catch (_: Exception) { false }
+    /**
+     * Atomic replace of the whole file. false when it could not be written (the app keeps working from memory).
+     * V34.0: one lock per file path and a unique temp file per write; the old file is never deleted first. Before, two
+     * writers shared "<file>.tmp" and a failed rename deleted the old file, so concurrent saves could lose the file.
+     */
+    fun save(store: Map<String, LevelFreeze.Frozen>): Boolean = synchronized(lockFor(file)) {
+        var tmp: File? = null
+        try {
+            file.parentFile?.mkdirs()
+            tmp = File.createTempFile(file.name, ".tmp", file.parentFile ?: File("."))
+            tmp.writeText((listOf(HEADER) + store.values.map { encode(it) }).joinToString("\n") + "\n", Charsets.UTF_8)
+            try {
+                java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            true
+        } catch (_: Exception) {
+            try { tmp?.delete() } catch (_: Exception) { }
+            false
+        }
+    }
 }
