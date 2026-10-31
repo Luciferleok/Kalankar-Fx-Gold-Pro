@@ -182,8 +182,9 @@ object LedgerPulseBuilder {
             overdue = stats.overdue,
             lastRecorded = if (last == null) "Nothing recorded yet" else
                 "${PredictionLedger.utcLabel(last.createdAt, true)} • ${last.interval} • ${last.finalSignal.name} (${ago(now - last.createdAt)})",
+            // V33.1R.3: only a future result is "next"; records already past their time are counted as waiting
             nextDue = if (next == null) "No active prediction" else
-                "${PredictionLedger.utcLabel(next.expiresAt, true)} (${inTime(next.expiresAt + LearningCoordinator.SETTLE_MS - now)}) • ${next.interval}",
+                DueLine.label(DueLine.of(pending.map { it.expiresAt to it.interval }, now), now),
             lastCheck = lastCheck,
             ledgerStarted = if (first == null) "--" else "${PredictionLedger.utcLabel(first.createdAt, true)} (${ago(now - first.createdAt)})",
             fileSize = if (stats.fileBytes >= 0) String.format(Locale.US, "%.1f KB", stats.fileBytes / 1024.0) else "unknown",

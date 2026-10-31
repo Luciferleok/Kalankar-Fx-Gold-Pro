@@ -179,7 +179,7 @@ class BackgroundRecorder(
             recorded = stats.records, checked = stats.results, active = stats.pending,
             todayCorrect = ok, todayWrong = bad,
             lastRecorded = if (last == null) "--" else "${PredictionLedger.utcLabel(last.createdAt)} • ${last.interval} ${last.finalSignal.name}",
-            nextDue = if (next == null) "--" else "${PredictionLedger.utcLabel(next.expiresAt)} • ${next.interval}",
+            nextDue = if (next == null) "--" else DueLine.label(DueLine.of(st.records.filter { st.resultOf(it.id) == null }.map { it.expiresAt to it.interval }, now), now, withDay = false),
             problems = problems,
             durationMs = took,
             avgDurationMs = durations.average().toLong(),

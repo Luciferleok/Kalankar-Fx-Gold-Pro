@@ -455,6 +455,16 @@ fun UnifiedSignalDashboardView(
                             fontFamily = FontFamily.Monospace,
                             color = signalColor
                         )
+                        // V33.1R.3: say what the number is (screens showed "83%" beside an axis marked in percent from sell to buy)
+                        Text(
+                            text = when (currentLanguage) {
+                                AppLanguage.ENGLISH -> "pillar agreement · not a probability"
+                                AppLanguage.HINDI -> "पिलर सहमति · संभावना नहीं"
+                                AppLanguage.MARATHI -> "पिलर सहमती · शक्यता नाही"
+                            },
+                            fontSize = 9.sp,
+                            color = TextSecondary
+                        )
 
                         val verdictText = when (analysis.overallSignal) {
                             Signal.BUY -> when (currentLanguage) {
@@ -497,9 +507,10 @@ fun UnifiedSignalDashboardView(
                     modifier = Modifier.fillMaxWidth(0.92f),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "🔴 0% SELL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalSell)
-                    Text(text = "🟡 50% HOLD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalWait)
-                    Text(text = "🟢 100% BUY", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalBuy)
+                    // V33.1R.3: the dial shows direction only; the big number is pillar agreement, not a position on this axis
+                    Text(text = "◀ SELL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalSell)
+                    Text(text = "HOLD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalWait)
+                    Text(text = "BUY ▶", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SignalBuy)
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))

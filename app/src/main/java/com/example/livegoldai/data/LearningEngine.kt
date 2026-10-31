@@ -391,7 +391,7 @@ object LearningEngine {
         val pending = all.filter { outcomeOf(it) == LedgerOutcome.PENDING }
         val nextDue = pending.minOfOrNull { it.expiresAt }
         val pendingNote = if (nextDue == null) "No active predictions." else
-            "${pending.size} active. Next result due ${PredictionLedger.utcLabel(nextDue, withDay = true)}."
+            "${pending.size} active. Next result due: ${DueLine.label(DueLine.of(pending.map { it.expiresAt to it.interval }, now), now)}."
 
         fun countOf(vararg o: LedgerOutcome) = all.count { outcomeOf(it) in o }
 
