@@ -236,15 +236,22 @@ class GoldViewModel @JvmOverloads constructor(
     /** V33.1R.2: levels kept per plan window (snapshot id + side), in memory only */
     private val frozenLevels = mutableMapOf<String, com.example.livegoldai.data.LevelFreeze.Frozen>()
 
+    /** V33.1R.4-b: only the newest load for the selected timeframe may change the screen */
+    private val loadGate = com.example.livegoldai.data.RequestGate()
+    private fun isCurrentLoad(t: com.example.livegoldai.data.RequestGate.Ticket) = loadGate.isCurrent(t, _uiState.value.selectedInterval)
+
     fun loadData(isInitial: Boolean = false) {
+        val ticket = loadGate.begin(_uiState.value.selectedInterval)
         viewModelScope.launch {
-            if (isInitial) {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            } else {
-                _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            if (isCurrentLoad(ticket)) {
+                if (isInitial) {
+                    _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                } else {
+                    _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+                }
             }
 
-            val currentInterval = _uiState.value.selectedInterval
+            val currentInterval = ticket.interval
             val result = apiService.fetchAnalysis(interval = currentInterval)
 
             result.onSuccess { rawAnalysis ->
@@ -281,6 +288,8 @@ class GoldViewModel @JvmOverloads constructor(
                 } catch (_: Exception) {
                     rawAnalysis
                 }
+                // V33.1R.4-b: a newer load or another timeframe owns the screen now; drop this result's screen effects
+                if (!isCurrentLoad(ticket)) return@onSuccess
                 val target = _uiState.value.priceAlertTarget
                 val triggered = if (target != null) {
                     val p = analysis.currentPrice
@@ -310,6 +319,7 @@ class GoldViewModel @JvmOverloads constructor(
                     )
                 }
             }.onFailure { err ->
+                if (!isCurrentLoad(ticket)) return@onFailure
                 _uiState.update {
                     it.copy(
                         isLoading = false,
