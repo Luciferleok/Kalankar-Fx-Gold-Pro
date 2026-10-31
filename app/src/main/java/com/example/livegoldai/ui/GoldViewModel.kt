@@ -189,6 +189,14 @@ class GoldViewModel @JvmOverloads constructor(
     }
     private var aiJob: Job? = null
 
+    /** V33.1R.2: levels kept per plan window (snapshot id + side), in memory only */
+    private val frozenLevels = mutableMapOf<String, com.example.livegoldai.data.LevelFreeze.Frozen>()
+    /** V33.1R.4-b: only the newest load for the selected timeframe may change the screen.
+     *  Declared BEFORE init: init calls loadData(), and Kotlin initializes properties in source order (a property declared
+     *  after init is still null while init runs, which crashed the app at start in fcc9675). */
+    private val loadGate = com.example.livegoldai.data.RequestGate()
+    private fun isCurrentLoad(t: com.example.livegoldai.data.RequestGate.Ticket) = loadGate.isCurrent(t, _uiState.value.selectedInterval)
+
     init {
         com.example.livegoldai.data.AppEngine.init(application.filesDir)
         val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
@@ -233,12 +241,7 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(language = language) }
     }
 
-    /** V33.1R.2: levels kept per plan window (snapshot id + side), in memory only */
-    private val frozenLevels = mutableMapOf<String, com.example.livegoldai.data.LevelFreeze.Frozen>()
 
-    /** V33.1R.4-b: only the newest load for the selected timeframe may change the screen */
-    private val loadGate = com.example.livegoldai.data.RequestGate()
-    private fun isCurrentLoad(t: com.example.livegoldai.data.RequestGate.Ticket) = loadGate.isCurrent(t, _uiState.value.selectedInterval)
 
     fun loadData(isInitial: Boolean = false) {
         val ticket = loadGate.begin(_uiState.value.selectedInterval)
