@@ -92,6 +92,8 @@ fun V8HealthScreen(
                 V8KeyValue(tr(lang, "File", "फ़ाइल", "फाइल"), p.fileSize)
                 // V34.2: separate plan check on the levels that were shown (entry first, then TP1 or stop)
                 if (p.planCheck.isNotEmpty()) V8KeyValue(tr(lang, "Plan check (v2)", "प्लान जाँच (v2)", "प्लॅन तपासणी (v2)"), p.planCheck)
+                // V34.4: never one mixed number: each data provider on its own line
+                p.byProvider.forEach { line -> V8KeyValue(tr(lang, "By provider", "प्रोवाइडर अनुसार", "प्रोव्हायडरनुसार"), line) }
 
                 // ---- 24/7 background recorder
                 Spacer(modifier = Modifier.height(8.dp))

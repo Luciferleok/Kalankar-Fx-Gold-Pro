@@ -196,7 +196,8 @@ object LedgerPulseBuilder {
             integrityFindings = integrity?.findings ?: emptyList(),
             integrityPassed = integrity?.passed ?: emptyList(),
             diagnosis = diagnosis,
-            planCheck = planCheckLine(state)
+            planCheck = planCheckLine(state),
+            byProvider = providerLines(state)
         )
     }
 
@@ -204,6 +205,42 @@ object LedgerPulseBuilder {
      * V34.2: summary of the separate plan check (v2). Counts each v2 call once, by its plan result; the main accuracy
      * figures (v1) are not changed by this. Win share is TP1 / (TP1 + STOP); NO_ENTRY and OPEN are shown, never counted as wins.
      */
+    /** V34.4: a share is only called trustworthy from this many decided calls (same bar as PredictionAudit.MIN_N) */
+    const val PROVIDER_MIN_N = 30
+
+    /**
+     * V34.4: accuracy per data provider, so OANDA and Twelve Data results are never mixed into one number.
+     * v1 = the existing direction check (CORRECT vs INCORRECT / INVALIDATED; WAIT, sideways, unchecked and uncertain
+     * calls are not counted). v2 = the plan check (TP1 first vs stop first, entered calls only). Below
+     * [PROVIDER_MIN_N] the line says the sample is too small. Read-only: nothing here changes learning or qualification.
+     */
+    fun providerLines(state: LedgerState): List<String> {
+        val byProv = state.records.groupBy { r ->
+            when (SourceRegistry.identify(r.dataSource).provider) {
+                ProviderId.OANDA -> "OANDA"; ProviderId.TWELVE_DATA -> "Twelve Data"; ProviderId.BINANCE -> "Binance (proxy)"; ProviderId.YAHOO -> "Yahoo (proxy)"
+                else -> "older app version"
+            }
+        }
+        return byProv.mapNotNull { (name, recs) ->
+            var right = 0; var wrong = 0; var tp = 0; var sl = 0
+            for (r in recs) {
+                val res = state.resultOf(r.id) ?: continue
+                when (res.outcome) {
+                    LedgerOutcome.CORRECT -> right++
+                    LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> wrong++
+                    else -> {}
+                }
+                when (res.planOutcome) { PredictionLedger.PLAN_TP1 -> tp++; PredictionLedger.PLAN_STOP -> sl++ }
+            }
+            val n1 = right + wrong; val n2 = tp + sl
+            if (n1 == 0 && n2 == 0) null else {
+                fun part(label: String, ok: Int, n: Int) = if (n == 0) "$label: none yet" else
+                    "$label ${Math.round(100.0 * ok / n)}% of $n" + if (n < PROVIDER_MIN_N) " (too few to trust)" else ""
+                "$name · " + part("v1 direction right", right, n1) + " · " + part("v2 TP1 before stop", tp, n2)
+            }
+        }.sorted()
+    }
+
     fun planCheckLine(state: LedgerState): String {
         val ids = state.records.filter { it.planMethod.isNotEmpty() }.map { it.id }.toSet()
         val outs = state.results.filterKeys { it in ids }.values.map { it.planOutcome }.filter { it.isNotEmpty() }

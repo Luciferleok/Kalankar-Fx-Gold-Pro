@@ -142,5 +142,7 @@ data class LedgerPulse(
     val dataQualityDetail: String = "",
     val timeline: List<LabelStat> = emptyList(),     // recent forecasts on this timeframe, newest first, with their real result
     // V34.2: separate plan check (entry first, then TP1 or stop, on the levels shown); "" until a v2 call is checked
-    val planCheck: String = ""
+    val planCheck: String = "",
+    // V34.4: accuracy per data provider (v1 direction check and v2 plan check kept apart), one line per provider
+    val byProvider: List<String> = emptyList()
 )
