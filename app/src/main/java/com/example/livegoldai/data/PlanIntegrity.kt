@@ -133,19 +133,35 @@ object PlanStamp {
 object Freshness {
     const val LIVE = "LIVE"; const val DELAYED = "DELAYED"; const val STALE = "STALE"; const val OFFLINE = "OFFLINE"; const val CLOSED = "MARKET CLOSED"
 
+    /**
+     * V34.3: the age of the PRICE, not of the download. With the provider's own quote time (OANDA pricing) that time is
+     * used; OANDA's "not tradeable" means CLOSED. Without it (Twelve Data), a quote can be LIVE only while the newest
+     * candle is the current one (opened within one candle + 2 min); a successful download of an older price is at best
+     * DELAYED. Before: a fetch 3 s ago made a price LIVE even when no new candle had arrived for a whole interval.
+     */
     fun assess(a: GoldAnalysisResult, now: Long): String {
         val f = a.feed
         if (f == null || !f.isLive || a.isSimulatedFallback) return OFFLINE
         if (PredictionLedger.isMarketClosed(now)) return CLOSED
+        if (f.tradeable == false) return CLOSED
         val ivMs = RealityEngine.intervalMinutes(a.interval) * 60_000L
-        val quoteAge = now - f.fetchedAtMs
+        val providerTime = f.quoteTimeMs > 0L
+        val quoteAge = now - (if (providerTime) f.quoteTimeMs else f.fetchedAtMs)
         val candleAge = ShadowLive.barMs(a.lastUpdated)?.let { now - it } ?: Long.MAX_VALUE
+        val candleCurrent = candleAge <= ivMs + 120_000L
         return when {
             f.fetchedAtMs <= 0L -> OFFLINE
             candleAge > 2 * ivMs + 120_000L -> STALE
-            quoteAge <= 120_000L -> LIVE
+            quoteAge <= 120_000L && (providerTime || candleCurrent) -> LIVE
             quoteAge <= maxOf(120_000L, ivMs) -> DELAYED
             else -> STALE
         }
+    }
+
+    /** V34.3: age of the price itself (provider quote time when known, else download time); -1 when unknown */
+    fun priceAgeMs(a: GoldAnalysisResult, now: Long): Long {
+        val f = a.feed ?: return -1L
+        val t = if (f.quoteTimeMs > 0L) f.quoteTimeMs else f.fetchedAtMs
+        return if (t > 0L) now - t else -1L
     }
 }

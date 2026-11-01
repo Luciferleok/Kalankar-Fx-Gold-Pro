@@ -28,7 +28,10 @@ object OandaEndpoints {
     fun probeCandles() = "$REST/instruments/$INSTRUMENT/candles?count=3&granularity=M1&price=M"
 
     /** Every URL this app may call on OANDA. A test asserts nothing here can place or change an order. */
-    fun all(account: String = "ACC") = listOf(accounts(), instruments(account), probeCandles())
+    /** V34.3: latest bid/ask quote with the provider's own time (read-only GET). */
+    fun pricing(account: String) = "$REST/accounts/$account/pricing?instruments=$INSTRUMENT"
+
+    fun all(account: String = "ACC") = listOf(accounts(), instruments(account), probeCandles(), pricing(account))
 }
 
 /** One HTTP answer. code 0 = no answer at all; then [error] is TIMEOUT or NETWORK. */

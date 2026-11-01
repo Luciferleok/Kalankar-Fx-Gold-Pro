@@ -59,19 +59,20 @@ fun V8CockpitScreen(
     @Suppress("UNUSED_VARIABLE") val recomposeEverySecond = tick
     val now = System.currentTimeMillis()
     val feed = analysis.feed
-    val ageMs = feed?.let { now - it.fetchedAtMs } ?: -1L
+    // V34.3: age of the PRICE (OANDA's own quote time when available), and the same freshness rule the plan uses
+    val ageMs = com.example.livegoldai.data.Freshness.priceAgeMs(analysis, now)
     // truthful feed state: LIVE only when fresh. RESTORED for one minute after a gap ends.
-    val rawState = when {
-        feed == null -> "OFFLINE"
-        !feed.isLive -> "OFFLINE"
-        com.example.livegoldai.data.PredictionLedger.isMarketClosed(now) -> "MARKET CLOSED"
-        ageMs > 180_000 -> "STALE"
-        else -> "LIVE"
+    val rawState = when (com.example.livegoldai.data.Freshness.assess(analysis, now)) {
+        com.example.livegoldai.data.Freshness.LIVE -> "LIVE"
+        com.example.livegoldai.data.Freshness.DELAYED -> "DELAYED"
+        com.example.livegoldai.data.Freshness.STALE -> "STALE"
+        com.example.livegoldai.data.Freshness.CLOSED -> "MARKET CLOSED"
+        else -> "OFFLINE"
     }
     var lastGapAt by remember { mutableLongStateOf(0L) }
     LaunchedEffect(rawState) { if (rawState == "STALE" || rawState == "OFFLINE") lastGapAt = System.currentTimeMillis() }
     val liveState = if (rawState == "LIVE" && lastGapAt > 0 && now - lastGapAt < 60_000) "RESTORED" else rawState
-    val liveColor = when (liveState) { "LIVE" -> V8.Green; "RESTORED" -> V8.Info; "STALE" -> V8.Amber; "MARKET CLOSED" -> V8.Text3; else -> V8.Red }
+    val liveColor = when (liveState) { "LIVE" -> V8.Green; "RESTORED" -> V8.Info; "DELAYED" -> V8.Amber; "STALE" -> V8.Amber; "MARKET CLOSED" -> V8.Text3; else -> V8.Red }
     val sig = analysis.overallSignal
     val rawConf = analysis.agreementPercent.roundToInt()
     // V29B: the shared decision description and its trace sheet
@@ -104,7 +105,7 @@ fun V8CockpitScreen(
                     color = if (inst == "PAXG_USDT" || inst == "GC_F") V8.Amber else V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
                 V8Dot(liveColor)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = when (liveState) { "LIVE" -> tr(lang, "LIVE", "लाइव", "लाइव्ह"); "RESTORED" -> tr(lang, "RESTORED", "फिर से जुड़ा", "पुन्हा जोडले"); "STALE" -> tr(lang, "STALE", "पुराना", "जुना"); "MARKET CLOSED" -> tr(lang, "MARKET CLOSED", "मार्केट बंद", "मार्केट बंद"); else -> tr(lang, "OFFLINE", "ऑफ़लाइन", "ऑफलाइन") }, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                Text(text = when (liveState) { "LIVE" -> tr(lang, "LIVE", "लाइव", "लाइव्ह"); "RESTORED" -> tr(lang, "RESTORED", "फिर से जुड़ा", "पुन्हा जोडले"); "DELAYED" -> tr(lang, "DELAYED", "देरी से", "उशिराने"); "STALE" -> tr(lang, "STALE", "पुराना", "जुना"); "MARKET CLOSED" -> tr(lang, "MARKET CLOSED", "मार्केट बंद", "मार्केट बंद"); else -> tr(lang, "OFFLINE", "ऑफ़लाइन", "ऑफलाइन") }, color = liveColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = String.format(Locale.US, "$%,.2f", analysis.currentPrice), color = V8.Text1, fontSize = 42.sp, fontWeight = FontWeight.Light, letterSpacing = (-0.5).sp)
@@ -116,7 +117,9 @@ fun V8CockpitScreen(
             Row(modifier = Modifier.fillMaxWidth()) {
                 listOf(
                     tr(lang, "SOURCE", "स्रोत", "स्रोत") to (feed?.let { com.example.livegoldai.data.PlanText.sourceTile(it.source, it.sourceType) } ?: "--"),
-                    tr(lang, "AGE", "उम्र", "वय") to fmtAge(ageMs),
+                    tr(lang, "PRICE AGE", "भाव की उम्र", "भावाचे वय") to fmtAge(ageMs),
+                    // V34.3: the provider's real spread (OANDA bid/ask); "--" when the feed has no bid/ask (Twelve Data)
+                    tr(lang, "SPREAD", "स्प्रेड", "स्प्रेड") to (feed?.takeIf { it.bid > 0.0 && it.ask >= it.bid }?.let { String.format(Locale.US, "%.2f", it.ask - it.bid) } ?: "--"),
                     tr(lang, "FETCH", "लोड", "लोड") to (feed?.latencyMs?.let { "$it ms" } ?: "--")
                 ).forEach { (k, v) ->
                     Column(modifier = Modifier.weight(1f)) {

@@ -121,6 +121,16 @@ class GoldApiService(
     var oandaTransport: OandaTransport = OkHttpOandaTransport()
     val oandaStore by lazy { OandaCandleStore(oandaTransport, { oandaTok() }) }
     @Volatile private var oandaIssue = ""
+    /** V34.3: OANDA account used for the read-only quote (found once; null = not found yet) */
+    @Volatile private var oandaQuoteAccount: String? = null
+
+    /** V34.3: the provider's latest quote copied onto the feed; the analysis itself (prices, levels) is not changed */
+    private fun withOandaQuote(r: GoldAnalysisResult): GoldAnalysisResult {
+        val f = r.feed ?: return r
+        val (acc, q) = OandaPricing.fetch(oandaTransport, oandaTok(), oandaQuoteAccount)
+        if (acc != null) oandaQuoteAccount = acc
+        return if (q == null) r else r.copy(feed = f.copy(quoteTimeMs = q.timeMs, bid = q.bid, ask = q.ask, tradeable = q.tradeable))
+    }
 
     /** OANDA candles for an app timeframe, UTC-aligned; newest may be forming (as with Twelve Data). null + reason when not usable. */
     private fun fetchOandaCandles(interval: String, now: Long): List<CandleBar>? {
@@ -208,8 +218,8 @@ class GoldApiService(
                 if (oc != null) {
                     val analysis = TechnicalEngine.analyze(candles = oc, interval = interval, customDxy = dxyDeferred.await(),
                         customUs10y = us10yDeferred.await(), customEvents = eventsDeferred.await())
-                    val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), OANDA_SOURCE, now, 1,
-                        dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, "")
+                    val finalResult = withOandaQuote(withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), OANDA_SOURCE, now, 1,
+                        dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, ""))
                     memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
                     return@withContext Result.success(finalResult)
                 }

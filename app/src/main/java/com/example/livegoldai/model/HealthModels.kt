@@ -21,7 +21,12 @@ data class FeedStatus(
     val sourceType: String = "",                   // PRIMARY / BACKUP / PROXY / SIMULATED
     val keyMissing: Boolean = false,               // no Twelve Data key saved on this phone
     val creditsToday: Int = 0,                     // Twelve Data calls used today by this app
-    val primaryIssue: String = ""                  // why the primary feed was not used ("" when it was)
+    val primaryIssue: String = "",                 // why the primary feed was not used ("" when it was)
+    // ---- V34.3: the provider's own latest quote (OANDA pricing, read-only). 0 / null = not available (e.g. Twelve Data)
+    val quoteTimeMs: Long = 0L,                    // when the PROVIDER last priced XAU_USD (not when the phone fetched it)
+    val bid: Double = 0.0,
+    val ask: Double = 0.0,
+    val tradeable: Boolean? = null                 // OANDA's own flag: false = market not tradeable right now
 )
 
 @Serializable
