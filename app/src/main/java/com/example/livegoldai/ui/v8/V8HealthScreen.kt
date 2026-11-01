@@ -90,6 +90,8 @@ fun V8HealthScreen(
                 V8KeyValue(tr(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
                 V8KeyValue(tr(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)
                 V8KeyValue(tr(lang, "File", "फ़ाइल", "फाइल"), p.fileSize)
+                // V34.2: separate plan check on the levels that were shown (entry first, then TP1 or stop)
+                if (p.planCheck.isNotEmpty()) V8KeyValue(tr(lang, "Plan check (v2)", "प्लान जाँच (v2)", "प्लॅन तपासणी (v2)"), p.planCheck)
 
                 // ---- 24/7 background recorder
                 Spacer(modifier = Modifier.height(8.dp))

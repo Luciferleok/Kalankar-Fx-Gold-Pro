@@ -195,7 +195,23 @@ object LedgerPulseBuilder {
             integrity = integrity?.status ?: "",
             integrityFindings = integrity?.findings ?: emptyList(),
             integrityPassed = integrity?.passed ?: emptyList(),
-            diagnosis = diagnosis
+            diagnosis = diagnosis,
+            planCheck = planCheckLine(state)
         )
+    }
+
+    /**
+     * V34.2: summary of the separate plan check (v2). Counts each v2 call once, by its plan result; the main accuracy
+     * figures (v1) are not changed by this. Win share is TP1 / (TP1 + STOP); NO_ENTRY and OPEN are shown, never counted as wins.
+     */
+    fun planCheckLine(state: LedgerState): String {
+        val ids = state.records.filter { it.planMethod.isNotEmpty() }.map { it.id }.toSet()
+        val outs = state.results.filterKeys { it in ids }.values.map { it.planOutcome }.filter { it.isNotEmpty() }
+        if (outs.isEmpty()) return ""
+        val c = outs.groupingBy { it }.eachCount()
+        val tp = c[PredictionLedger.PLAN_TP1] ?: 0; val sl = c[PredictionLedger.PLAN_STOP] ?: 0
+        val share = if (tp + sl > 0) " · TP1 first ${Math.round(100.0 * tp / (tp + sl))}% of entered (N=${tp + sl})" else ""
+        return "TP1 $tp · stop $sl · no entry ${c[PredictionLedger.PLAN_NO_ENTRY] ?: 0} · open ${c[PredictionLedger.PLAN_OPEN] ?: 0}" +
+            " · unclear ${(c[PredictionLedger.PLAN_AMBIGUOUS] ?: 0) + (c[PredictionLedger.PLAN_NOT_COMPARABLE] ?: 0)}" + share
     }
 }

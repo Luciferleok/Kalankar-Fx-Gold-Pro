@@ -52,7 +52,13 @@ data class LedgerRecord(
     val engineVersion: String = "",
     val featureVersion: String = "",
     /** Distance from the prediction price to target 1. 0 on older records (then only the end-of-window rule is used). */
-    val tpDistance: Double = 0.0
+    val tpDistance: Double = 0.0,
+    // ---- V34.2 plan check (v2): the exact research levels shown with this call. 0 / "" on older records.
+    val planEntry: Double = 0.0,
+    val planStop: Double = 0.0,
+    val planTp1: Double = 0.0,
+    val planTp2: Double = 0.0,
+    val planMethod: String = ""          // "PLAN-V2" when the four levels above are filled
 )
 
 data class PathBar(val t: Long, val o: Double, val h: Double, val l: Double, val c: Double)
@@ -85,7 +91,9 @@ data class LedgerResult(
     val verifyConfidence: String = "",   // HIGH (same instrument) / MEDIUM (proxy, decisive) / LOW (proxy, too close)
     val tpHitAt: Long = 0L,              // when target 1 was reached before the stop (0 = not reached first)
     /** Symmetric path result: which side was touched first at 1 x ATR. +1 with the call, -1 against, 0 neither / same bar / WAIT. */
-    val pathHit: Int = 0
+    val pathHit: Int = 0,
+    /** V34.2 plan check (v2), separate from [outcome] (which learning keeps using): see PredictionLedger.planOutcome. "" = not checked */
+    val planOutcome: String = ""
 )
 
 data class LedgerEvent(
@@ -176,7 +184,9 @@ object PredictionLedger {
             "flt" to r.appliedFilter, "src" to r.sources.mapValues { it.value.name },
             "ds" to r.dataSource, "sid" to r.snapshotId, "ev" to r.engineVersion, "fv" to r.featureVersion,
             "tp" to r.tpDistance
-        )
+        ).apply {
+            if (r.planMethod.isNotEmpty()) { put("pe", r.planEntry); put("ps", r.planStop); put("p1", r.planTp1); put("p2", r.planTp2); put("pm", r.planMethod) }
+        }
     )
 
     private fun decodeRecord(m: Map<String, Any?>): LedgerRecord? = try {
@@ -192,7 +202,8 @@ object PredictionLedger {
                 if (sig == null) null else k to sig
             }.toMap(),
             dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv"),
-            tpDistance = m.num("tp")
+            tpDistance = m.num("tp"),
+            planEntry = m.num("pe"), planStop = m.num("ps"), planTp1 = m.num("p1"), planTp2 = m.num("p2"), planMethod = m.str("pm")
         )
     } catch (_: Exception) {
         null
@@ -206,7 +217,7 @@ object PredictionLedger {
             "att" to r.attribution, "warn" to r.warnings, "cf" to r.counterfactual,
             "tl" to r.timeline.map { listOf(it.first, it.second) },
             "sm" to r.sourceMatch, "bs" to r.basis, "bn" to r.basisNoise, "vc" to r.verifyConfidence, "tph" to r.tpHitAt, "ph" to r.pathHit
-        )
+        ).apply { if (r.planOutcome.isNotEmpty()) put("po", r.planOutcome) }
     )
 
     private fun decodeResult(m: Map<String, Any?>): LedgerResult? = try {
@@ -226,7 +237,7 @@ object PredictionLedger {
                 t to txt
             },
             sourceMatch = m.str("sm"), basis = m.num("bs"), basisNoise = m.num("bn"), verifyConfidence = m.str("vc"),
-            tpHitAt = m.long("tph"), pathHit = m.int("ph")
+            tpHitAt = m.long("tph"), pathHit = m.int("ph"), planOutcome = m.str("po")
         )
     } catch (_: Exception) {
         null
@@ -516,6 +527,42 @@ object PredictionLedger {
             slHitAt = slHitAt, realizedRange = realizedRange, tags = tags, attribution = attribution,
             warnings = warnings, counterfactual = counterfactual, timeline = tl, tpHitAt = tpHitAt, pathHit = pathHit
         )
+    }
+
+    const val PLAN_TP1 = "TP1"; const val PLAN_STOP = "STOP"; const val PLAN_NO_ENTRY = "NO_ENTRY"; const val PLAN_OPEN = "OPEN_AT_EXPIRY"
+    const val PLAN_AMBIGUOUS = "AMBIGUOUS_BAR"; const val PLAN_NOT_COMPARABLE = "NOT_COMPARABLE"
+
+    /**
+     * V34.2 plan check (v2): judged on the exact levels the user saw, in time order, with real candles of the same
+     * instrument. 1) the entry must be touched first; 2) after that, TP1 or the stop, whichever is touched first.
+     * Never entered -> NO_ENTRY (not a win). Entry and stop in one candle -> STOP (cautious); entry and TP1 in one
+     * candle without the stop -> AMBIGUOUS_BAR (order inside the candle is unknown). Neither -> OPEN_AT_EXPIRY.
+     * This does NOT replace [evaluate]'s outcome, which the learning engine and Shadow Lab keep using unchanged.
+     */
+    fun planOutcome(record: LedgerRecord, path: PricePath): String {
+        if (record.planMethod.isEmpty() || record.finalSignal == Signal.WAIT) return ""
+        val e = record.planEntry; val s = record.planStop; val t = record.planTp1
+        if (listOf(e, s, t).any { !it.isFinite() || it <= 0.0 }) return ""
+        val sell = record.finalSignal == Signal.SELL
+        if (sell && !(s > e && t < e) || !sell && !(s < e && t > e)) return ""
+        val bars = path.bars.filter { it.t >= record.createdAt - 60_000L && it.t < record.expiresAt }.sortedBy { it.t }
+        if (bars.isEmpty()) return ""
+        var entered = false
+        for (b in bars) {
+            val hitStop = if (sell) b.h >= s else b.l <= s
+            val hitTp = if (sell) b.l <= t else b.h >= t
+            if (!entered) {
+                val hitEntry = if (sell) b.h >= e else b.l <= e
+                if (!hitEntry) continue
+                entered = true
+                if (hitStop) return PLAN_STOP
+                if (hitTp) return PLAN_AMBIGUOUS
+                continue
+            }
+            if (hitStop) return PLAN_STOP           // stop and TP1 in one candle: counted as stop (cautious)
+            if (hitTp) return PLAN_TP1
+        }
+        return if (entered) PLAN_OPEN else PLAN_NO_ENTRY
     }
 
     fun emptyResult(record: LedgerRecord, now: Long, outcome: LedgerOutcome, source: String): LedgerResult = LedgerResult(

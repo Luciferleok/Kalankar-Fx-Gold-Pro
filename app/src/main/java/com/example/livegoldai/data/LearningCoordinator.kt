@@ -243,7 +243,11 @@ class LearningCoordinator(
                                 LedgerState(state.records, state.results + newResults, state.events),
                                 PredictionLedger.instrumentOf(r.dataSource), PredictionLedger.instrumentOf(path.source), now
                             )
-                            PredictionLedger.sourceCheck(r, raw, noise)
+                            PredictionLedger.sourceCheck(r, raw, noise).let { checked ->
+                                // V34.2: separate plan check (v2); only on the same instrument, where absolute levels are comparable
+                                if (r.planMethod.isEmpty()) checked
+                                else checked.copy(planOutcome = if (checked.sourceMatch == "SAME") PredictionLedger.planOutcome(r, path) else PredictionLedger.PLAN_NOT_COMPARABLE)
+                            }
                         }
                         now > r.expiresAt + GIVE_UP_AFTER_MS -> PredictionLedger.emptyResult(r, now, LedgerOutcome.DATA_FAILURE, "no data")
                         else -> null // try again on the next refresh
@@ -317,6 +321,12 @@ class LearningCoordinator(
             engineVersion = PredictionLedger.ENGINE_VERSION,
             featureVersion = com.example.livegoldai.data.brain.FeatureCatalog.VERSION,
             tpDistance = tp
-        )
+        ).let { r ->
+            // V34.2: also keep the exact plan levels of this call (the ones the screen shows), for the separate plan check
+            val fin = r.finalSignal
+            val ok = planOk && fin == rawSig && fin != Signal.WAIT && listOf(ts.entryPrice, ts.stopLoss, ts.takeProfit1, ts.takeProfit2).all { it.isFinite() && it > 0.0 } &&
+                (if (fin == Signal.SELL) ts.stopLoss > ts.entryPrice && ts.takeProfit1 < ts.entryPrice else ts.stopLoss < ts.entryPrice && ts.takeProfit1 > ts.entryPrice)
+            if (!ok) r else r.copy(planEntry = ts.entryPrice, planStop = ts.stopLoss, planTp1 = ts.takeProfit1, planTp2 = ts.takeProfit2, planMethod = "PLAN-V2")
+        }
     }
 }

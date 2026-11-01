@@ -56,9 +56,26 @@ object LevelFreeze {
      * Pure: returns the analysis to show and the store entry to keep. [store] maps key -> Frozen; the caller owns it.
      * Call after PlanStamp.stamp and before PresentationBuilder.build.
      */
-    fun apply(a: GoldAnalysisResult, store: MutableMap<String, Frozen>, now: Long): GoldAnalysisResult {
+    /** V34.2: the levels recorded in the ledger for this call (same provider, candle and side). */
+    data class Seed(val entry: Double, val stop: Double, val tp1: Double, val tp2: Double)
+
+    /** V34.2: the ledger's plan levels for [a], or null (no v2 record of this provider, candle and side). */
+    fun seedFrom(state: LedgerState?, a: GoldAnalysisResult): Seed? {
+        val t = a.tradeSetup
+        if (state == null || t.signal == Signal.WAIT) return null
+        val prov = SourceRegistry.identify(a.feed?.source).provider
+        if (prov == ProviderId.NONE) return null
+        val r = state.records.lastOrNull {
+            it.interval.equals(a.interval, true) && it.barId == a.lastUpdated && it.planMethod.isNotEmpty() &&
+                it.finalSignal == t.signal && SourceRegistry.identify(it.dataSource).provider == prov
+        } ?: return null
+        val ok = listOf(r.planEntry, r.planStop, r.planTp1, r.planTp2).all { it.isFinite() && it > 0.0 }
+        return if (ok) Seed(r.planEntry, r.planStop, r.planTp1, r.planTp2) else null
+    }
+
+    fun apply(a: GoldAnalysisResult, store: MutableMap<String, Frozen>, now: Long, seed: Seed? = null): GoldAnalysisResult {
         val k = key(a) ?: return a
-        val f = store[k]
+        var f = store[k]
         if (f == null) {
             // V33.1R.4-c1: an older candle arriving late (a slow load) must not evict the current window or be kept itself
             val iv = a.interval.lowercase(); val bar = a.lastUpdated
@@ -70,8 +87,24 @@ object LevelFreeze {
             store.values.removeAll { endOf(it) <= now }
             while (store.size >= CAP) store.values.minByOrNull { endOf(it) }?.let { old -> store.remove(old.key) } ?: break
             val bot = a.multiBotEnsemble?.allBots?.firstOrNull()
-            store[k] = Frozen(k, a.tradeSetup, now, bot?.stopLossPips, bot?.targetPips, iv, bar)
-            return withFixedAt(a, now)
+            val live = a.tradeSetup
+            if (seed == null || (seed.entry == live.entryPrice && seed.stop == live.stopLoss && seed.tp1 == live.takeProfit1 && seed.tp2 == live.takeProfit2)) {
+                store[k] = Frozen(k, live, now, bot?.stopLossPips, bot?.targetPips, iv, bar)
+                return withFixedAt(a, now)
+            }
+            // V34.2: the ledger already holds this call's levels (e.g. recorded by the background recorder earlier in the
+            // candle): show exactly those, so the screen and the plan check use the same numbers
+            val sm = linkedMapOf<String, String>()
+            listOf(live.entryPrice to seed.entry, live.stopLoss to seed.stop, live.takeProfit1 to seed.tp1, live.takeProfit2 to seed.tp2)
+                .forEach { (l, v) -> if (f2(l) != f2(v)) sm[f2(l)] = f2(v) }
+            val seeded = live.copy(
+                entryPrice = seed.entry, stopLoss = seed.stop, takeProfit1 = seed.tp1, takeProfit2 = seed.tp2,
+                stopLossPips = kotlin.math.abs(seed.entry - seed.stop) * 10.0, takeProfit1Pips = kotlin.math.abs(seed.tp1 - seed.entry) * 10.0,
+                takeProfit2Pips = kotlin.math.abs(seed.tp2 - seed.entry) * 10.0,
+                strategyNote = requote(live.strategyNote, sm), strategyNoteHindi = requote(live.strategyNoteHindi, sm), strategyNoteMarathi = requote(live.strategyNoteMarathi, sm)
+            )
+            f = Frozen(k, seeded, now, kotlin.math.abs(seed.entry - seed.stop) * 10.0, kotlin.math.abs(seed.tp1 - seed.entry) * 10.0, iv, bar)
+            store[k] = f
         }
         val s = f.setup
         val t = a.tradeSetup

@@ -293,7 +293,9 @@ class GoldViewModel @JvmOverloads constructor(
                             try {
                                 synchronized(frozenLevels) {
                                     val before = frozenLevels.keys.toSet()
-                                    val out = com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis())
+                                    // V34.2: a new window takes the levels the ledger recorded for this call, when there are any
+                                    val out = com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis(),
+                                        com.example.livegoldai.data.LevelFreeze.seedFrom(st, stamped0))
                                     // a window was added or dropped, or the last save failed: write (and remember the result)
                                     if (frozenLevels.keys != before || freezeSaveFailed) freezeSaveFailed = !levelStore.save(frozenLevels)
                                     if (freezeSaveFailed && out.tradeSetup.levelsFixedAtMs > 0L) out.copy(tradeSetup = out.tradeSetup.copy(levelsSaved = false)) else out
