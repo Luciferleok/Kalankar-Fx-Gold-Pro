@@ -30,7 +30,9 @@ object ResearchScenario {
         /** V33.1R.2: when these levels were first seen in this window (0 = unknown) */
         val fixedAtMs: Long = 0L,
         /** V34.1a: provider whose ledger record holds this candle, when it is NOT this plan's provider ("" = none) */
-        val recordedByOther: String = ""
+        val recordedByOther: String = "",
+        /** V34.0-fix1: false when the kept levels are not saved on the phone yet */
+        val saved: Boolean = true
     )
 
     /** null when there is no side (WAIT) or no usable levels. */
@@ -43,7 +45,7 @@ object ResearchScenario {
         return Levels(t.snapshotId, a.interval, t.signal, t.entryPrice, t.stopLoss, t.takeProfit1, t.takeProfit2,
             t.stopLossPips, t.takeProfit1Pips, t.takeProfit2Pips, t.expiresAtMs,
             if (t.horizonMin > 0) t.horizonMin else PlanStamp.horizonMin(a.interval), t.planStatus, state,
-            ResearchGate.executionAllowed(a, now), t.levelsFixedAtMs, t.recordedByOtherProvider)
+            ResearchGate.executionAllowed(a, now), t.levelsFixedAtMs, t.recordedByOtherProvider, t.levelsSaved)
     }
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
@@ -56,7 +58,8 @@ object ResearchScenario {
         val head = if (lv.actionable) t(l, "1. ACTIVE PLAN: $s (authorized for this snapshot).", "1. सक्रिय प्लान: $s (इस स्नैपशॉट के लिए अधिकृत)।", "1. सक्रिय प्लॅन: $s (या स्नॅपशॉटसाठी अधिकृत).")
             else t(l, "1. Rules lean $s. Research scenario, not a trade instruction.", "1. नियमों का झुकाव $s। रिसर्च परिदृश्य, ट्रेड निर्देश नहीं।", "1. नियमांचा कल $s. रिसर्च परिस्थिती, ट्रेड सूचना नाही.")
         return listOf(head,
-            if (lv.fixedAtMs > 0) t(l, "2. Entry reference: ${money(lv.entry)} (pullback level, fixed at ${utc(lv.fixedAtMs)} for this window).", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबैक लेवल, इस विंडो के लिए ${utc(lv.fixedAtMs)} पर तय)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबॅक लेव्हल, या विंडोसाठी ${utc(lv.fixedAtMs)} ला निश्चित).")
+            if (lv.fixedAtMs > 0) t(l, "2. Entry reference: ${money(lv.entry)} (pullback level, fixed at ${utc(lv.fixedAtMs)} for this window).", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबैक लेवल, इस विंडो के लिए ${utc(lv.fixedAtMs)} पर तय)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (पुलबॅक लेव्हल, या विंडोसाठी ${utc(lv.fixedAtMs)} ला निश्चित).") +
+                (if (lv.saved) "" else t(l, " Not saved on this phone yet: an app restart may show new levels.", " अभी फ़ोन में सेव नहीं: ऐप दोबारा खुलने पर नए लेवल दिख सकते हैं।", " अजून फोनमध्ये सेव्ह नाही: ॲप पुन्हा उघडल्यावर नवीन लेव्हल दिसू शकतात."))
             else t(l, "2. Entry reference: ${money(lv.entry)} (pullback level of this snapshot).", "2. एंट्री संदर्भ: ${money(lv.entry)} (इस स्नैपशॉट का पुलबैक लेवल)।", "2. एंट्री संदर्भ: ${money(lv.entry)} (या स्नॅपशॉटचा पुलबॅक लेव्हल)."),
             t(l, "3. Invalidation: ${money(lv.stop)}. Reaching it ends the scenario.", "3. अमान्य स्तर: ${money(lv.stop)}। यहाँ पहुँचते ही परिदृश्य खत्म।", "3. अवैध स्तर: ${money(lv.stop)}. येथे पोहोचल्यावर परिस्थिती संपते."),
             t(l, "4. Research targets: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}.", "4. रिसर्च टारगेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}।", "4. रिसर्च टार्गेट: TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)}."),

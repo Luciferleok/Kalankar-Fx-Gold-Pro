@@ -79,8 +79,13 @@ object ResearchGate {
         a != null && authorize(a, a.tradeSetup.snapshotId, a.interval, now).allowed
 
     /** A grant is used only while the snapshot it came from is still the current, still-authorized one. */
-    fun stillValid(g: LotGrant?, a: GoldAnalysisResult?, now: Long): Boolean =
-        g != null && authorize(a, g.snapshotId, g.interval, now).allowed
+    fun stillValid(g: LotGrant?, a: GoldAnalysisResult?, now: Long): Boolean {
+        if (g == null || a == null || !authorize(a, g.snapshotId, g.interval, now).allowed) return false
+        // V34.0-fix1: the same snapshot id is not enough; the scenario the grant was made from must be unchanged (fail closed)
+        val t = a.tradeSetup
+        return t.signal == g.signal && t.entryPrice == g.entry && t.stopLoss == g.stop && t.takeProfit1 == g.tp1 &&
+            t.takeProfit2 == g.tp2 && t.expiresAtMs == g.expiresAtMs && t.dataSource == g.dataSource && t.instrument == g.instrument
+    }
 
     /** Hypothetical result at a target for a given cash risk: risk × (reward / risk) of THIS plan. null when not computable. */
     fun hypotheticalAtTarget(g: LotGrant, riskCash: Double, target: Double): Double? {

@@ -23,6 +23,12 @@ import java.util.Locale
  */
 object LevelFreeze {
 
+    /** V34.0-fix1: windows kept at most (9+ timeframes x 2 providers x 2 sides fit with room to spare) */
+    const val CAP = 64
+    private const val NO_END_KEEP_MS = 48 * 3_600_000L
+    /** end of a kept window: its fixed expiry, or 48 h after it was fixed when no expiry was stamped */
+    fun endOf(f: Frozen): Long = if (f.setup.expiresAtMs > 0L) f.setup.expiresAtMs else f.fixedAtMs + NO_END_KEEP_MS
+
     data class Frozen(val key: String, val setup: TradeSetup, val fixedAtMs: Long, val botSlPips: Double?, val botTpPips: Double?,
                       val interval: String = "", val barId: String = "")
 
@@ -59,7 +65,10 @@ object LevelFreeze {
             if (store.values.any { it.interval == iv && it.barId > bar }) return a
             // drop only OLDER windows of the same timeframe (before: matched by a wrong prefix and could drop a newer one)
             store.values.removeAll { (it.interval == iv && it.barId < bar) }
-            if (store.size >= 16) store.values.minByOrNull { it.fixedAtMs }?.let { old -> store.remove(old.key) }
+            // V34.0-fix1: retention by expiry, not by count. Expired windows go first; an unexpired window is dropped only
+            // above CAP (before: a cap of 16 removed the oldest window even while it was still running).
+            store.values.removeAll { endOf(it) <= now }
+            while (store.size >= CAP) store.values.minByOrNull { endOf(it) }?.let { old -> store.remove(old.key) } ?: break
             val bot = a.multiBotEnsemble?.allBots?.firstOrNull()
             store[k] = Frozen(k, a.tradeSetup, now, bot?.stopLossPips, bot?.targetPips, iv, bar)
             return withFixedAt(a, now)

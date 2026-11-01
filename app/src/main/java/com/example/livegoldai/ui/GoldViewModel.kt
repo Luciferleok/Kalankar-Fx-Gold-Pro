@@ -194,6 +194,8 @@ class GoldViewModel @JvmOverloads constructor(
     private val levelStore = com.example.livegoldai.data.LevelFreezeStore(java.io.File(application.filesDir, "level_freeze_v1.tsv"))
     private val frozenLevels: MutableMap<String, com.example.livegoldai.data.LevelFreeze.Frozen> =
         try { levelStore.load(System.currentTimeMillis()) } catch (_: Exception) { mutableMapOf() }
+    /** V34.0-fix1: true after a failed save; the next refresh retries and the plan says the levels are not saved yet */
+    @Volatile private var freezeSaveFailed = false
     /** V33.1R.4-b: only the newest load for the selected timeframe may change the screen.
      *  Declared BEFORE init: init calls loadData(), and Kotlin initializes properties in source order (a property declared
      *  after init is still null while init runs, which crashed the app at start in fcc9675). */
@@ -292,8 +294,9 @@ class GoldViewModel @JvmOverloads constructor(
                                 synchronized(frozenLevels) {
                                     val before = frozenLevels.keys.toSet()
                                     val out = com.example.livegoldai.data.LevelFreeze.apply(stamped0, frozenLevels, System.currentTimeMillis())
-                                    if (frozenLevels.keys != before) levelStore.save(frozenLevels)   // a window was added or dropped
-                                    out
+                                    // a window was added or dropped, or the last save failed: write (and remember the result)
+                                    if (frozenLevels.keys != before || freezeSaveFailed) freezeSaveFailed = !levelStore.save(frozenLevels)
+                                    if (freezeSaveFailed && out.tradeSetup.levelsFixedAtMs > 0L) out.copy(tradeSetup = out.tradeSetup.copy(levelsSaved = false)) else out
                                 }
                             } catch (_: Exception) { stamped0 }
                         stamped.copy(presentation = try {

@@ -376,7 +376,9 @@ data class TradeSetup(
     // ---- V33.1R.2: when these levels were first seen in this plan window (LevelFreeze); 0 = not kept
     val levelsFixedAtMs: Long = 0L,
     // ---- V34.1a: non-empty when this candle was recorded in the ledger from ANOTHER provider (that record is not used here)
-    val recordedByOtherProvider: String = ""
+    val recordedByOtherProvider: String = "",
+    // ---- V34.0-fix1: false when the kept levels could not be written to the phone (they would not survive a restart)
+    val levelsSaved: Boolean = true
 ) {
     fun getStrategyNote(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> strategyNote
