@@ -51,6 +51,7 @@ fun DualPredictionAndIndicatorsSection(
     onOpenCalculator: (Double) -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
     onPillarClick: (GroupAnalysis) -> Unit = {},
+    onOpenPassport: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -142,6 +143,7 @@ fun DualPredictionAndIndicatorsSection(
                         PredictionBigCard(
                             analysis = analysis,
                             onOpenCalculator = onOpenCalculator,
+                            onOpenPassport = onOpenPassport,
                             onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
                         )
                     }
@@ -163,6 +165,7 @@ fun DualPredictionAndIndicatorsSection(
                         PredictionBigCard(
                             analysis = analysis,
                             onOpenCalculator = onOpenCalculator,
+                            onOpenPassport = onOpenPassport,
                             onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
                         )
                     }
@@ -188,6 +191,7 @@ fun DualPredictionAndIndicatorsSection(
 @Composable
 fun PredictionBigCard(
     analysis: GoldAnalysisResult,
+    onOpenPassport: () -> Unit = {},
     onOpenCalculator: (Double) -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -1173,6 +1177,13 @@ fun PredictionBigCard(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(text = "Copy", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
+                    }
+                    // V34.6: one-tap audit of this forecast (source, levels, version, evidence, ledger result)
+                    TextButton(
+                        onClick = onOpenPassport,
+                        modifier = Modifier.fillMaxWidth().testTag("trust_passport_btn")
+                    ) {
+                        Text(text = "🛡 " + com.example.livegoldai.data.TrustPassport.title(currentLanguage), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = GoldLight)
                     }
                 }
             }

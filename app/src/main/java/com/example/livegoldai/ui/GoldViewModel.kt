@@ -86,6 +86,8 @@ data class GoldUiState(
     // V33.1: the calculator exists only with a grant from ResearchGate for one snapshot; refusals are shown, never skipped
     val lotGrant: com.example.livegoldai.data.ResearchGate.LotGrant? = null,
     val lotRefusal: List<String> = emptyList(),
+    /** V34.6: Trust Passport rows for the forecast on screen; null = closed */
+    val passportRows: List<com.example.livegoldai.data.TrustPassport.Row>? = null,
     val showPriceAlertDialog: Boolean = false,
     val amoled: Boolean = false,          // true black background on dark themes
     val themeMode: ThemeMode = ThemeMode.ROYAL_OBSIDIAN,
@@ -607,6 +609,17 @@ class GoldViewModel @JvmOverloads constructor(
         if (g == null) _uiState.update { it.copy(showLotCalculator = false, lotGrant = null, lotRefusal = d.refusals) }
         else _uiState.update { it.copy(showLotCalculator = true, selectedSlPips = g.stopPips, lotGrant = g, lotRefusal = emptyList()) }
     }
+
+    /** V34.6: read-only audit sheet of the forecast on screen (snapshot + ledger); changes nothing */
+    fun openPassport() {
+        val s = _uiState.value
+        val rows = try {
+            com.example.livegoldai.data.TrustPassport.build(s.data, learning.currentState(), System.currentTimeMillis(), s.language)
+        } catch (_: Exception) { null }
+        _uiState.update { it.copy(passportRows = rows) }
+    }
+
+    fun closePassport() { _uiState.update { it.copy(passportRows = null) } }
 
     fun closeLotCalculator() {
         _uiState.update { it.copy(showLotCalculator = false, lotGrant = null, lotRefusal = emptyList()) }

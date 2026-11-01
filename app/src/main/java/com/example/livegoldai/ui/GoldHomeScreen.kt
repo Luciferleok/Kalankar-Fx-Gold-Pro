@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -154,6 +155,25 @@ fun GoldHomeScreen(
         )
     } else if (uiState.showLotCalculator) {
         LaunchedEffect(lotGrant?.snapshotId) { viewModel.closeLotCalculator() }
+    }
+    // V34.6: Trust Passport (read-only)
+    uiState.passportRows?.let { rows ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.closePassport() },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { viewModel.closePassport() }) { Text("OK") } },
+            title = { Text(com.example.livegoldai.data.TrustPassport.title(uiState.language)) },
+            text = {
+                androidx.compose.foundation.layout.Column(modifier = Modifier.heightIn(max = 480.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    rows.forEach { r ->
+                        Text(text = r.label, fontSize = 10.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                        Text(text = r.value, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            color = if (r.verified) androidx.compose.ui.graphics.Color.Unspecified else androidx.compose.ui.graphics.Color(0xFFE0A030))
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    Text(text = com.example.livegoldai.data.TrustPassport.footer(uiState.language), fontSize = 10.sp, color = androidx.compose.ui.graphics.Color.Gray)
+                }
+            }
+        )
     }
     if (uiState.lotRefusal.isNotEmpty()) {
         androidx.compose.material3.AlertDialog(
@@ -790,7 +810,8 @@ fun GoldHomeScreen(
                                         analysis = analysis,
                                         onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
                                         onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
-                                        onPillarClick = { group -> viewModel.openPillarDeepDive(group) }
+                                        onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
+                                        onOpenPassport = { viewModel.openPassport() }
                                     )
                                 }
 
