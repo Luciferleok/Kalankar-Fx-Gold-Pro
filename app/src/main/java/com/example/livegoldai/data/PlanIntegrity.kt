@@ -142,7 +142,7 @@ object Freshness {
     fun assess(a: GoldAnalysisResult, now: Long): String {
         val f = a.feed
         if (f == null || !f.isLive || a.isSimulatedFallback) return OFFLINE
-        if (PredictionLedger.isMarketClosed(now)) return CLOSED
+        if (SessionClock.marketClosed(now)) return CLOSED       // V34.5: weekend or a full-day holiday
         if (f.tradeable == false) return CLOSED
         val ivMs = RealityEngine.intervalMinutes(a.interval) * 60_000L
         val providerTime = f.quoteTimeMs > 0L

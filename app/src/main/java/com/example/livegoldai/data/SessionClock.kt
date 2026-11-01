@@ -38,8 +38,34 @@ object SessionClock {
         return start to end
     }
 
+    /**
+     * V34.5: full-day spot-gold closures (UTC calendar day): Christmas (25 Dec), New Year (1 Jan) and Good Friday.
+     * Only days when the market does not trade at all; shortened sessions (e.g. US Thanksgiving) are NOT modelled.
+     * Display / freshness only: the ledger's own weekend rule (PredictionLedger.isMarketClosed) is unchanged.
+     */
+    fun holidayName(now: Long): String? {
+        val d = Instant.ofEpochMilli(now).atZone(ZoneOffset.UTC).toLocalDate()
+        return when {
+            d.monthValue == 12 && d.dayOfMonth == 25 -> "Christmas"
+            d.monthValue == 1 && d.dayOfMonth == 1 -> "New Year"
+            d == easterSunday(d.year).minusDays(2) -> "Good Friday"
+            else -> null
+        }
+    }
+
+    /** Gregorian Easter Sunday (anonymous Gregorian algorithm). */
+    fun easterSunday(y: Int): java.time.LocalDate {
+        val a = y % 19; val b = y / 100; val c = y % 100; val d = b / 4; val e = b % 4; val f = (b + 8) / 25; val g = (b - f + 1) / 3
+        val h = (19 * a + b - d - g + 15) % 30; val i = c / 4; val k = c % 4; val l = (32 + 2 * e + 2 * i - h - k) % 7
+        val m = (a + 11 * h + 22 * l) / 451; val month = (h + l - 7 * m + 114) / 31; val day = ((h + l - 7 * m + 114) % 31) + 1
+        return java.time.LocalDate.of(y, month, day)
+    }
+
+    /** weekend (ledger rule) or a full-day holiday */
+    fun marketClosed(now: Long): Boolean = PredictionLedger.isMarketClosed(now) || holidayName(now) != null
+
     fun isOpen(d: Def, now: Long): Boolean {
-        if (PredictionLedger.isMarketClosed(now)) return false
+        if (marketClosed(now)) return false
         val (s, e) = window(d, now)
         return now in s until e
     }
