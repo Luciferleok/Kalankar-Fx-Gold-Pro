@@ -50,6 +50,8 @@ object PositionSizer {
     }
 
     const val E_BALANCE = "BALANCE"; const val E_RISK = "RISK_PERCENT"; const val E_SLIPPAGE = "SLIPPAGE"; const val E_LEVELS = "PLAN_LEVELS"
+    /** V34.0-fix2: an input so large that a cash figure would not be a finite number */
+    const val E_RANGE = "OUT_OF_RANGE"
     const val M_CONTRACT = "CONTRACT_SIZE"; const val M_MIN = "MIN_VOLUME"; const val M_STEP = "VOLUME_STEP"; const val M_MAX = "MAX_VOLUME"
     const val M_CURRENCY = "ACCOUNT_CURRENCY"; const val M_RATE = "USD_TO_ACCOUNT_RATE"
 
@@ -116,6 +118,8 @@ object PositionSizer {
         val budget = balance!! * riskPct!! / 100.0
         val lossPerLot = (dist + slippage!!) * spec.contractSize!! * rate          // account currency, at the stop + slippage
         val minRisk = spec.minVolume!! * lossPerLot
+        // V34.0-fix2: every cash figure must be a finite number (no "Infinity" shown, no NaN carried on)
+        if (!budget.isFinite() || !lossPerLot.isFinite() || lossPerLot <= 0.0 || !minRisk.isFinite()) return Result.Invalid(listOf(E_RANGE))
         val raw = budget / lossPerLot
         // V33.1R.4-c2: on the broker's grid (min + N × step), never above the budget or the maximum volume
         var vol = floorToGrid(minOf(raw, spec.maxVolume!!), spec.minVolume, spec.volumeStep!!)
@@ -128,10 +132,12 @@ object PositionSizer {
         fun profit(tp: Double): Double? {
             if (!tp.isFinite() || tp <= 0.0) return null
             val reward = if (isLong) tp - inp.entry else inp.entry - tp
-            return if (reward <= 0.0) null else vol * reward * spec.contractSize * rate
+            return if (reward <= 0.0) null else (vol * reward * spec.contractSize * rate).takeIf { it.isFinite() }
         }
-        val margin = if (pos(spec.leverage) && inp.price.isFinite() && inp.price > 0.0)
-            vol * spec.contractSize * inp.price * rate / spec.leverage!! else null
+        val margin = (if (pos(spec.leverage) && inp.price.isFinite() && inp.price > 0.0)
+            vol * spec.contractSize * inp.price * rate / spec.leverage!! else null)?.takeIf { it.isFinite() }
+        val planned = vol * lossPerLot
+        if (!vol.isFinite() || !planned.isFinite()) return Result.Invalid(listOf(E_RANGE))
         return Result.Ok(vol, budget, vol * lossPerLot, profit(inp.tp1), profit(inp.tp2), margin, dist, slippage, cur,
             cappedByMaxVolume = raw > spec.maxVolume)
     }

@@ -86,7 +86,11 @@ class LevelFreezeStore(private val file: File) {
         try {
             file.parentFile?.mkdirs()
             tmp = File.createTempFile(file.name, ".tmp", file.parentFile ?: File("."))
-            tmp.writeText((listOf(HEADER) + store.values.map { encode(it) }).joinToString("\n") + "\n", Charsets.UTF_8)
+            // V34.0-fix2: write and flush to the storage device (fsync) before the replace, like Android AtomicFile
+            java.io.FileOutputStream(tmp).use { out ->
+                out.write(((listOf(HEADER) + store.values.map { encode(it) }).joinToString("\n") + "\n").toByteArray(Charsets.UTF_8))
+                out.flush(); out.fd.sync()
+            }
             try {
                 java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
             } catch (_: java.nio.file.AtomicMoveNotSupportedException) {

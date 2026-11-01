@@ -233,6 +233,7 @@ private fun inputError(code: String) = when (code) {
     PositionSizer.E_RISK -> "Risk % must be above 0 and at most 100."
     PositionSizer.E_SLIPPAGE -> "Slippage allowance must be 0 or more (leave empty for 0)."
     PositionSizer.E_LEVELS -> "The plan's entry and stop are not usable."
+    PositionSizer.E_RANGE -> "A number is too large to calculate. Check balance and broker values."
     else -> code
 }
 
