@@ -14,6 +14,11 @@ import kotlin.math.sqrt
  *   PROVEN EDGE      N >= [MIN_N] and the lower 99.9% bound > 50%
  *   WORSE THAN CHANCE N >= [MIN_N] and the upper 99.9% bound < 50%
  *   NO PROVEN EDGE   everything else (including too few calls)
+ * V34.8.1: only INDEPENDENT calls are counted. A 15m call is judged over 1 hour, so four back-to-back 15m calls share
+ * most of one price move and are not four pieces of evidence (the Wilson interval assumes independent calls). Per
+ * timeframe, a call is kept only when it was made at or after the end of the previous kept call's window; calls of other
+ * providers on the same moment are dropped the same way. Before: every decided call was counted, so N and the certainty
+ * were overstated (screenshot 2 Nov: "15M: 61% right of 319 · PROVEN EDGE" counted overlapping windows).
  * Nothing here changes a forecast, a level, the ledger, learning or qualification. Past results are not a promise.
  */
 object EdgeFinder {
@@ -30,7 +35,7 @@ object EdgeFinder {
             high < 50.0 -> "WORSE THAN CHANCE"
             else -> "NO PROVEN EDGE"
         }
-        fun line(): String = "$dimension $value: ${Math.round(pct)}% right of $n (99.9% range ${Math.round(low)}–${Math.round(high)}%) · $verdict"
+        fun line(): String = "$dimension $value: ${Math.round(pct)}% right of $n independent calls (99.9% range ${Math.round(low)}–${Math.round(high)}%) · $verdict"
     }
 
     fun wilson(k: Int, n: Int): Pair<Double, Double> {
@@ -49,7 +54,19 @@ object EdgeFinder {
     /** decided v1 calls with their dimension values */
     private data class Call(val right: Boolean, val keys: Map<String, String>)
 
-    private fun calls(state: LedgerState): List<Call> = state.records.mapNotNull { r ->
+    /** V34.8.1: per timeframe, keep a call only when its window starts at or after the previous kept call's window ended. */
+    fun independent(records: List<LedgerRecord>): List<LedgerRecord> =
+        records.groupBy { it.interval.lowercase() }.values.flatMap { list ->
+            var end = Long.MIN_VALUE
+            list.sortedWith(compareBy({ it.createdAt }, { it.id })).filter { r ->
+                if (r.createdAt >= end) { end = maxOf(r.expiresAt, r.createdAt + 1); true } else false
+            }
+        }
+
+    private fun calls(state: LedgerState): List<Call> = independent(state.records.filter { r ->
+        r.finalSignal != Signal.WAIT && when (state.resultOf(r.id)?.outcome) {
+            LedgerOutcome.CORRECT, LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> true; else -> false }
+    }).mapNotNull { r ->
         if (r.finalSignal == Signal.WAIT) return@mapNotNull null
         val o = state.resultOf(r.id)?.outcome ?: return@mapNotNull null
         val right = when (o) { LedgerOutcome.CORRECT -> true; LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> false; else -> return@mapNotNull null }
@@ -72,7 +89,7 @@ object EdgeFinder {
         val proven = gs.filter { it.verdict == "PROVEN EDGE" }.sortedByDescending { it.low }
         val worse = gs.filter { it.verdict == "WORSE THAN CHANCE" }.sortedBy { it.high }
         return listOf(all.line()) + proven.map { it.line() } + worse.map { it.line() } +
-            (if (proven.isEmpty()) listOf("No group shows a proven edge yet (99.9% test, N >= $MIN_N).") else emptyList())
+            (if (proven.isEmpty()) listOf("No group shows a proven edge yet (99.9% test, N >= $MIN_N independent calls).") else emptyList())
     }
 
     /**
