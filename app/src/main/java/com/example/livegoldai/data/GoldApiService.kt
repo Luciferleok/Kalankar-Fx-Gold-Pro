@@ -37,6 +37,7 @@ class GoldApiService(
         const val CALENDAR_TTL_MS = 60 * 60_000L
         const val CALENDAR_RETRY_MS = 5 * 60_000L
         const val CALENDAR_STALE_MS = 3 * 24 * 3_600_000L
+        val CALENDAR_URLS = listOf("https://nfs.faireconomy.media/ff_calendar_thisweek.json", "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json")
         // V29D-H2: PAXG/USDT trades are a different market: always named as PROXY volume, never as XAU/USD volume
         const val VOLUME_SOURCE = "PAXG/USDT (Binance) • PROXY volume, not XAU/USD"
 
@@ -528,6 +529,9 @@ class GoldApiService(
     private val calendarLock = Any()
     @Volatile private var calendarCache: Pair<Long, List<EconomicEvent>>? = null
     @Volatile private var calendarFailedAt = 0L
+    /** V35.1: why the last calendar download failed ("" when it worked), shown in SYSTEM -> News & macro */
+    @Volatile var calendarIssue: String = ""
+        private set
 
     private fun fetchLiveEconomicEvents(): List<EconomicEvent> = synchronized(calendarLock) {
         val now = System.currentTimeMillis()
@@ -536,19 +540,31 @@ class GoldApiService(
         // after a failure wait a few minutes before asking again; meanwhile keep the last good list (up to 3 days old)
         val stale = c?.takeIf { now - it.first < CALENDAR_STALE_MS }?.second ?: emptyList()
         if (now - calendarFailedAt < CALENDAR_RETRY_MS) return@synchronized stale
-        val fresh = downloadEconomicEvents()
-        if (fresh.isNotEmpty()) { calendarCache = now to fresh; fresh } else { calendarFailedAt = now; stale }
+        // V35.1: the same weekly file from a second host when the first refuses (rate limit / blocked)
+        val issues = ArrayList<String>()
+        for (url in CALENDAR_URLS) {
+            val (fresh, issue) = downloadEconomicEvents(url)
+            if (fresh.isNotEmpty()) { calendarCache = now to fresh; calendarIssue = ""; return@synchronized fresh }
+            issues.add("${url.substringAfter("//").substringBefore("/")}: $issue")
+        }
+        calendarFailedAt = now
+        calendarIssue = issues.joinToString("; ") + " (at ${utcFormat("HH:mm", now)} UTC, retry in 5 min" +
+            (if (stale.isNotEmpty()) ", using the last good list)" else ")")
+        stale
     }
 
-    private fun downloadEconomicEvents(): List<EconomicEvent> {
+    private fun downloadEconomicEvents(url: String): Pair<List<EconomicEvent>, String> {
         try {
             val req = Request.Builder()
-                .url("https://nfs.faireconomy.media/ff_calendar_thisweek.json")
+                .url(url)
                 .header("User-Agent", "Mozilla/5.0")
                 .build()
             val resp = client.newCall(req).execute()
-            val body = resp.body?.string()
-            if (resp.isSuccessful && !body.isNullOrBlank()) {
+            val body = resp.use { it.body?.string() }
+            if (!resp.isSuccessful) return emptyList<EconomicEvent>() to "HTTP ${resp.code}"
+            if (body.isNullOrBlank()) return emptyList<EconomicEvent>() to "empty reply"
+            if (!body.trimStart().startsWith("[")) return emptyList<EconomicEvent>() to "not a calendar (likely a rate-limit page)"
+            run {
                 val arr = json.parseToJsonElement(body).jsonArray
                 val list = mutableListOf<EconomicEvent>()
                 for (elem in arr) {
@@ -591,12 +607,14 @@ class GoldApiService(
                 }
                 if (list.isNotEmpty()) {
                     // V35.0: the whole week, sorted (the list is cached; screens show only what is still ahead)
-                    return list.sortedBy { parseFfTimeMs(it.isoTime) ?: Long.MAX_VALUE }
+                    return list.sortedBy { parseFfTimeMs(it.isoTime) ?: Long.MAX_VALUE } to ""
                 }
+                return emptyList<EconomicEvent>() to "no USD events in the file"
             }
-        } catch (_: Exception) {}
-
-        return emptyList() // calendar unavailable: show nothing rather than invented events
+        } catch (e: Exception) {
+            // calendar unavailable: show nothing rather than invented events
+            return emptyList<EconomicEvent>() to (e.javaClass.simpleName + (e.message?.take(60)?.let { ": $it" } ?: ""))
+        }
     }
 
     private fun withFeed(r: GoldAnalysisResult, source: String, startMs: Long, tried: Int, dxy: Boolean, us10y: Boolean, events: Int, volumeSource: String = ""): GoldAnalysisResult {
@@ -610,7 +628,7 @@ class GoldApiService(
         }
         return r.copy(feed = FeedStatus(source, end, end - startMs, !r.isSimulatedFallback, dxy, us10y, events, tried, volumeSource,
             instrumentId = id.instrument.name, providerId = id.provider.name, providerSymbol = id.symbol, sourceType = id.type.name,
-            keyMissing = apiKey.isBlank() && !oandaConfigured(), creditsToday = creditBudget.usedToday(end),
+            keyMissing = apiKey.isBlank() && !oandaConfigured(), creditsToday = creditBudget.usedToday(end), calendarIssue = calendarIssue,
             primaryIssue = issue))
     }
 

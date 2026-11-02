@@ -26,7 +26,8 @@ data class FeedStatus(
     val quoteTimeMs: Long = 0L,                    // when the PROVIDER last priced XAU_USD (not when the phone fetched it)
     val bid: Double = 0.0,
     val ask: Double = 0.0,
-    val tradeable: Boolean? = null                 // OANDA's own flag: false = market not tradeable right now
+    val tradeable: Boolean? = null,                // OANDA's own flag: false = market not tradeable right now
+    val calendarIssue: String = ""                 // V35.1: why the calendar did not load ("" = loaded or not tried)
 )
 
 @Serializable
