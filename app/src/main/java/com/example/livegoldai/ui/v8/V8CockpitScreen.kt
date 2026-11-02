@@ -513,7 +513,9 @@ fun V8CockpitScreen(
                         Text(text = if (mtfXau) r.keyLevel else com.example.livegoldai.data.PlanText.proxyLevel(r.keyLevel), color = V8.Text3, fontSize = 10.sp, modifier = Modifier.weight(0.48f))
                     }
                 }
-                Text(text = tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT, a different instrument: context only, not used in the XAU/USD decision", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT, अलग इंस्ट्रूमेंट: सिर्फ संदर्भ, XAU/USD फैसले में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT, वेगळे इन्स्ट्रुमेंट: फक्त संदर्भ, XAU/USD निर्णयात नाही"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+                // V34.6.1: the footer names the instrument actually shown (OANDA XAU/USD since V32.3.1, else the PAXG proxy)
+                Text(text = if (mtfXau) tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • XAU/USD from OANDA: context only, not used in the forecast", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • OANDA का XAU/USD: सिर्फ संदर्भ, फ़ोरकास्ट में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • OANDA चे XAU/USD: फक्त संदर्भ, अंदाजात नाही")
+                    else tr(lang, "Rule: EMA9 vs EMA21 + close vs EMA50 • PAXG/USDT, a different instrument: context only, not used in the XAU/USD decision", "नियम: EMA9 बनाम EMA21 + क्लोज़ बनाम EMA50 • PAXG/USDT, अलग इंस्ट्रूमेंट: सिर्फ संदर्भ, XAU/USD फैसले में शामिल नहीं", "नियम: EMA9 विरुद्ध EMA21 + क्लोज विरुद्ध EMA50 • PAXG/USDT, वेगळे इन्स्ट्रुमेंट: फक्त संदर्भ, XAU/USD निर्णयात नाही"), color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
 
