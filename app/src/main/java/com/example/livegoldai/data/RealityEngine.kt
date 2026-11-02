@@ -402,7 +402,7 @@ object RealityEngine {
                 pillarName = k.replaceFirstChar { it.uppercase() },
                 pillarNameHindi = k.replaceFirstChar { it.uppercase() },
                 weightMultiplier = w,
-                adjustmentReason = "Fixed weight. Real accuracy: $acc2",
+                adjustmentReason = if (k == "macro") "2.5 only from 1 h before to 30 min after high-impact USD news, else 0. Real accuracy: $acc2" else "Fixed weight. Real accuracy: $acc2",
                 adjustmentReasonHindi = "तय वज़न। असली सटीकता: $acc2"
             )
         }

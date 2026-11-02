@@ -36,7 +36,8 @@ object PillarCheck {
 
     /** Would the engine still have called [side] if [key]'s vote were WAIT? (weighted 68% gate or 5-of-7 count) */
     fun survivesWithout(votes: Map<String, Signal>, side: Signal, key: String, weights: Map<String, Double> = TechnicalEngine.PILLAR_WEIGHTS): Boolean {
-        val total = weights.values.sum()
+        // V35.0: only pillars that voted in this record take part (Macro is absent outside its news window)
+        val total = weights.filterKeys { it in votes }.values.sum()
         val pts = weights.entries.sumOf { (k, w) -> if (k != key && votes[k] == side) w else 0.0 }
         val count = weights.keys.count { k -> k != key && votes[k] == side }
         return 100.0 * pts / total >= GATE || count >= 5
@@ -52,24 +53,50 @@ object PillarCheck {
         else -> "not proven either way"
     }
 
-    data class PillarLine(val key: String, val ownVote: EdgeFinder.Group, val needed: EdgeFinder.Group)
+    data class PillarLine(val key: String, val ownVote: EdgeFinder.Group, val needed: EdgeFinder.Group, val title: String = TITLES[key] ?: key)
+
+    /** V35.0: records written after the Macro news-window rule carry "ctx:macro" (Macro's raw vote, active or not). */
+    private fun newRule(r: LedgerRecord) = r.sources.containsKey("ctx:macro")
 
     fun pillars(state: LedgerState): List<PillarLine> {
         val rows = checked(state)
         return TITLES.keys.map { key ->
+            // V35.0: Macro is judged separately before (always on) and after (news window only) the rule change
+            val pool = if (key == "macro") rows.filter { !newRule(it.r) } else rows
             // own vote, on independent windows of the records where this pillar voted BUY or SELL
-            val voted = independentRows(rows.filter { val v = it.r.sources["grp:$key"]; v == Signal.BUY || v == Signal.SELL })
+            val voted = independentRows(pool.filter { val v = it.r.sources["grp:$key"]; v == Signal.BUY || v == Signal.SELL })
             var ok = 0; var n = 0
             voted.forEach { x -> when (PredictionLedger.directionScore(x.r.sources["grp:$key"]!!, x.res.move, x.res.threshold)) { 1 -> { ok++; n++ }; 0 -> n++ } }
             // calls that needed this pillar's vote
-            val needRows = independentRows(rows.filter { x ->
+            val needRows = independentRows(pool.filter { x ->
                 val side = x.r.finalSignal
                 (side == Signal.BUY || side == Signal.SELL) && x.r.sources["grp:$key"] == side && !survivesWithout(votes(x.r), side, key)
             })
             var nOk = 0; var nN = 0
             needRows.forEach { x -> when (PredictionLedger.directionScore(x.r.finalSignal, x.res.move, x.res.threshold)) { 1 -> { nOk++; nN++ }; 0 -> nN++ } }
-            PillarLine(key, EdgeFinder.Group("Pillar", TITLES[key]!!, ok, n), EdgeFinder.Group("Needed", TITLES[key]!!, nOk, nN))
+            val title = if (key == "macro") "Macro & News (old rule, always on)" else TITLES[key]!!
+            PillarLine(key, EdgeFinder.Group("Pillar", title, ok, n), EdgeFinder.Group("Needed", title, nOk, nN), title)
+        } + macroNewRule(rows)
+    }
+
+    /** V35.0: Macro under the news-window rule: its votes inside the window (used), and outside it (not used, research). */
+    private fun macroNewRule(rows: List<Row>): List<PillarLine> {
+        fun score(sel: List<Row>, sig: (LedgerRecord) -> Signal?): EdgeFinder.Group {
+            var ok = 0; var n = 0
+            independentRows(sel.filter { val v = sig(it.r); v == Signal.BUY || v == Signal.SELL }).forEach { x ->
+                when (PredictionLedger.directionScore(sig(x.r)!!, x.res.move, x.res.threshold)) { 1 -> { ok++; n++ }; 0 -> n++ }
+            }
+            return EdgeFinder.Group("Pillar", "", ok, n)
         }
+        val fresh = rows.filter { newRule(it.r) }
+        if (fresh.isEmpty()) return emptyList()
+        val inWin = fresh.filter { it.r.sources.containsKey("grp:macro") }
+        val outWin = fresh.filter { !it.r.sources.containsKey("grp:macro") }
+        val empty = EdgeFinder.Group("Needed", "", 0, 0)
+        return listOf(
+            PillarLine("macro", score(inWin) { it.sources["grp:macro"] }.copy(value = "Macro & News (news window, used)"), empty, "Macro & News (news window, used)"),
+            PillarLine("macro", score(outWin) { it.sources["ctx:macro"] }.copy(value = "Macro & News (outside window, NOT used)"), empty, "Macro & News (outside window, NOT used)")
+        )
     }
 
     /** BUY/SELL calls the range filter turned into WAIT: how often the raw call would have been right (independent windows). */
@@ -87,7 +114,7 @@ object PillarCheck {
         val ps = pillars(state)
         if (ps.all { it.ownVote.n == 0 }) return emptyList()
         val lines = ps.map { p ->
-            "${TITLES[p.key]}: own vote ${pct(p.ownVote)} · ${verdict(p.ownVote)}" +
+            "${p.title}: own vote ${if (p.ownVote.n == 0) "no checked votes yet" else pct(p.ownVote) + " · " + verdict(p.ownVote)}" +
                 if (p.needed.n > 0) " · calls that needed it: ${Math.round(p.needed.pct)}% right of ${p.needed.n}" + (if (p.needed.n >= EdgeFinder.MIN_N) " (${verdict(p.needed)})" else "") else ""
         }
         val rf = rangeFilter(state)
@@ -97,6 +124,6 @@ object PillarCheck {
             "TOO FEW" -> "too few to judge"
             else -> "no proof either way"
         })
-        return lines + rfLine + "Close direction beyond the noise threshold; flat windows excluded. Evidence only: no pillar, weight or filter is changed."
+        return lines + rfLine + "Close direction beyond the noise threshold; flat windows excluded. Evidence only: this check changes no pillar, weight or filter. Since E22.1 Macro votes only 1 h before to 30 min after high-impact USD news."
     }
 }

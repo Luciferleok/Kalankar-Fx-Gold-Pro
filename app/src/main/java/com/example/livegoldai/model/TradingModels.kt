@@ -332,7 +332,11 @@ data class GroupAnalysis(
     val key: String,
     val title: String,
     val verdict: Signal,
-    val indicators: List<IndicatorItem>
+    val indicators: List<IndicatorItem>,
+    /** V35.0: the pillar's own vote before any window rule (null = same as verdict) */
+    val rawVerdict: Signal? = null,
+    /** V35.0: false = takes no part in the forecast now (Macro outside its news window) */
+    val active: Boolean = true
 )
 
 @Serializable

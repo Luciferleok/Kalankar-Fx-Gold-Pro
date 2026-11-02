@@ -738,7 +738,7 @@ fun UnifiedSignalDashboardView(
                 val weights = mapOf(
                     "trend" to "3.0x",
                     "smc" to "3.0x",
-                    "macro" to "2.5x",
+                    "macro" to "2.5x (news window only)",
                     "sr" to "2.0x",
                     "candlestick" to "2.0x",
                     "momentum" to "1.5x",

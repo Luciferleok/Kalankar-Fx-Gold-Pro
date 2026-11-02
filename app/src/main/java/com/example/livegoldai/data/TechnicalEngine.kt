@@ -30,7 +30,8 @@ object TechnicalEngine {
         interval: String = "4h",
         customDxy: MacroMarketIndex? = null,
         customUs10y: MacroMarketIndex? = null,
-        customEvents: List<EconomicEvent> = emptyList()
+        customEvents: List<EconomicEvent> = emptyList(),
+        nowMs: Long = System.currentTimeMillis()
     ): GoldAnalysisResult {
         if (candles.size < 30) {
             // V29A: too few real candles. The placeholder is marked SIMULATED so it can never be shown as live,
@@ -571,7 +572,11 @@ object TechnicalEngine {
             explanation = "US 10Y yield data unavailable right now (no vote)"
         )
 
-        val upcomingEvents = customEvents // real calendar only; empty if it could not be loaded
+        // real calendar only; empty if it could not be loaded. V35.0: the feed now passes the whole (cached) week, so the
+        // screens get what is still ahead (or released within the last hour), as before
+        val upcomingEvents = customEvents
+            .filter { (EventTime.parseMs(it.isoTime) ?: Long.MAX_VALUE) >= nowMs - 60 * 60_000L }
+            .ifEmpty { customEvents.takeLast(8) }
 
 
         val macroItems = listOf(
@@ -588,7 +593,11 @@ object TechnicalEngine {
                 detail = us10yData.explanation
             )
         )
-        val macroVerdict = decide(macroItems.map { it.signal })
+        val macroRaw = decide(macroItems.map { it.signal })
+        // V35.0: Macro votes only from 1 h before to 30 min after a high-impact USD event (see MacroWindow)
+        val macroEvent = MacroWindow.activeEvent(customEvents, nowMs)
+        val macroActive = macroEvent != null
+        val macroVerdict = if (macroActive) macroRaw else Signal.WAIT
 
         // Group Summaries (7 Institutional Pillars ordered in professional trading sequence)
         val groups = listOf(
@@ -598,21 +607,25 @@ object TechnicalEngine {
             GroupAnalysis(key = "sr", title = "Support & Resistance", verdict = srVerdict, indicators = srItems),
             GroupAnalysis(key = "volatility", title = "Volatility Bands", verdict = volatilityVerdict, indicators = volatilityItems),
             GroupAnalysis(key = "candlestick", title = "Candlestick Action", verdict = candleVerdict, indicators = candleItems),
-            GroupAnalysis(key = "macro", title = "Macro & News Sentiment", verdict = macroVerdict, indicators = macroItems)
+            GroupAnalysis(key = "macro",
+                title = if (macroActive) "Macro & News Sentiment" else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news)",
+                verdict = macroVerdict, indicators = macroItems, rawVerdict = macroRaw, active = macroActive)
         )
+        // V35.0: only active pillars take part (Macro is inactive outside its news window)
+        val voting = groups.filter { it.active }
 
-        val buyCount = groups.count { it.verdict == Signal.BUY }
-        val sellCount = groups.count { it.verdict == Signal.SELL }
-        val waitCount = groups.count { it.verdict == Signal.WAIT }
-        val total = groups.size
+        val buyCount = voting.count { it.verdict == Signal.BUY }
+        val sellCount = voting.count { it.verdict == Signal.SELL }
+        val waitCount = voting.count { it.verdict == Signal.WAIT }
+        val total = voting.size
 
         // Dynamic Institutional Indicator Weighting:
-        // Trend, SMC, and Macro carry dominant mathematical weights (8.5 of 15.5)
-        val pillarWeights = PILLAR_WEIGHTS
-        val totalWeight = pillarWeights.values.sum() // 15.5
+        // Trend, SMC, and Macro carry dominant mathematical weights (8.5 of 15.5); without Macro 13.0
+        val pillarWeights = MacroWindow.weights(macroActive)
+        val totalWeight = pillarWeights.values.sum()
         var weightedBuyPoints = 0.0
         var weightedSellPoints = 0.0
-        groups.forEach { g ->
+        voting.forEach { g ->
             val w = pillarWeights[g.key] ?: 1.0
             if (g.verdict == Signal.BUY) weightedBuyPoints += w
             if (g.verdict == Signal.SELL) weightedSellPoints += w

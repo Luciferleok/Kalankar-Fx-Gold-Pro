@@ -288,7 +288,10 @@ class LearningCoordinator(
         val horizon = com.example.livegoldai.data.TechnicalEngine.calculateValidityMinutes(interval)
 
         val sources = LinkedHashMap<String, Signal>()
-        raw.groups.forEach { sources["grp:${it.key}"] = it.verdict }
+        // V35.0: an inactive pillar (Macro outside its news window) is not a vote: no "grp:" entry. Macro's own raw vote
+        // is always kept as "ctx:macro" (research only), so its news-window and off-window behaviour can be compared.
+        raw.groups.forEach { g -> if (g.active) sources["grp:${g.key}"] = g.verdict }
+        raw.groups.firstOrNull { it.key == "macro" }?.let { g -> sources["ctx:macro"] = g.rawVerdict ?: g.verdict }
         shown.multiAiConsensus?.modelInsights?.forEach { sources["eng:${it.provider.name}"] = it.signal }
         shown.multiBotEnsemble?.allBots?.forEach { sources["bot:${it.id}"] = it.signal }
         shown.multiBotEnsemble?.let { sources["bots:ensemble"] = it.ensembleSignal }

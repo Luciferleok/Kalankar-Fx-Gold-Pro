@@ -243,9 +243,11 @@ object CockpitInsightsBuilder {
             if (r <= 30) warnings.add(String.format(Locale.US, "RSI %.0f: oversold", r))
         }
 
-        val total = TechnicalEngine.PILLAR_WEIGHTS.values.sum()
+        // V35.0: an inactive pillar (Macro outside its news window) has no weight and is not in the total
+        val wts = MacroWindow.weights(a.groups.firstOrNull { it.key == "macro" }?.active ?: true)
+        val total = wts.values.sum()
         val contributions = a.groups.map { g ->
-            val w = TechnicalEngine.PILLAR_WEIGHTS[g.key] ?: 1.0
+            val w = if (g.active) (wts[g.key] ?: 1.0) else 0.0
             val sign = when (g.verdict) { Signal.BUY -> 1.0; Signal.SELL -> -1.0; Signal.WAIT -> 0.0 }
             PillarContribution(g.key, g.title, g.verdict, w, sign * w / total * 100.0)
         }

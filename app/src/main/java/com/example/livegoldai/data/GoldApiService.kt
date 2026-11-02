@@ -34,6 +34,9 @@ class GoldApiService(
     class VolBar(val t: Long, val v: Double, val buy: Double)
 
     companion object {
+        const val CALENDAR_TTL_MS = 60 * 60_000L
+        const val CALENDAR_RETRY_MS = 5 * 60_000L
+        const val CALENDAR_STALE_MS = 3 * 24 * 3_600_000L
         // V29D-H2: PAXG/USDT trades are a different market: always named as PROXY volume, never as XAU/USD volume
         const val VOLUME_SOURCE = "PAXG/USDT (Binance) • PROXY volume, not XAU/USD"
 
@@ -520,7 +523,24 @@ class GoldApiService(
         return MacroMarketIndex("^TNX", "US 10-Yr Yield", yieldVal, changePct, impact, expl)
     }
 
-    private fun fetchLiveEconomicEvents(): List<EconomicEvent> {
+    // V35.0: one calendar download per hour, shared by every timeframe (before: one per timeframe per refresh, which the
+    // calendar site rate-limits -> "Calendar not loaded", and the Macro news window could not be found)
+    private val calendarLock = Any()
+    @Volatile private var calendarCache: Pair<Long, List<EconomicEvent>>? = null
+    @Volatile private var calendarFailedAt = 0L
+
+    private fun fetchLiveEconomicEvents(): List<EconomicEvent> = synchronized(calendarLock) {
+        val now = System.currentTimeMillis()
+        val c = calendarCache
+        if (c != null && now - c.first < CALENDAR_TTL_MS) return@synchronized c.second
+        // after a failure wait a few minutes before asking again; meanwhile keep the last good list (up to 3 days old)
+        val stale = c?.takeIf { now - it.first < CALENDAR_STALE_MS }?.second ?: emptyList()
+        if (now - calendarFailedAt < CALENDAR_RETRY_MS) return@synchronized stale
+        val fresh = downloadEconomicEvents()
+        if (fresh.isNotEmpty()) { calendarCache = now to fresh; fresh } else { calendarFailedAt = now; stale }
+    }
+
+    private fun downloadEconomicEvents(): List<EconomicEvent> {
         try {
             val req = Request.Builder()
                 .url("https://nfs.faireconomy.media/ff_calendar_thisweek.json")
@@ -570,11 +590,8 @@ class GoldApiService(
                     }
                 }
                 if (list.isNotEmpty()) {
-                    val cutoff = System.currentTimeMillis() - 60 * 60_000L
-                    val upcoming = list
-                        .filter { (parseFfTimeMs(it.isoTime) ?: Long.MAX_VALUE) >= cutoff }
-                        .sortedBy { parseFfTimeMs(it.isoTime) ?: Long.MAX_VALUE }
-                    return upcoming.ifEmpty { list.takeLast(8) }
+                    // V35.0: the whole week, sorted (the list is cached; screens show only what is still ahead)
+                    return list.sortedBy { parseFfTimeMs(it.isoTime) ?: Long.MAX_VALUE }
                 }
             }
         } catch (_: Exception) {}

@@ -205,7 +205,7 @@ private fun pillarMeaning(key: String, lang: AppLanguage): String {
         "sr" -> "Floor pivots and Fibonacci levels of recent swing"
         "volatility" -> "Bollinger / Keltner bands and ATR"
         "candlestick" -> "Last candle pattern: engulfing, hammer, direction"
-        "macro" -> "US Dollar Index and US 10-year yield daily change"
+        "macro" -> "US Dollar Index and US 10-year yield daily change. Votes only from 1 h before to 30 min after high-impact USD news; otherwise context only"
         else -> "Indicator group"
     }
     return when (lang) {

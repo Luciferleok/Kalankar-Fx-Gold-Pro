@@ -249,7 +249,7 @@ object PredictionLedger {
 
     // ------------------------------------------------------------------ source-consistent verification
 
-    const val ENGINE_VERSION = "E22.0"   // V29A: no PAXG MTF filter, TWAP instead of invented-volume VWAP, MFI only with real volume
+    const val ENGINE_VERSION = "E22.1"   // V35.0: Macro votes only 1 h before to 30 min after high-impact USD news; was E22.0   // V29A: no PAXG MTF filter, TWAP instead of invented-volume VWAP, MFI only with real volume
 
     /** True when the result is based on a trustworthy real price path. */
     fun reliable(o: LedgerOutcome): Boolean =
