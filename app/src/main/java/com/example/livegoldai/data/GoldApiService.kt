@@ -210,9 +210,10 @@ class GoldApiService(
         }
 
         // Asynchronously fetch Macro Drivers in parallel so analysis has zero delay
-        val dxyDeferred = async { fetchLiveDxy() }
-        val us10yDeferred = async { fetchLiveUs10y() }
         val eventsDeferred = async { fetchLiveEconomicEvents() }
+        // V35.2: inside the Macro news window the dollar / yield votes come from the minutes around the release
+        val dxyDeferred = async { macroIndex(true, eventsDeferred.await()) }
+        val us10yDeferred = async { macroIndex(false, eventsDeferred.await()) }
 
         // Step 0 (V32): OANDA practice, read-only, when the user saved a token
         oandaIssue = ""
@@ -502,6 +503,57 @@ class GoldApiService(
         }
     }
 
+    // ---------------- V35.2 MACRO IN THE NEWS WINDOW ----------------
+
+    private val intradayCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Pair<Long, Double>>>>()
+
+    /** Yahoo 5-minute closes for [symbol] (time ms, close), cached 60 s; empty when unavailable. */
+    private fun yahooIntraday(symbol: String): List<Pair<Long, Double>> {
+        val now = System.currentTimeMillis()
+        intradayCache[symbol]?.let { if (now - it.first < 60_000L) return it.second }
+        val bars = try {
+            val req = Request.Builder()
+                .url("https://query1.finance.yahoo.com/v8/finance/chart/$symbol?interval=5m&range=2d")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                .build()
+            val resp = client.newCall(req).execute()
+            val body = resp.use { it.body?.string() }
+            if (!resp.isSuccessful || body.isNullOrBlank()) emptyList() else {
+                val r = json.parseToJsonElement(body).jsonObject["chart"]?.jsonObject?.get("result")?.jsonArray?.get(0)?.jsonObject
+                val ts = r?.get("timestamp")?.jsonArray?.map { it.jsonPrimitive.content.toLongOrNull() } ?: emptyList()
+                val cl = r?.get("indicators")?.jsonObject?.get("quote")?.jsonArray?.get(0)?.jsonObject?.get("close")?.jsonArray
+                    ?.map { it.jsonPrimitive.content.toDoubleOrNull() } ?: emptyList()
+                ts.indices.mapNotNull { i -> val t = ts[i]; val c = cl.getOrNull(i); if (t != null && c != null) t * 1000L to c else null }
+            }
+        } catch (_: Exception) { emptyList() }
+        if (bars.isNotEmpty()) intradayCache[symbol] = now to bars
+        return bars
+    }
+
+    /**
+     * Macro input for the engine. Inside the news window (MacroWindow): the move around the release (NewsMacro), from
+     * the dollar index, or from EUR/USD (inverted: EUR/USD down = dollar up) when the dollar index is delayed; if no
+     * intraday price at all, the day's change, named as such. Outside the window the engine gives Macro no vote anyway.
+     */
+    private fun macroIndex(dollar: Boolean, events: List<EconomicEvent>): MacroMarketIndex? {
+        val now = System.currentTimeMillis()
+        val ev = MacroWindow.activeEvent(events, now)
+        val t = ev?.let { EventTime.parseMs(it.isoTime) }
+        if (ev != null && t != null) {
+            val name = ev.title
+            if (dollar) {
+                NewsMacro.dxy(yahooIntraday("DX-Y.NYB"), t, now, name)?.let { return it }
+                NewsMacro.dxy(yahooIntraday("EURUSD=X").map { it.first to 1.0 / it.second }, t, now, name)
+                    ?.let { return it.copy(explanation = it.explanation.replace("US Dollar", "US Dollar (via EUR/USD)")) }
+            } else {
+                NewsMacro.yield10(yahooIntraday("%5ETNX"), t, now, name)?.let { return it }
+            }
+            val daily = if (dollar) fetchLiveDxy() else fetchLiveUs10y()
+            return daily?.copy(explanation = daily.explanation + " (news window, but no fresh intraday price: day's change used)")
+        }
+        return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
+    }
+
     private fun fetchLiveDxy(): MacroMarketIndex? {
         val (price, changePct) = fetchYahooDailyChange("DX-Y.NYB") ?: return null
         val impact = if (changePct < -0.05) Signal.BUY else if (changePct > 0.05) Signal.SELL else Signal.WAIT
@@ -536,21 +588,22 @@ class GoldApiService(
     private fun fetchLiveEconomicEvents(): List<EconomicEvent> = synchronized(calendarLock) {
         val now = System.currentTimeMillis()
         val c = calendarCache
-        if (c != null && now - c.first < CALENDAR_TTL_MS) return@synchronized c.second
+        if (c != null && now - c.first < CALENDAR_TTL_MS) return@synchronized OfficialCalendar.merge(c.second)
         // after a failure wait a few minutes before asking again; meanwhile keep the last good list (up to 3 days old)
         val stale = c?.takeIf { now - it.first < CALENDAR_STALE_MS }?.second ?: emptyList()
-        if (now - calendarFailedAt < CALENDAR_RETRY_MS) return@synchronized stale
+        if (now - calendarFailedAt < CALENDAR_RETRY_MS) return@synchronized OfficialCalendar.merge(stale)
         // V35.1: the same weekly file from a second host when the first refuses (rate limit / blocked)
         val issues = ArrayList<String>()
         for (url in CALENDAR_URLS) {
             val (fresh, issue) = downloadEconomicEvents(url)
-            if (fresh.isNotEmpty()) { calendarCache = now to fresh; calendarIssue = ""; return@synchronized fresh }
+            if (fresh.isNotEmpty()) { calendarCache = now to fresh; calendarIssue = ""; return@synchronized OfficialCalendar.merge(fresh) }
             issues.add("${url.substringAfter("//").substringBefore("/")}: $issue")
         }
         calendarFailedAt = now
-        calendarIssue = issues.joinToString("; ") + " (at ${utcFormat("HH:mm", now)} UTC, retry in 5 min" +
-            (if (stale.isNotEmpty()) ", using the last good list)" else ")")
-        stale
+        calendarIssue = "Forex Factory: " + issues.joinToString("; ") + " (at ${utcFormat("HH:mm", now)} UTC, retry in 5 min" +
+            (if (stale.isNotEmpty()) ", using the last good list" else "") + "; ${OfficialCalendar.SOURCE_NOTE} in use)"
+        // V35.2: the official BLS / Fed schedule keeps the Macro news window working without Forex Factory
+        OfficialCalendar.merge(stale)
     }
 
     private fun downloadEconomicEvents(url: String): Pair<List<EconomicEvent>, String> {

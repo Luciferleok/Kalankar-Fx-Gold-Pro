@@ -92,8 +92,13 @@ class HealthMonitor {
 
         // ---------------- NEWS & MACRO
         val newsChecks = listOf(
-            HealthCheck("Economic calendar", if ((feed?.calendarEvents ?: 0) > 0) "OK" else "WARN",
-                if ((feed?.calendarEvents ?: 0) > 0) "${feed?.calendarEvents} USD events loaded" else "Calendar not loaded" + (feed?.calendarIssue?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")),
+            // V35.2: Forex Factory live, or the official BLS / Fed schedule when Forex Factory cannot be loaded
+            HealthCheck("Economic calendar", if ((feed?.calendarEvents ?: 0) > 0 && feed?.calendarIssue.isNullOrBlank()) "OK" else "WARN",
+                when {
+                    (feed?.calendarEvents ?: 0) > 0 && feed?.calendarIssue.isNullOrBlank() -> "${feed?.calendarEvents} USD events (Forex Factory + official schedule)"
+                    (feed?.calendarEvents ?: 0) > 0 -> "${feed?.calendarEvents} USD events from the official BLS / Fed schedule only. ${feed?.calendarIssue}"
+                    else -> "Calendar not loaded" + (feed?.calendarIssue?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
+                }),
             HealthCheck("US Dollar Index", if (feed?.dxyAvailable == true) "OK" else "WARN", if (feed?.dxyAvailable == true) "Live" else "Unavailable (no vote)"),
             HealthCheck("US 10Y yield", if (feed?.us10yAvailable == true) "OK" else "WARN", if (feed?.us10yAvailable == true) "Live" else "Unavailable (no vote)")
         )
