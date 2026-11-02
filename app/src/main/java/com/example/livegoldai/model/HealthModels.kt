@@ -147,5 +147,7 @@ data class LedgerPulse(
     val byProvider: List<String> = emptyList(),
     // V34.7 Edge Finder: where the rule direction has (or has not) beaten chance, and the evidence for the forecast on screen
     val edges: List<String> = emptyList(),
-    val edgeForCurrent: String = ""
+    val edgeForCurrent: String = "",
+    // V34.9 Pillar check: each pillar's own vote and the calls that needed it, plus the range filter (evidence only)
+    val pillars: List<String> = emptyList()
 )

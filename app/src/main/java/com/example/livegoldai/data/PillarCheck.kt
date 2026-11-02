@@ -1,0 +1,102 @@
+package com.example.livegoldai.data
+
+import com.example.livegoldai.model.Signal
+
+/**
+ * V34.9 Pillar check: does each of the 7 rule pillars help or hurt? Read-only statistics on the ledger.
+ *
+ * Every ledger record keeps each pillar's own vote ("grp:<key>" in [LedgerRecord.sources]) and the real move over the
+ * call's window. For each pillar this reports:
+ *   - its OWN vote: how often the price really moved the way the pillar voted (close direction beyond the noise
+ *     threshold; flat windows excluded), counted on INDEPENDENT windows only (see [EdgeFinder.independent]);
+ *   - the calls that NEEDED it: BUY/SELL calls the pillar agreed with that would have been WAIT without its vote
+ *     (same 68% weighted gate and 5-of-7 count rule as TechnicalEngine), and how often those calls were right.
+ * And the range filter: the BUY/SELL calls it turned into WAIT, and how often they would have been right.
+ *
+ * Verdicts use the Edge Finder's 99.9% Wilson interval and N >= [EdgeFinder.MIN_N]. Nothing here changes a pillar,
+ * a weight, the gate, a forecast or the ledger: it only shows evidence for a decision the owner makes.
+ */
+object PillarCheck {
+
+    val TITLES = linkedMapOf("trend" to "Trend", "smc" to "Smart Money", "momentum" to "Momentum", "sr" to "Support/Resistance",
+        "volatility" to "Volatility", "candlestick" to "Candlestick", "macro" to "Macro & News")
+    private const val GATE = 68.0
+
+    private data class Row(val r: LedgerRecord, val res: LedgerResult)
+
+    private fun checked(state: LedgerState): List<Row> = state.records.mapNotNull { r ->
+        val res = state.resultOf(r.id) ?: return@mapNotNull null
+        if (!PredictionLedger.reliable(res.outcome) || res.threshold.isNaN() || res.move.isNaN()) null else Row(r, res)
+    }
+
+    private fun independentRows(rows: List<Row>): List<Row> {
+        val byId = rows.associateBy { it.r.id }
+        return EdgeFinder.independent(rows.map { it.r }).mapNotNull { byId[it.id] }
+    }
+
+    /** Would the engine still have called [side] if [key]'s vote were WAIT? (weighted 68% gate or 5-of-7 count) */
+    fun survivesWithout(votes: Map<String, Signal>, side: Signal, key: String, weights: Map<String, Double> = TechnicalEngine.PILLAR_WEIGHTS): Boolean {
+        val total = weights.values.sum()
+        val pts = weights.entries.sumOf { (k, w) -> if (k != key && votes[k] == side) w else 0.0 }
+        val count = weights.keys.count { k -> k != key && votes[k] == side }
+        return 100.0 * pts / total >= GATE || count >= 5
+    }
+
+    private fun votes(r: LedgerRecord): Map<String, Signal> =
+        TITLES.keys.mapNotNull { k -> r.sources["grp:$k"]?.let { k to it } }.toMap()
+
+    private fun verdict(g: EdgeFinder.Group): String = when (g.verdict) {
+        "PROVEN EDGE" -> "HELPS"
+        "WORSE THAN CHANCE" -> "HURTS (wrong more often than chance)"
+        "TOO FEW" -> "too few to judge"
+        else -> "not proven either way"
+    }
+
+    data class PillarLine(val key: String, val ownVote: EdgeFinder.Group, val needed: EdgeFinder.Group)
+
+    fun pillars(state: LedgerState): List<PillarLine> {
+        val rows = checked(state)
+        return TITLES.keys.map { key ->
+            // own vote, on independent windows of the records where this pillar voted BUY or SELL
+            val voted = independentRows(rows.filter { val v = it.r.sources["grp:$key"]; v == Signal.BUY || v == Signal.SELL })
+            var ok = 0; var n = 0
+            voted.forEach { x -> when (PredictionLedger.directionScore(x.r.sources["grp:$key"]!!, x.res.move, x.res.threshold)) { 1 -> { ok++; n++ }; 0 -> n++ } }
+            // calls that needed this pillar's vote
+            val needRows = independentRows(rows.filter { x ->
+                val side = x.r.finalSignal
+                (side == Signal.BUY || side == Signal.SELL) && x.r.sources["grp:$key"] == side && !survivesWithout(votes(x.r), side, key)
+            })
+            var nOk = 0; var nN = 0
+            needRows.forEach { x -> when (PredictionLedger.directionScore(x.r.finalSignal, x.res.move, x.res.threshold)) { 1 -> { nOk++; nN++ }; 0 -> nN++ } }
+            PillarLine(key, EdgeFinder.Group("Pillar", TITLES[key]!!, ok, n), EdgeFinder.Group("Needed", TITLES[key]!!, nOk, nN))
+        }
+    }
+
+    /** BUY/SELL calls the range filter turned into WAIT: how often the raw call would have been right (independent windows). */
+    fun rangeFilter(state: LedgerState): EdgeFinder.Group {
+        val blocked = independentRows(checked(state).filter { it.r.appliedFilter == "C-RANGE" && (it.r.rawSignal == Signal.BUY || it.r.rawSignal == Signal.SELL) })
+        var ok = 0; var n = 0
+        blocked.forEach { x -> when (PredictionLedger.directionScore(x.r.rawSignal, x.res.move, x.res.threshold)) { 1 -> { ok++; n++ }; 0 -> n++ } }
+        return EdgeFinder.Group("Range filter", "blocked calls", ok, n)
+    }
+
+    private fun pct(g: EdgeFinder.Group) = "${Math.round(g.pct)}% right of ${g.n} independent (99.9% range ${Math.round(g.low)}–${Math.round(g.high)}%)"
+
+    /** SYSTEM lines: one per pillar, then the range filter. Empty when nothing has been checked yet. */
+    fun summary(state: LedgerState): List<String> {
+        val ps = pillars(state)
+        if (ps.all { it.ownVote.n == 0 }) return emptyList()
+        val lines = ps.map { p ->
+            "${TITLES[p.key]}: own vote ${pct(p.ownVote)} · ${verdict(p.ownVote)}" +
+                if (p.needed.n > 0) " · calls that needed it: ${Math.round(p.needed.pct)}% right of ${p.needed.n}" + (if (p.needed.n >= EdgeFinder.MIN_N) " (${verdict(p.needed)})" else "") else ""
+        }
+        val rf = rangeFilter(state)
+        val rfLine = if (rf.n == 0) emptyList() else listOf("Range filter: the calls it blocked would have been ${pct(rf)} · " + when (rf.verdict) {
+            "PROVEN EDGE" -> "the filter is blocking calls that worked"
+            "WORSE THAN CHANCE" -> "the filter is helping"
+            "TOO FEW" -> "too few to judge"
+            else -> "no proof either way"
+        })
+        return lines + rfLine + "Close direction beyond the noise threshold; flat windows excluded. Evidence only: no pillar, weight or filter is changed."
+    }
+}

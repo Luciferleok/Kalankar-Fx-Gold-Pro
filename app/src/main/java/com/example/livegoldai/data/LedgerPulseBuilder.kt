@@ -199,7 +199,8 @@ object LedgerPulseBuilder {
             planCheck = planCheckLine(state),
             byProvider = providerLines(state),
             edges = try { EdgeFinder.summary(state) } catch (_: Exception) { emptyList() },
-            edgeForCurrent = try { EdgeFinder.forForecast(a, state, now) } catch (_: Exception) { "" }
+            edgeForCurrent = try { EdgeFinder.forForecast(a, state, now) } catch (_: Exception) { "" },
+            pillars = try { PillarCheck.summary(state) } catch (_: Exception) { emptyList() }
         )
     }
 

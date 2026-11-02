@@ -96,6 +96,8 @@ fun V8HealthScreen(
                 p.byProvider.forEach { line -> V8KeyValue(tr(lang, "By provider", "प्रोवाइडर अनुसार", "प्रोव्हायडरनुसार"), line) }
                 // V34.7: where the rules have (or have not) beaten chance, 99.9% test
                 p.edges.forEach { line -> V8KeyValue(tr(lang, "Edge check", "एज जाँच", "एज तपासणी"), line) }
+                // V34.9: does each pillar (and the range filter) help or hurt? evidence only, nothing is changed
+                p.pillars.forEach { line -> V8KeyValue(tr(lang, "Pillar check", "पिलर जाँच", "पिलर तपासणी"), line) }
 
                 // ---- 24/7 background recorder
                 Spacer(modifier = Modifier.height(8.dp))
