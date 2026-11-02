@@ -469,6 +469,7 @@ private fun ShadowLabTab(
         Note("Correction: " + com.example.livegoldai.data.ShadowLab.Experiment.CORRECTION + " This run: ${r.familySize} challengers.")
         Note("Attempts: " + com.example.livegoldai.data.ShadowLab.Experiment.ATTEMPTS)
         Note(com.example.livegoldai.data.ShadowLab.Experiment.ATTEMPT_1)
+        Note(com.example.livegoldai.data.ShadowLab.Experiment.ATTEMPT_2)
 
         Section(t(lang, "TEST DATA", "टेस्ट डेटा", "चाचणी डेटा"))
         InfoRow("Snapshot", r.shortId + " • " + r.snapshotId.take(24) + "…")

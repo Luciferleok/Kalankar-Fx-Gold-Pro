@@ -33,9 +33,9 @@ import kotlin.math.sqrt
  */
 object ShadowLab {
 
-    const val LAB_VERSION = "SL1.5"
+    const val LAB_VERSION = "SL1.6"
     const val LABEL_VERSION = "L1"
-    const val FEATURE_SCHEMA = "F2"     // 5 directional factors + context (vol, efficiency, time of day, squeeze)
+    const val FEATURE_SCHEMA = "F3"     // 5 directional factors + context (vol, efficiency, time of day, squeeze) + 2 higher-timeframe factors (V34.8)
     const val RECIPE_VERSION = "R2"     // FACTOR GATED: logistic, L2=2, rolling 1500, gate at 30% train coverage, OOD wait
     const val HORIZON = 4               // closed candles ahead
     val SWEEP = listOf(2, 4, 8)         // horizons compared (exploratory, own correction family)
@@ -70,6 +70,9 @@ object ShadowLab {
         const val ATTEMPTS = "Max 3 pre-registered one-change attempts per timeframe; after 3 failures: architecture review."
         /** Attempt #1, registered 2026-10-23 after run 1 showed FACTOR GATED made 91% UP calls on 4h (drift-following). */
         const val ATTEMPT_1 = "A1 (2026-10-23): ONE change - FACTOR BALANCED = FACTOR GATED fitted with UP and DOWN weighted equally, so the model cannot win by copying gold's drift. Same factors, gate, label, checks; family grows to 5 challengers."
+        /** Attempt #2, registered 2026-11-02 before any run: the live ledger (3645 checked calls) showed no proven edge and
+         *  calls with higher rule agreement were right LESS often, i.e. the same-timeframe view alone does not carry the edge. */
+        const val ATTEMPT_2 = "A2 (2026-11-02): ONE change - FACTOR MTF = FACTOR GATED plus 2 higher-timeframe factors from the same closed candles: trend of a 4x longer view (EMA80 vs EMA200, per 2x ATR) and position in the last 80 candles' range. Same label, gate, WAIT rules and checks; family grows to 6 challengers (stricter for all). The live shadow model and the app's BUY/SELL/WAIT are not changed."
     }
 
     data class Bar(val time: String, val open: Double, val high: Double, val low: Double, val close: Double)
@@ -86,9 +89,13 @@ object ShadowLab {
         val regime: Regime,
         val sessionSin: Double = 0.0,
         val sessionCos: Double = 0.0,
-        val squeeze: Double = 0.0
+        val squeeze: Double = 0.0,
+        val htfTrend: Double = 0.0,     // V34.8: EMA80 - EMA200 per 2x ATR (EMA20/50 of a 4x longer timeframe)
+        val htfPos: Double = 0.0        // V34.8: position in the last 80 candles' range, -1 (low) .. +1 (high)
     ) {
         fun directional() = doubleArrayOf(trend, momentum, stretch, rangePos, trend * efficiency)
+        /** V34.8 attempt #2: the 5 directional factors plus the higher-timeframe view */
+        fun mtf() = doubleArrayOf(trend, momentum, stretch, rangePos, trend * efficiency, htfTrend, htfPos)
         fun extended() = doubleArrayOf(trend, momentum, stretch, rangePos, trend * efficiency, sessionSin, sessionCos, squeeze, squeeze * momentum)
         fun context(conf: Double) = doubleArrayOf(conf, volRatio, efficiency,
             if (regime == Regime.TREND) 1.0 else 0.0, if (regime == Regime.RANGE) 1.0 else 0.0, squeeze, sessionSin, sessionCos)
@@ -328,6 +335,7 @@ object ShadowLab {
         val cP = track("FACTOR+", "CHALLENGER", "adds time of day and volatility squeeze")
         val cM = track("META FILTER", "CHALLENGER", "FACTOR GATED, but skips conditions where its earlier calls failed")
         val cB = track("FACTOR BALANCED", "CHALLENGER", "attempt #1: FACTOR GATED with UP and DOWN weighted equally (cannot win by copying drift)")
+        val cX = track("FACTOR MTF", "CHALLENGER", "attempt #2: FACTOR GATED plus the higher-timeframe trend and range position")
         val nRand = track("RANDOM FEATURE", "CONTROL", "same model on pure noise: must show no edge")
         val nShuf = track("SHUFFLED FEATURE", "CONTROL", "real factors from the wrong candles: must show no edge")
         val waitReason = Array(nT) { "" }
@@ -355,6 +363,8 @@ object ShadowLab {
             val balOod = bal?.let { g -> g.mean to g.sd }
             val plus = Logit.fit(dIdx.map { f[it]!!.extended() }, ys)
             val plusGate = plus?.let { g -> gateFor(trainIdx.map { g.prob(f[it]!!.extended()) }, TARGET_COVERAGE) }
+            val mtfM = Logit.fit(dIdx.map { f[it]!!.mtf() }, ys)
+            val mtfGate = mtfM?.let { g -> gateFor(trainIdx.map { g.prob(f[it]!!.mtf()) }, TARGET_COVERAGE) }
             val rM = Logit.fit(dIdx.map { randomFeat[it] }, ys)
             val rGate = rM?.let { g -> gateFor(trainIdx.map { g.prob(randomFeat[it]) }, TARGET_COVERAGE) }
             val sM = Logit.fit(dIdx.map { f[shuffledOf[it]!!]!!.directional() }, ys)
@@ -403,6 +413,12 @@ object ShadowLab {
                     val isOod = x.indices.any { j -> abs((x[j] - balOod.first[j]) / balOod.second[j]) > OOD_Z }
                     val p = bal.prob(x)
                     if (!isOod && abs(p - 0.5) >= balGate) cB[t] = if (p > 0.5) 1 else -1
+                }
+                if (mtfM != null && mtfGate != null) {
+                    val x = fi.mtf()
+                    val isOod = x.indices.any { j -> abs((x[j] - mtfM.mean[j]) / mtfM.sd[j]) > OOD_Z }
+                    val p = mtfM.prob(x)
+                    if (!isOod && abs(p - 0.5) >= mtfGate) cX[t] = if (p > 0.5) 1 else -1
                 }
                 if (rM != null && rGate != null) { val p = rM.prob(randomFeat[i]); if (abs(p - 0.5) >= rGate) nRand[t] = if (p > 0.5) 1 else -1 }
                 if (sM != null && sGate != null) { val p = sM.prob(f[shuffledOf[i]!!]!!.directional()); if (abs(p - 0.5) >= sGate) nShuf[t] = if (p > 0.5) 1 else -1 }
@@ -626,7 +642,7 @@ object ShadowLab {
             val a = part[k]; val b = full[k]
             if ((a == null) != (b == null)) return false to "factor row $k changed when later candles were removed"
             if (a != null && b != null) {
-                val x = a.extended(); val z = b.extended()
+                val x = a.extended() + a.mtf(); val z = b.extended() + b.mtf()
                 if (x.indices.any { abs(x[it] - z[it]) > 1e-9 } || a.regime != b.regime) return false to "factor row $k changed when later candles were removed"
             }
         }
@@ -713,6 +729,8 @@ object ShadowLab {
         val atr = atr14(bars)
         val e20 = ema(close, 20)
         val e50 = ema(close, 50)
+        val e80 = ema(close, 80)
+        val e200 = ema(close, 200)
         val bw = DoubleArray(n)
         for (i in 19 until n) {
             var s = 0.0; var s2 = 0.0
@@ -726,6 +744,8 @@ object ShadowLab {
             val a = atr[i]
             var hi = Double.NEGATIVE_INFINITY; var lo = Double.POSITIVE_INFINITY
             for (j in i - 19..i) { hi = max(hi, bars[j].high); lo = min(lo, bars[j].low) }
+            var hi80 = Double.NEGATIVE_INFINITY; var lo80 = Double.POSITIVE_INFINITY
+            for (j in i - 79..i) { hi80 = max(hi80, bars[j].high); lo80 = min(lo80, bars[j].low) }
             var path = 0.0
             for (j in i - 19..i) path += abs(close[j] - close[j - 1])
             val er = if (path <= 0) 0.0 else abs(close[i] - close[i - 20]) / path
@@ -752,7 +772,9 @@ object ShadowLab {
                 regime = regime,
                 sessionSin = if (hr == null) 0.0 else sin(2 * PI * hr / 24),
                 sessionCos = if (hr == null) 0.0 else cos(2 * PI * hr / 24),
-                squeeze = if (bw[i] <= 0 || bwMed <= 0) 0.0 else clip(ln(bw[i] / bwMed))
+                squeeze = if (bw[i] <= 0 || bwMed <= 0) 0.0 else clip(ln(bw[i] / bwMed)),
+                htfTrend = clip((e80[i] - e200[i]) / (2 * a)),
+                htfPos = if (hi80 - lo80 <= 0) 0.0 else 2 * (close[i] - lo80) / (hi80 - lo80) - 1
             ))
         }
         return out
