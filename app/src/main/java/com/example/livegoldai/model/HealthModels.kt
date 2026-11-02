@@ -144,5 +144,8 @@ data class LedgerPulse(
     // V34.2: separate plan check (entry first, then TP1 or stop, on the levels shown); "" until a v2 call is checked
     val planCheck: String = "",
     // V34.4: accuracy per data provider (v1 direction check and v2 plan check kept apart), one line per provider
-    val byProvider: List<String> = emptyList()
+    val byProvider: List<String> = emptyList(),
+    // V34.7 Edge Finder: where the rule direction has (or has not) beaten chance, and the evidence for the forecast on screen
+    val edges: List<String> = emptyList(),
+    val edgeForCurrent: String = ""
 )

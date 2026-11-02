@@ -209,6 +209,11 @@ fun V8CockpitScreen(
                         },
                         color = V8.Amber, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp
                     )
+                    // V34.7: what the ledger says about setups like this one (99.9% test); shown under every BUY/SELL
+                    analysis.pulse?.edgeForCurrent?.takeIf { sig != Signal.WAIT && it.isNotBlank() }?.let { ev ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = ev, color = if (ev.contains("PROVEN EDGE")) V8.Green else if (ev.startsWith("Caution")) V8.Red else V8.Text3, fontSize = 10.sp)
+                    }
                     // V29D: stable expiry (ledger record, else candle open + horizon); the horizon is shown, never reset by a refresh
                     if (sig != Signal.WAIT && until > now) {
                         Spacer(modifier = Modifier.height(6.dp))

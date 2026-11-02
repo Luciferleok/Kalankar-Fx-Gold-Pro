@@ -54,6 +54,7 @@ object TrustPassport {
         // evidence
         add("Historical evidence", "पुराना सबूत", "जुना पुरावा",
             p?.let { if (it.hitRatePct >= 0 && it.hitRateN > 0) "${it.hitRatePct}% · N=${it.hitRateN} " + t(l, "(similar setups, not a probability)", "(मिलते-जुलते सेटअप, संभावना नहीं)", "(समान सेटअप, शक्यता नाही)") else null })
+        add("Evidence for this setup", "इस सेटअप का सबूत", "या सेटअपचा पुरावा", a.pulse?.edgeForCurrent?.ifBlank { null }, a.pulse?.edgeForCurrent?.contains("PROVEN EDGE") == true)
         add("Live qualification", "लाइव योग्यता", "लाइव्ह पात्रता", p?.researchModelStatus?.takeIf { it.isNotBlank() && it != "UNKNOWN" }, p?.provenEdge == true)
         p?.conflicting?.takeIf { it.isNotEmpty() }?.let { c -> add("Why it may fail", "क्यों गलत हो सकता है", "का चुकू शकते", c.take(3).joinToString(" · ") { it.title }) }
             ?: add("Why it may fail", "क्यों गलत हो सकता है", "का चुकू शकते", t(l, "no opposing rule recorded; rules can still be wrong", "कोई उल्टा नियम दर्ज नहीं; नियम फिर भी गलत हो सकते हैं", "उलटा नियम नोंदलेला नाही; नियम तरीही चुकू शकतात"))

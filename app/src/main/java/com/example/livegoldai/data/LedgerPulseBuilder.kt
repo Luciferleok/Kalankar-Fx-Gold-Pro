@@ -197,7 +197,9 @@ object LedgerPulseBuilder {
             integrityPassed = integrity?.passed ?: emptyList(),
             diagnosis = diagnosis,
             planCheck = planCheckLine(state),
-            byProvider = providerLines(state)
+            byProvider = providerLines(state),
+            edges = try { EdgeFinder.summary(state) } catch (_: Exception) { emptyList() },
+            edgeForCurrent = try { EdgeFinder.forForecast(a, state, now) } catch (_: Exception) { "" }
         )
     }
 

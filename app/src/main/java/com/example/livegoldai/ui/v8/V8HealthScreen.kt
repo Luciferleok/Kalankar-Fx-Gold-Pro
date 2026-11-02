@@ -94,6 +94,8 @@ fun V8HealthScreen(
                 if (p.planCheck.isNotEmpty()) V8KeyValue(tr(lang, "Plan check (v2)", "प्लान जाँच (v2)", "प्लॅन तपासणी (v2)"), p.planCheck)
                 // V34.4: never one mixed number: each data provider on its own line
                 p.byProvider.forEach { line -> V8KeyValue(tr(lang, "By provider", "प्रोवाइडर अनुसार", "प्रोव्हायडरनुसार"), line) }
+                // V34.7: where the rules have (or have not) beaten chance, 99.9% test
+                p.edges.forEach { line -> V8KeyValue(tr(lang, "Edge check", "एज जाँच", "एज तपासणी"), line) }
 
                 // ---- 24/7 background recorder
                 Spacer(modifier = Modifier.height(8.dp))
