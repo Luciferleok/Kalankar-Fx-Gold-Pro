@@ -252,6 +252,6 @@ object LedgerPulseBuilder {
         val tp = c[PredictionLedger.PLAN_TP1] ?: 0; val sl = c[PredictionLedger.PLAN_STOP] ?: 0
         val share = if (tp + sl > 0) " · TP1 first ${Math.round(100.0 * tp / (tp + sl))}% of entered (N=${tp + sl})" else ""
         return "TP1 $tp · stop $sl · no entry ${c[PredictionLedger.PLAN_NO_ENTRY] ?: 0} · open ${c[PredictionLedger.PLAN_OPEN] ?: 0}" +
-            " · unclear ${(c[PredictionLedger.PLAN_AMBIGUOUS] ?: 0) + (c[PredictionLedger.PLAN_NOT_COMPARABLE] ?: 0)}" + share
+            " · unclear ${(c[PredictionLedger.PLAN_AMBIGUOUS] ?: 0) + (c[PredictionLedger.PLAN_NOT_COMPARABLE] ?: 0) + (c[PredictionLedger.PLAN_BOUNDARY] ?: 0)}" + share
     }
 }

@@ -531,6 +531,10 @@ object PredictionLedger {
 
     const val PLAN_TP1 = "TP1"; const val PLAN_STOP = "STOP"; const val PLAN_NO_ENTRY = "NO_ENTRY"; const val PLAN_OPEN = "OPEN_AT_EXPIRY"
     const val PLAN_AMBIGUOUS = "AMBIGUOUS_BAR"; const val PLAN_NOT_COMPARABLE = "NOT_COMPARABLE"
+    /** V35.3-D (PLAN-V2.1 only): a decisive touch happened in a minute that is only partly inside the window */
+    const val PLAN_BOUNDARY = "BOUNDARY_UNCERTAIN"
+    const val PLAN_METHOD_V2 = "PLAN-V2"
+    const val PLAN_METHOD_V21 = "PLAN-V2.1"
 
     /**
      * V34.2 plan check (v2): judged on the exact levels the user saw, in time order, with real candles of the same
@@ -540,6 +544,7 @@ object PredictionLedger {
      * This does NOT replace [evaluate]'s outcome, which the learning engine and Shadow Lab keep using unchanged.
      */
     fun planOutcome(record: LedgerRecord, path: PricePath): String {
+        if (record.planMethod == PLAN_METHOD_V21) return planOutcomeV21(record, path)
         if (record.planMethod.isEmpty() || record.finalSignal == Signal.WAIT) return ""
         val e = record.planEntry; val s = record.planStop; val t = record.planTp1
         if (listOf(e, s, t).any { !it.isFinite() || it <= 0.0 }) return ""
@@ -563,6 +568,51 @@ object PredictionLedger {
             if (hitTp) return PLAN_TP1
         }
         return if (entered) PLAN_OPEN else PLAN_NO_ENTRY
+    }
+
+    /**
+     * V35.3-D PLAN-V2.1 (records made from E22.1-V35.3 on; older PLAN-V2 records keep the method above, unchanged).
+     * One-minute OHLC bars cannot show WHEN inside the minute a level was touched. Before, the minute in which the call was
+     * published (up to 59 s BEFORE publication) and the minute running past expiry were read as if every touch happened
+     * inside the window. Now:
+     *  - the sequence is read only on minutes fully inside [publication, expiry];
+     *  - if the partial first minute touched the stop or TP1, or (when the full minutes never reached the entry) the entry,
+     *    the result could depend on a touch before publication: BOUNDARY_UNCERTAIN;
+     *  - if the result is still open / no entry and the partial last minute touched the stop or TP1 (or the entry), that
+     *    touch may be after expiry: BOUNDARY_UNCERTAIN.
+     * BOUNDARY_UNCERTAIN is counted neither TP1 nor STOP.
+     */
+    fun planOutcomeV21(record: LedgerRecord, path: PricePath): String {
+        if (record.finalSignal == Signal.WAIT) return ""
+        val e = record.planEntry; val s = record.planStop; val t = record.planTp1
+        if (listOf(e, s, t).any { !it.isFinite() || it <= 0.0 }) return ""
+        val sell = record.finalSignal == Signal.SELL
+        if (sell && !(s > e && t < e) || !sell && !(s < e && t > e)) return ""
+        val all = path.bars.filter { it.t + 60_000L > record.createdAt && it.t < record.expiresAt }.sortedBy { it.t }
+        if (all.isEmpty()) return ""
+        val full = all.filter { it.t >= record.createdAt && it.t + 60_000L <= record.expiresAt }
+        val first = all.firstOrNull { it.t < record.createdAt }
+        val last = all.lastOrNull { it.t + 60_000L > record.expiresAt && it.t >= record.createdAt }
+        fun stopIn(b: PathBar) = if (sell) b.h >= s else b.l <= s
+        fun tpIn(b: PathBar) = if (sell) b.l <= t else b.h >= t
+        fun entryIn(b: PathBar) = if (sell) b.h >= e else b.l <= e
+        var entered = false
+        var res = ""
+        for (b in full) {
+            if (!entered) {
+                if (!entryIn(b)) continue
+                entered = true
+                if (stopIn(b)) { res = PLAN_STOP; break }
+                if (tpIn(b)) { res = PLAN_AMBIGUOUS; break }
+                continue
+            }
+            if (stopIn(b)) { res = PLAN_STOP; break }
+            if (tpIn(b)) { res = PLAN_TP1; break }
+        }
+        if (res.isEmpty()) res = if (entered) PLAN_OPEN else PLAN_NO_ENTRY
+        if (first != null && (stopIn(first) || tpIn(first) || (!entered && entryIn(first)))) return PLAN_BOUNDARY
+        if (last != null && (res == PLAN_OPEN || res == PLAN_NO_ENTRY) && (stopIn(last) || tpIn(last) || (res == PLAN_NO_ENTRY && entryIn(last)))) return PLAN_BOUNDARY
+        return res
     }
 
     fun emptyResult(record: LedgerRecord, now: Long, outcome: LedgerOutcome, source: String): LedgerResult = LedgerResult(

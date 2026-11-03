@@ -329,7 +329,7 @@ class LearningCoordinator(
             val fin = r.finalSignal
             val ok = planOk && fin == rawSig && fin != Signal.WAIT && listOf(ts.entryPrice, ts.stopLoss, ts.takeProfit1, ts.takeProfit2).all { it.isFinite() && it > 0.0 } &&
                 (if (fin == Signal.SELL) ts.stopLoss > ts.entryPrice && ts.takeProfit1 < ts.entryPrice else ts.stopLoss < ts.entryPrice && ts.takeProfit1 > ts.entryPrice)
-            if (!ok) r else r.copy(planEntry = ts.entryPrice, planStop = ts.stopLoss, planTp1 = ts.takeProfit1, planTp2 = ts.takeProfit2, planMethod = "PLAN-V2")
+            if (!ok) r else r.copy(planEntry = ts.entryPrice, planStop = ts.stopLoss, planTp1 = ts.takeProfit1, planTp2 = ts.takeProfit2, planMethod = PredictionLedger.PLAN_METHOD_V21)   // V35.3-D: new records use PLAN-V2.1
         }
     }
 }
