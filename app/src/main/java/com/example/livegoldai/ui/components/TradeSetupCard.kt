@@ -267,7 +267,7 @@ fun TradeSetupCard(
                             Stop Loss: $${String.format(Locale.US, "%.2f", setup.stopLoss)} (-${String.format(Locale.US, "%.0f", setup.stopLossPips)} pips)
                             Take Profit 1: $${String.format(Locale.US, "%.2f", setup.takeProfit1)} (+${String.format(Locale.US, "%.0f", setup.takeProfit1Pips)} pips)
                             Take Profit 2: $${String.format(Locale.US, "%.2f", setup.takeProfit2)} (+${String.format(Locale.US, "%.0f", setup.takeProfit2Pips)} pips)
-                            Risk:Reward: ${setup.riskRewardRatio} | Confluence: ${setup.confidencePercent}%
+                            Risk:Reward: ${setup.riskRewardRatio} | ${scoreTag ?: "Score"}: ${scoreValue ?: "--"}
                             Analysis: ${setup.strategyNote}
                             By Mr. Rudvay Ujjwal Kalankar
                         """.trimIndent()

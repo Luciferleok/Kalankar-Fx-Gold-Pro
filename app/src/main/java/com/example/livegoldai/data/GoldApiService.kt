@@ -544,6 +544,9 @@ class GoldApiService(
             if (dollar) {
                 // V35.3-G: 1st choice the dollar index computed from six OANDA FX pairs (completed candles), then Yahoo
                 if (oandaConfigured()) oandaMacroPairs()?.let { p -> OandaMacro.dollarIndex(p, t, now, name)?.let { return it } }
+                // V35.4: six-pair index not possible (a pair missing on this account) -> OANDA EUR/USD as the dollar proxy
+                if (oandaConfigured()) oandaMacroBars("EUR_USD")?.let { b -> NewsMacro.usdProxy(b.filter { it.complete }.map { it.startMs to it.close }, t, now, name)?.let { return it.copy(
+                    explanation = it.explanation.replace("INVERTED EUR/USD (", "INVERTED EUR/USD (OANDA, ")) } }
                 NewsMacro.dxy(yahooIntraday("DX-Y.NYB"), t, now, name)?.let { return it }
                 NewsMacro.usdProxy(yahooIntraday("EURUSD=X"), t, now, name)?.let { return it }
             } else {

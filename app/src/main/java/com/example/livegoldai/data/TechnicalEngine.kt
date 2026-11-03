@@ -589,9 +589,11 @@ object TechnicalEngine {
                 detail = dxyData.explanation
             ),
             IndicatorItem(
-                name = "US 10-Yr Treasury Yield",
+                // V35.4: OANDA's USB10Y_USD is the T-Note PRICE, not the yield in percent: own name and unit
+                name = if (us10yData.symbol == OandaMacro.NOTE) "US 10Y T-Note price (OANDA; yield moves the other way)" else "US 10-Yr Treasury Yield",
                 signal = us10yData.impactOnGold,
-                valueDisplay = "${format2(us10yData.value)}% (${if (us10yData.changePercent >= 0) "+" else ""}${format2(us10yData.changePercent)}%)",
+                valueDisplay = if (us10yData.symbol == OandaMacro.NOTE) "${format2(us10yData.value)} (price ${if (us10yData.changePercent >= 0) "+" else ""}${format2(us10yData.changePercent)}%)"
+                    else "${format2(us10yData.value)}% (${if (us10yData.changePercent >= 0) "+" else ""}${format2(us10yData.changePercent)}%)",
                 detail = us10yData.explanation
             )
         )

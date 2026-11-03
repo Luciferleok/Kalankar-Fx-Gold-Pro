@@ -35,6 +35,16 @@ object PillarCheck {
         return EdgeFinder.independentAcross(rows.map { it.r }).mapNotNull { byId[it.id] }
     }
 
+    /**
+     * V35.4: the gate weights each engine version actually used. Identical for every engine since V14 (git: b5c7596 to
+     * now), verified against the live engine on 4000 random decisions. A version not listed here is NOT re-scored with
+     * today's weights: its records are left out of "calls that needed it" (said in the line) instead of being silently
+     * rebuilt with rules it never used.
+     */
+    val GATE_WEIGHTS_BY_ENGINE: Map<String, Map<String, Double>> = mapOf("" to TechnicalEngine.PILLAR_WEIGHTS,
+        "E22.0" to TechnicalEngine.PILLAR_WEIGHTS, "E22.1" to TechnicalEngine.PILLAR_WEIGHTS)
+    fun gateWeights(engineVersion: String): Map<String, Double>? = GATE_WEIGHTS_BY_ENGINE[engineVersion]
+
     /** Would the engine still have called [side] if [key]'s vote were WAIT? (weighted 68% gate or 5-of-7 count) */
     fun survivesWithout(votes: Map<String, Signal>, side: Signal, key: String, weights: Map<String, Double> = TechnicalEngine.PILLAR_WEIGHTS): Boolean {
         // V35.0: only pillars that voted in this record take part (Macro is absent outside its news window)
@@ -54,7 +64,7 @@ object PillarCheck {
         else -> "not proven either way"
     }
 
-    data class PillarLine(val key: String, val ownVote: EdgeFinder.Group, val needed: EdgeFinder.Group, val title: String = TITLES[key] ?: key)
+    data class PillarLine(val key: String, val ownVote: EdgeFinder.Group, val needed: EdgeFinder.Group, val title: String = TITLES[key] ?: key, val neededByEngine: String = "")
 
     /** V35.0: records written after the Macro news-window rule carry "ctx:macro" (Macro's raw vote, active or not). */
     private fun newRule(r: LedgerRecord) = r.sources.containsKey("ctx:macro")
@@ -71,12 +81,16 @@ object PillarCheck {
             // calls that needed this pillar's vote
             val needRows = independentRows(pool.filter { x ->
                 val side = x.r.finalSignal
-                (side == Signal.BUY || side == Signal.SELL) && x.r.sources["grp:$key"] == side && !survivesWithout(votes(x.r), side, key)
+                val w = gateWeights(x.r.engineVersion)
+                w != null && (side == Signal.BUY || side == Signal.SELL) && x.r.sources["grp:$key"] == side && !survivesWithout(votes(x.r), side, key, w)
             })
             var nOk = 0; var nN = 0
-            needRows.forEach { x -> when (PredictionLedger.directionScore(x.r.finalSignal, x.res.move, x.res.threshold)) { 1 -> { nOk++; nN++ }; 0 -> nN++ } }
+            val byEng = LinkedHashMap<String, IntArray>()
+            needRows.forEach { x -> val c = byEng.getOrPut(EdgeFinder.engineOf(x.r.engineVersion)) { IntArray(2) }
+                when (PredictionLedger.directionScore(x.r.finalSignal, x.res.move, x.res.threshold)) { 1 -> { nOk++; nN++; c[0]++; c[1]++ }; 0 -> { nN++; c[1]++ } } }
+            val engLine = byEng.filter { it.value[1] > 0 }.entries.joinToString(" · ") { (k, v) -> "$k ${Math.round(100.0 * v[0] / v[1])}% of ${v[1]}" }
             val title = if (key == "macro") "Macro & News (old rule, always on)" else TITLES[key]!!
-            PillarLine(key, EdgeFinder.Group("Pillar", title, ok, n), EdgeFinder.Group("Needed", title, nOk, nN), title)
+            PillarLine(key, EdgeFinder.Group("Pillar", title, ok, n), EdgeFinder.Group("Needed", title, nOk, nN), title, engLine)
         } + macroNewRule(rows)
     }
 
@@ -117,8 +131,11 @@ object PillarCheck {
         val ps = pillars(state)
         if (ps.all { it.ownVote.n == 0 }) return emptyList()
         val lines = ps.map { p ->
+            // V35.4: two different questions, named apart: the pillar's OWN vote accuracy, and its INCREMENTAL contribution
+            // (final BUY/SELL calls that would have been WAIT without it), with the engine versions it comes from
             "${p.title}: own vote ${if (p.ownVote.n == 0) "no checked votes yet" else pct(p.ownVote) + " · " + verdict(p.ownVote)}" +
-                if (p.needed.n > 0) " · calls that needed it: ${Math.round(p.needed.pct)}% right of ${p.needed.n}" + (if (p.needed.n >= EdgeFinder.MIN_N) " (${verdict(p.needed)})" else "") else ""
+                if (p.needed.n > 0) " · incremental (calls that needed it): ${Math.round(p.needed.pct)}% right of ${p.needed.n}" +
+                    (if (p.needed.n >= EdgeFinder.MIN_N) " (${verdict(p.needed)})" else "") + (p.neededByEngine.takeIf { it.isNotEmpty() }?.let { " [$it]" } ?: "") else ""
         }
         val rf = rangeFilter(state)
         val rfLine = if (rf.n == 0) emptyList() else listOf("Range filter: the calls it blocked would have been ${pct(rf)} · " + when (rf.verdict) {

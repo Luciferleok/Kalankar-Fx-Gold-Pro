@@ -101,8 +101,8 @@ class HealthMonitor {
                 }),
             // V35.3-B: the four Macro states kept apart (window / schedule source / minute data / vote)
             CockpitInsightsBuilder.macroWindowCheck(a),
-            HealthCheck("US Dollar Index", if (feed?.dxyAvailable == true) "OK" else "WARN", if (feed?.dxyAvailable == true) "Live" else "Unavailable (no vote)"),
-            HealthCheck("US 10Y yield", if (feed?.us10yAvailable == true) "OK" else "WARN", if (feed?.us10yAvailable == true) "Live" else "Unavailable (no vote)")
+            HealthCheck("US Dollar Index (daily context)", if (feed?.dxyAvailable == true) "OK" else "WARN", if (feed?.dxyAvailable == true) "Live" else "Unavailable (no vote)"),
+            HealthCheck("US 10Y yield (daily context)", if (feed?.us10yAvailable == true) "OK" else "WARN", if (feed?.us10yAvailable == true) "Live" else "Unavailable (no vote)")
         )
         categories.add(category("NEWS", "News & macro", newsChecks))
 
