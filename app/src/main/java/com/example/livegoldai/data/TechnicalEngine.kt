@@ -608,7 +608,9 @@ object TechnicalEngine {
             GroupAnalysis(key = "volatility", title = "Volatility Bands", verdict = volatilityVerdict, indicators = volatilityItems),
             GroupAnalysis(key = "candlestick", title = "Candlestick Action", verdict = candleVerdict, indicators = candleItems),
             GroupAnalysis(key = "macro",
-                title = if (macroActive) "Macro & News Sentiment" else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news)",
+                title = if (macroActive) "Macro & News Sentiment (ACTIVE: ${macroEvent!!.title}, " +
+                    (if (macroEvent.title.endsWith("(BLS)") || macroEvent.title.endsWith("(Fed)")) "official schedule" else "live calendar") + ")"
+                    else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news)",
                 verdict = macroVerdict, indicators = macroItems, rawVerdict = macroRaw, active = macroActive)
         )
         // V35.0: only active pillars take part (Macro is inactive outside its news window)

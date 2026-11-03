@@ -533,7 +533,7 @@ class GoldApiService(
     /**
      * Macro input for the engine. Inside the news window (MacroWindow): the move around the release (NewsMacro), from
      * the dollar index, or from EUR/USD (inverted: EUR/USD down = dollar up) when the dollar index is delayed; if no
-     * intraday price at all, the day's change, named as such. Outside the window the engine gives Macro no vote anyway.
+     * intraday price at all, no vote (MACRO DATA UNAVAILABLE). Outside the window the engine gives Macro no vote anyway.
      */
     private fun macroIndex(dollar: Boolean, events: List<EconomicEvent>): MacroMarketIndex? {
         val now = System.currentTimeMillis()
@@ -548,8 +548,12 @@ class GoldApiService(
             } else {
                 NewsMacro.yield10(yahooIntraday("%5ETNX"), t, now, name)?.let { return it }
             }
+            // V35.3-B: no fresh minute-level price -> NO vote (before: the day's change voted, the input that was wrong
+            // 58% of the time). The day's value is still shown as context.
             val daily = if (dollar) fetchLiveDxy() else fetchLiveUs10y()
-            return daily?.copy(explanation = daily.explanation + " (news window, but no fresh intraday price: day's change used)")
+            val what = if (dollar) "US Dollar" else "10Y yield"
+            return (daily ?: MacroMarketIndex(if (dollar) "DXY" else "^TNX", if (dollar) "US Dollar Index" else "US 10-Yr Yield", 0.0, 0.0, Signal.WAIT, ""))
+                .copy(impactOnGold = Signal.WAIT, explanation = "News window ($name): MACRO DATA UNAVAILABLE for the $what (no fresh 5-minute price): no vote")
         }
         return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
     }

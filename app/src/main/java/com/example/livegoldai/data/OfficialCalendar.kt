@@ -44,12 +44,28 @@ object OfficialCalendar {
     }.sortedBy { ms(it.date + " " + it.time.removeSuffix(" ET")) }
 
     /**
-     * Live events plus every official event that the live list does not already have (no High USD live event within
-     * 45 minutes of it). With no live list, the official list alone.
+     * Live events plus every official event that the live list does not already have (no live High USD release of the
+     * same kind within 45 minutes of it). With no live list, the official list alone.
      */
+    /** V35.3-B: the kind of release, so a live event only replaces the SAME official release (statement != press conference). */
+    fun kind(title: String): String {
+        val x = title.lowercase()
+        return when {
+            "press conference" in x -> "FOMC_PRESS"
+            "fomc" in x || "federal funds" in x || "fed interest rate" in x -> "FOMC_RATE"
+            "non-farm" in x || "nonfarm" in x || "employment situation" in x -> "NFP"
+            "ppi" in x || "producer price" in x -> "PPI"
+            "cpi" in x || "consumer price" in x -> "CPI"
+            else -> "OTHER"
+        }
+    }
+
     fun merge(live: List<EconomicEvent>): List<EconomicEvent> {
-        val liveHigh = live.filter { it.impact.equals("High", true) }.mapNotNull { EventTime.parseMs(it.isoTime) }
-        val extra = events().filter { o -> val t = EventTime.parseMs(o.isoTime) ?: return@filter false; liveHigh.none { kotlin.math.abs(it - t) <= 45 * 60_000L } }
+        val liveHigh = live.filter { it.impact.equals("High", true) && it.country.equals("USD", true) }
+            .mapNotNull { e -> EventTime.parseMs(e.isoTime)?.let { kind(e.title) to it } }
+        // an official event is dropped only when the live calendar has the same KIND of release within 45 minutes
+        val extra = events().filter { o -> val t = EventTime.parseMs(o.isoTime) ?: return@filter false; val k = kind(o.title)
+            liveHigh.none { (lk, lt) -> lk == k && kotlin.math.abs(lt - t) <= 45 * 60_000L } }
         return (live + extra).sortedBy { EventTime.parseMs(it.isoTime) ?: Long.MAX_VALUE }
     }
 }

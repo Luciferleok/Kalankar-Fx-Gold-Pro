@@ -99,6 +99,8 @@ class HealthMonitor {
                     (feed?.calendarEvents ?: 0) > 0 -> "${feed?.calendarEvents} USD events from the official BLS / Fed schedule only. ${feed?.calendarIssue}"
                     else -> "Calendar not loaded" + (feed?.calendarIssue?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
                 }),
+            // V35.3-B: the four Macro states kept apart (window / schedule source / minute data / vote)
+            CockpitInsightsBuilder.macroWindowCheck(a),
             HealthCheck("US Dollar Index", if (feed?.dxyAvailable == true) "OK" else "WARN", if (feed?.dxyAvailable == true) "Live" else "Unavailable (no vote)"),
             HealthCheck("US 10Y yield", if (feed?.us10yAvailable == true) "OK" else "WARN", if (feed?.us10yAvailable == true) "Live" else "Unavailable (no vote)")
         )
@@ -286,5 +288,17 @@ object CockpitInsightsBuilder {
     private fun rsiValue(a: GoldAnalysisResult): Double? {
         val item = a.groups.flatMap { it.indicators }.firstOrNull { it.name.startsWith("RSI") } ?: return null
         return Regex("-?\\d+(\\.\\d+)?").find(item.valueDisplay)?.value?.toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
+    }
+
+    /** V35.3-B: NEWS WINDOW ACTIVE / EVENT SCHEDULE / INTRADAY EVIDENCE / MACRO VOTE ELIGIBLE, from the analysis itself. */
+    fun macroWindowCheck(a: GoldAnalysisResult): HealthCheck {
+        val g = a.groups.firstOrNull { it.key == "macro" } ?: return HealthCheck("Macro news window", "WARN", "No Macro pillar in this analysis")
+        if (!g.active) return HealthCheck("Macro news window", "OK", "OFF: no high-impact USD news within 1 h (Macro takes no part in the forecast)")
+        val src = Regex("ACTIVE: (.*)\\)$").find(g.title)?.groupValues?.get(1) ?: "news window"
+        val missing = g.indicators.count { it.detail.contains("unavailable", ignoreCase = true) }
+        val votes = g.indicators.count { it.signal != Signal.WAIT }
+        val evidence = when (missing) { 0 -> "minute data: dollar + 10Y"; g.indicators.size -> "minute data: NONE"; else -> "minute data: partial" }
+        return HealthCheck("Macro news window", if (missing == g.indicators.size) "WARN" else "OK",
+            "ACTIVE: $src · $evidence · " + if (votes > 0) "Macro votes ${g.verdict.name}" else "no Macro vote (moves too small or no data)")
     }
 }

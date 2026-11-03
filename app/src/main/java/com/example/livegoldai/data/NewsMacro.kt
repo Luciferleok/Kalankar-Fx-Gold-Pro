@@ -20,13 +20,26 @@ object NewsMacro {
 
     data class Move(val change: Double, val fromMs: Long, val toMs: Long, val label: String)
 
-    /** [bars] = (time ms, close), any order, nulls removed. */
+    /** Yahoo bars are stamped at their START; a bar's close is the price at its END (or "now" while it is forming). */
+    const val BAR_MS = 5 * 60_000L
+
+    /**
+     * [bars] = (bar start ms, close), any order. V35.3-B: the price AT a moment is the close of the last bar that ENDED by
+     * then (before: the bar that STARTED at the release was taken as the pre-release price, although its close is after the
+     * release: 3 min after NFP the move was not measured at all, 12 min after it 0.05% instead of 0.30%).
+     *  - before the release: from the price 60 min ago to the latest price;
+     *  - after the release: from the price at the release to the latest price, which must come from a bar that started
+     *    at or after the release (otherwise there is no post-release price yet: no vote).
+     * Bars stamped in the future are ignored; a latest bar older than [MAX_AGE_MS] means no vote.
+     */
     fun move(bars: List<Pair<Long, Double>>, eventMs: Long, now: Long): Move? {
         val b = bars.filter { it.first <= now && it.second.isFinite() && it.second > 0 }.sortedBy { it.first }
         val cur = b.lastOrNull() ?: return null
         if (now - cur.first > MAX_AGE_MS) return null
-        val (baseT, label) = if (now < eventMs) (now - 60 * 60_000L) to "last 60 min" else eventMs to "since the release"
-        val base = b.lastOrNull { it.first <= baseT } ?: return null
+        val after = now >= eventMs
+        val (baseAt, label) = if (!after) (now - 60 * 60_000L) to "last 60 min" else eventMs to "since the release"
+        if (after && cur.first < eventMs) return null
+        val base = b.lastOrNull { it.first + BAR_MS <= baseAt } ?: return null
         if (base.first >= cur.first) return null
         return Move(cur.second - base.second, base.first, cur.first, label)
     }
