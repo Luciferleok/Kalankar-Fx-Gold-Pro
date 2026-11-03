@@ -19,23 +19,36 @@ import kotlin.math.sqrt
  * timeframe, a call is kept only when it was made at or after the end of the previous kept call's window; calls of other
  * providers on the same moment are dropped the same way. Before: every decided call was counted, so N and the certainty
  * were overstated (screenshot 2 Nov: "15M: 61% right of 319 · PROVEN EDGE" counted overlapping windows).
+ * V35.3 (statistical honesty): a group above the 99.9% bound is "HISTORICAL EDGE" (past data only, NOT forward-validated),
+ * never "PROVEN". Cross-timeframe groups (session, regime, side, agreement, provider, engine, all) count one call per time
+ * window across ALL timeframes (a 5m and a 15m call on the same moment are one piece of evidence). Engine versions are a
+ * dimension of their own. For the forecast on screen, a positive group is shown only together with any matching group that
+ * points the other way (MIXED EVIDENCE); a lone selected subgroup is never presented as proof for today's call.
+ * Forward validation (a frozen rule tested only on calls made after it was frozen) does not exist yet: nothing is labelled so.
  * Nothing here changes a forecast, a level, the ledger, learning or qualification. Past results are not a promise.
  */
 object EdgeFinder {
     const val MIN_N = 50
     private const val Z = 3.291            // 99.9% two-sided (many groups are compared: strict on purpose)
+    const val HIST = "HISTORICAL EDGE"
+    const val WORSE = "WORSE THAN CHANCE"
+    const val NONE = "NO EDGE SHOWN"
+    const val FEW = "INSUFFICIENT SAMPLE"
+    /** dimensions that pool several timeframes: one call per time window across all timeframes */
+    private val CROSS = listOf("Session", "Regime", "Side", "Agreement", "Provider", "Engine")
 
     data class Group(val dimension: String, val value: String, val right: Int, val n: Int) {
         val pct: Double get() = if (n == 0) 0.0 else 100.0 * right / n
         val low: Double get() = wilson(right, n).first * 100
         val high: Double get() = wilson(right, n).second * 100
         val verdict: String get() = when {
-            n < MIN_N -> "TOO FEW"
-            low > 50.0 -> "PROVEN EDGE"
-            high < 50.0 -> "WORSE THAN CHANCE"
-            else -> "NO PROVEN EDGE"
+            n < MIN_N -> FEW
+            low > 50.0 -> HIST
+            high < 50.0 -> WORSE
+            else -> NONE
         }
-        fun line(): String = "$dimension $value: ${Math.round(pct)}% right of $n independent calls (99.9% range ${Math.round(low)}–${Math.round(high)}%) · $verdict"
+        fun line(): String = "$dimension $value: ${Math.round(pct)}% right of $n independent calls (99.9% range ${Math.round(low)}–${Math.round(high)}%) · " +
+            if (verdict == HIST) "$HIST (past data only, not forward-validated)" else verdict
     }
 
     fun wilson(k: Int, n: Int): Pair<Double, Double> {
@@ -50,65 +63,81 @@ object EdgeFinder {
     fun providerOf(src: String): String = when (SourceRegistry.identify(src).provider) {
         ProviderId.OANDA -> "OANDA"; ProviderId.TWELVE_DATA -> "Twelve Data"; ProviderId.NONE -> "older version"; else -> "proxy"
     }
+    fun engineOf(v: String): String = v.ifBlank { "older" }
 
     /** decided v1 calls with their dimension values */
     private data class Call(val right: Boolean, val keys: Map<String, String>)
 
     /** V34.8.1: per timeframe, keep a call only when its window starts at or after the previous kept call's window ended. */
     fun independent(records: List<LedgerRecord>): List<LedgerRecord> =
-        records.groupBy { it.interval.lowercase() }.values.flatMap { list ->
-            var end = Long.MIN_VALUE
-            list.sortedWith(compareBy({ it.createdAt }, { it.id })).filter { r ->
-                if (r.createdAt >= end) { end = maxOf(r.expiresAt, r.createdAt + 1); true } else false
-            }
-        }
+        records.groupBy { it.interval.lowercase() }.values.flatMap { thin(it) }
 
-    private fun calls(state: LedgerState): List<Call> = independent(state.records.filter { r ->
+    /** V35.3: one call per time window across ALL timeframes (for groups that pool timeframes). */
+    fun independentAcross(records: List<LedgerRecord>): List<LedgerRecord> = thin(records)
+
+    private fun thin(list: List<LedgerRecord>): List<LedgerRecord> {
+        var end = Long.MIN_VALUE
+        return list.sortedWith(compareBy({ it.createdAt }, { it.id })).filter { r ->
+            if (r.createdAt >= end) { end = maxOf(r.expiresAt, r.createdAt + 1); true } else false
+        }
+    }
+
+    private fun decided(state: LedgerState): List<LedgerRecord> = state.records.filter { r ->
         r.finalSignal != Signal.WAIT && when (state.resultOf(r.id)?.outcome) {
             LedgerOutcome.CORRECT, LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> true; else -> false }
-    }).mapNotNull { r ->
-        if (r.finalSignal == Signal.WAIT) return@mapNotNull null
-        val o = state.resultOf(r.id)?.outcome ?: return@mapNotNull null
-        val right = when (o) { LedgerOutcome.CORRECT -> true; LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> false; else -> return@mapNotNull null }
-        Call(right, mapOf("Timeframe" to r.interval.uppercase(), "Session" to r.session.ifBlank { "UNKNOWN" }, "Regime" to r.regime.ifBlank { "UNKNOWN" },
-            "Side" to r.finalSignal.name, "Agreement" to band(r.confidence), "Provider" to providerOf(r.dataSource)))
     }
+
+    private fun toCall(r: LedgerRecord, state: LedgerState): Call = Call(state.resultOf(r.id)?.outcome == LedgerOutcome.CORRECT,
+        mapOf("Timeframe" to r.interval.uppercase(), "Session" to r.session.ifBlank { "UNKNOWN" }, "Regime" to r.regime.ifBlank { "UNKNOWN" },
+            "Side" to r.finalSignal.name, "Agreement" to band(r.confidence), "Provider" to providerOf(r.dataSource), "Engine" to engineOf(r.engineVersion)))
+
+    /** per-timeframe thinning (Timeframe groups) */
+    private fun calls(state: LedgerState): List<Call> = independent(decided(state)).map { toCall(it, state) }
+    /** thinning across timeframes (all other groups and the "All calls" line) */
+    private fun callsAcross(state: LedgerState): List<Call> = independentAcross(decided(state)).map { toCall(it, state) }
 
     fun groups(state: LedgerState): List<Group> {
-        val cs = calls(state)
-        return listOf("Timeframe", "Session", "Regime", "Side", "Agreement", "Provider").flatMap { dim ->
-            cs.groupBy { it.keys.getValue(dim) }.map { (v, list) -> Group(dim, v, list.count { it.right }, list.size) }
-        }
+        val per = calls(state); val across = callsAcross(state)
+        fun of(dim: String, cs: List<Call>) = cs.groupBy { it.keys.getValue(dim) }.map { (v, list) -> Group(dim, v, list.count { it.right }, list.size) }
+        return of("Timeframe", per) + CROSS.flatMap { of(it, across) }
     }
 
-    /** SYSTEM lines: proven edges first, then worse-than-chance, then a one-line summary */
+    /** SYSTEM lines: all calls, historical edges, worse-than-chance groups, the current engine, then a one-line summary */
     fun summary(state: LedgerState): List<String> {
         val gs = groups(state)
         if (gs.isEmpty()) return emptyList()
-        val total = calls(state); val all = Group("All", "calls", total.count { it.right }, total.size)
-        val proven = gs.filter { it.verdict == "PROVEN EDGE" }.sortedByDescending { it.low }
-        val worse = gs.filter { it.verdict == "WORSE THAN CHANCE" }.sortedBy { it.high }
-        return listOf(all.line()) + proven.map { it.line() } + worse.map { it.line() } +
-            (if (proven.isEmpty()) listOf("No group shows a proven edge yet (99.9% test, N >= $MIN_N independent calls).") else emptyList())
+        val total = callsAcross(state); val all = Group("All", "calls", total.count { it.right }, total.size)
+        val hist = gs.filter { it.verdict == HIST }.sortedByDescending { it.low }
+        val worse = gs.filter { it.verdict == WORSE }.sortedBy { it.high }
+        val eng = gs.firstOrNull { it.dimension == "Engine" && it.value == PredictionLedger.ENGINE_VERSION }
+        return listOf(all.line()) + hist.map { it.line() } + worse.map { it.line() } +
+            listOf(eng?.let { "Current engine ${PredictionLedger.ENGINE_VERSION}: " + it.line().substringAfter(": ") } ?: "Current engine ${PredictionLedger.ENGINE_VERSION}: no checked calls yet") +
+            (if (hist.isEmpty()) listOf("No group shows a historical edge (99.9% test, N >= $MIN_N independent calls).") else emptyList()) +
+            "Historical groups are past data only: none is forward-validated, none is today's win chance."
     }
 
     /**
-     * The evidence for the forecast on screen: its own timeframe, current session, current regime, side, agreement band
-     * and provider. Reports the strongest PROVEN EDGE or WORSE THAN CHANCE among them, else "no proven edge".
+     * The evidence for the forecast on screen: every matching group (its timeframe, current session, regime, side,
+     * agreement band, provider and the current engine). A historical edge is shown only together with any matching group
+     * that points the other way; worse-than-chance groups come first.
      */
     fun forForecast(a: GoldAnalysisResult, state: LedgerState, now: Long): String {
         if (a.overallSignal == Signal.WAIT) return ""
         val newsActive = a.newsMode != null || a.newsTradingPlan?.isNewsActive == true || a.isNewsModeTriggered
         val mine = mapOf("Timeframe" to a.interval.uppercase(), "Session" to PredictionLedger.sessionOf(now),
             "Regime" to PredictionLedger.regimeOf(a.recentCandles, newsActive), "Side" to a.overallSignal.name,
-            "Agreement" to band(a.agreementPercent.toInt()), "Provider" to providerOf(a.feed?.source ?: ""))
+            "Agreement" to band(a.agreementPercent.toInt()), "Provider" to providerOf(a.feed?.source ?: ""), "Engine" to PredictionLedger.ENGINE_VERSION)
         val gs = groups(state).filter { mine[it.dimension] == it.value }
-        val worse = gs.filter { it.verdict == "WORSE THAN CHANCE" }.minByOrNull { it.high }
-        val best = gs.filter { it.verdict == "PROVEN EDGE" }.maxByOrNull { it.low }
+        val worse = gs.filter { it.verdict == WORSE }.minByOrNull { it.high }
+        val best = gs.filter { it.verdict == HIST }.maxByOrNull { it.low }
+        // a matching group with enough calls whose own hit rate is below 50% contradicts a positive group
+        val against = gs.filter { it.n >= MIN_N && it.pct < 50.0 && it.verdict != WORSE }.minByOrNull { it.pct }
         return when {
             worse != null -> "Caution: ${worse.line()}"
-            best != null -> best.line()
-            else -> "No proven edge for this setup yet (timeframe, session, regime, side, agreement, provider all checked)"
+            best != null && against != null -> "MIXED EVIDENCE: ${best.line()} BUT ${against.line()}"
+            best != null -> "HISTORICAL GROUP EVIDENCE: ${best.line()}"
+            gs.none { it.n >= MIN_N } -> "$FEW for this setup (fewer than $MIN_N independent calls in every matching group)"
+            else -> "No edge shown for this setup (timeframe, session, regime, side, agreement, provider, engine all checked)"
         }
     }
 }

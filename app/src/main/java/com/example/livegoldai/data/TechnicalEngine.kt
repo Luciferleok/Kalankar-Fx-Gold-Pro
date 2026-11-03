@@ -767,9 +767,9 @@ object TechnicalEngine {
                 titleEnglish = "68% weighted agreement gate (built-in rule)",
                 titleHindi = "68% वेटेड सहमति गेट (बिल्ट-इन नियम)",
                 titleMarathi = "68% वेटेड सहमती गेट (बिल्ट-इन नियम)",
-                descriptionEnglish = "BUY/SELL is shown only when the weighted pillar vote reaches 68% (or 5 of 7 pillars agree). Otherwise WAIT.",
-                descriptionHindi = "BUY/SELL तभी दिखता है जब वेटेड पिलर वोट 68% हो (या 7 में से 5 पिलर सहमत हों)। वरना WAIT।",
-                descriptionMarathi = "BUY/SELL तेव्हाच दिसतो जेव्हा वेटेड पिलर मत 68% होते (किंवा 7 पैकी 5 पिलर सहमत). नाहीतर WAIT.",
+                descriptionEnglish = "BUY/SELL is shown only when the weighted pillar vote reaches 68% (or 5 voting pillars agree: 7 pillars, or 6 when Macro is outside its news window). Otherwise WAIT.",
+                descriptionHindi = "BUY/SELL तभी दिखता है जब वेटेड पिलर वोट 68% हो (या 5 वोटिंग पिलर सहमत हों: 7, या न्यूज़ विंडो के बाहर Macro बंद होने पर 6)। वरना WAIT।",
+                descriptionMarathi = "BUY/SELL तेव्हाच दिसतो जेव्हा वेटेड पिलर मत 68% होते (किंवा 5 मतदान करणारे पिलर सहमत: 7, किंवा न्यूज विंडोबाहेर Macro बंद असताना 6). नाहीतर WAIT.",
                 errorAddressedEnglish = "Fixed rule, not learned. Its real effect is measured in the Learning Center.",
                 errorAddressedHindi = "यह तय नियम है, सीखा हुआ नहीं। इसका असली असर लर्निंग सेंटर में मापा जाता है।",
                 errorAddressedMarathi = "हा ठरलेला नियम आहे, शिकलेला नाही. याचा खरा परिणाम लर्निंग सेंटरमध्ये मोजला जातो.",
@@ -778,12 +778,17 @@ object TechnicalEngine {
         )
 
         // Next Prediction Playbook (Explicit, actionable, profit-maximizing guidance)
-        // No invented win rate: share of the 7 pillars that agree with the call (a vote count, not a probability).
+        // No invented win rate: share of the VOTING pillars that agree with the call (a vote count, not a probability).
+        // V35.3: denominator = voting pillars (6 when Macro is outside its news window; before: always 7).
         // The Learning Center replaces it with a calibrated value only when enough real results exist.
-        val confluenceWinRate = ((maxOf(buyCount, sellCount) * 100.0) / groups.size.coerceAtLeast(1)).roundToInt().coerceIn(0, 100)
+        val confluenceWinRate = ((maxOf(buyCount, sellCount) * 100.0) / total.coerceAtLeast(1)).roundToInt().coerceIn(0, 100)
 
+        // V35.3: ONE canonical decision. The playbook follows overallSignal (68% gate / 5 votes); before, 4 BUY or SELL
+        // pillars were enough for a BUY/SELL playbook while the engine said WAIT (seen in 68 of 3000 random charts).
+        // A 4-pillar lean below the gate is named only as a RESEARCH LEAN inside the WAIT playbook.
+        val researchLean = when { overallSignal != Signal.WAIT -> ""; buyCount >= 4 -> "BUY"; sellCount >= 4 -> "SELL"; else -> "" }
         val nextPrediction = when {
-            buyCount >= 4 -> {
+            overallSignal == Signal.BUY -> {
                 val entryMin = format2(max(currentPrice - 0.35 * atrSafe, fib0618))
                 val entryMax = format2(min(currentPrice + 0.05 * atrSafe, fib0500))
                 val slNum = currentPrice - (adaptiveSlMultiplier * atrSafe + 0.35)
@@ -925,7 +930,7 @@ object TechnicalEngine {
                     appliedCorrections = appliedCorrectionsList
                 )
             }
-            sellCount >= 4 -> {
+            overallSignal == Signal.SELL -> {
                 val entryMin = format2(max(currentPrice - 0.05 * atrSafe, swingLow))
                 val entryMax = format2(min(currentPrice + 0.35 * atrSafe, swingHigh))
                 val slNum = currentPrice + (adaptiveSlMultiplier * atrSafe + 0.35)
@@ -1075,7 +1080,8 @@ object TechnicalEngine {
                 val pipsSL = (1.2 * atrSafe) * 10.0
                 NextPredictionPlaybook(
                     verdict = Signal.WAIT,
-                    urgencyTag = "WAIT & STAND BY ⏸️ (CAPITAL PRESERVATION)",
+                    urgencyTag = if (researchLean.isNotEmpty()) "WAIT • RESEARCH LEAN $researchLean (${maxOf(buyCount, sellCount)} of $total pillars, below the 68% gate: not a signal)"
+                        else "WAIT & STAND BY ⏸️ (CAPITAL PRESERVATION)",
                     winProbabilityPercent = 50,
                     actionHeading = "WAIT • CHOPPY RANGE DETECTED • CAPITAL FIRST",
                     tradeType = "NO TRADE / WAIT FOR BREAKOUT",
@@ -2085,19 +2091,19 @@ object TechnicalEngine {
 
         // Only protections that really exist in this app's code.
         val rulesEnglish = listOf(
-            "1. Agreement gate: BUY/SELL only when the weighted vote reaches 68% (or 5 of 7 pillars agree). Otherwise WAIT.",
+            "1. Agreement gate: BUY/SELL only when the weighted vote reaches 68% (or 5 voting pillars agree; Macro votes only around high-impact USD news). Otherwise WAIT.",
             "2. Range filter: in a sideways market (efficiency ratio below 0.20) the call is shown as WAIT.",
             "3. Data guard: when the price data fails the quality check (stale, broken or demo), no BUY/SELL is shown and nothing is recorded.",
             "4. News mode: from 15 min before to 45 min after high-impact USD news, fresh entries are put on WAIT."
         )
         val rulesHindi = listOf(
-            "1. सहमति गेट: BUY/SELL तभी, जब वेटेड वोट 68% हो (या 7 में से 5 पिलर सहमत हों)। वरना WAIT।",
+            "1. सहमति गेट: BUY/SELL तभी, जब वेटेड वोट 68% हो (या 5 वोटिंग पिलर सहमत हों; Macro सिर्फ़ बड़ी USD न्यूज़ के आसपास वोट करता है)। वरना WAIT।",
             "2. रेंज फ़िल्टर: साइडवेज़ मार्केट (efficiency ratio 0.20 से कम) में सिग्नल WAIT दिखता है।",
             "3. डेटा गार्ड: भाव का डेटा जाँच में फेल हो (पुराना, टूटा या डेमो) तो BUY/SELL नहीं दिखता और कुछ रिकॉर्ड नहीं होता।",
             "4. न्यूज़ मोड: हाई-इम्पैक्ट USD न्यूज़ के 15 मिनट पहले से 45 मिनट बाद तक नई एंट्री WAIT पर।"
         )
         val rulesMarathi = listOf(
-            "1. सहमती गेट: BUY/SELL तेव्हाच, जेव्हा वेटेड मत 68% असते (किंवा 7 पैकी 5 पिलर सहमत). नाहीतर WAIT.",
+            "1. सहमती गेट: BUY/SELL तेव्हाच, जेव्हा वेटेड मत 68% असते (किंवा 5 मतदान करणारे पिलर सहमत; Macro फक्त मोठ्या USD न्यूजच्या आसपास मत देतो). नाहीतर WAIT.",
             "2. रेंज फिल्टर: साइडवेज मार्केटमध्ये (efficiency ratio 0.20 पेक्षा कमी) सिग्नल WAIT दिसतो.",
             "3. डेटा गार्ड: भावाचा डेटा तपासणीत नापास झाला (जुना, तुटलेला किंवा डेमो) तर BUY/SELL दिसत नाही आणि काहीही नोंदले जात नाही.",
             "4. न्यूज मोड: हाय-इम्पॅक्ट USD बातमीच्या 15 मिनिटे आधीपासून 45 मिनिटे नंतरपर्यंत नवीन एंट्री WAIT वर."

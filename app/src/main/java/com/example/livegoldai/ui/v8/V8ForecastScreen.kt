@@ -120,9 +120,9 @@ fun V8ForecastScreen(
                     color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = tr(lang, "Each pillar adds its weight to BUY or SELL. BUY/SELL needs 68% (or 5 of 7 pillars).",
-                        "हर पिलर अपना वज़न BUY या SELL में जोड़ता है। BUY/SELL के लिए 68% (या 7 में से 5 पिलर) चाहिए।",
-                        "प्रत्येक पिलर आपले वजन BUY किंवा SELL मध्ये जोडतो. BUY/SELL साठी 68% (किंवा 7 पैकी 5 पिलर) हवे."),
+                    text = tr(lang, "Each voting pillar adds its weight to BUY or SELL. BUY/SELL needs 68% (or 5 voting pillars). Macro votes only around high-impact USD news.",
+                        "हर वोटिंग पिलर अपना वज़न BUY या SELL में जोड़ता है। BUY/SELL के लिए 68% (या 5 वोटिंग पिलर) चाहिए। Macro सिर्फ़ बड़ी USD न्यूज़ के आसपास वोट करता है।",
+                        "प्रत्येक मतदान करणारा पिलर आपले वजन BUY किंवा SELL मध्ये जोडतो. BUY/SELL साठी 68% (किंवा 5 पिलर) हवे. Macro फक्त मोठ्या USD न्यूजच्या आसपास मत देतो."),
                     color = V8.Text3, fontSize = 10.sp
                 )
                 Spacer(modifier = Modifier.height(6.dp))

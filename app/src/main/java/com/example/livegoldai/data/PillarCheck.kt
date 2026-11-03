@@ -31,7 +31,8 @@ object PillarCheck {
 
     private fun independentRows(rows: List<Row>): List<Row> {
         val byId = rows.associateBy { it.r.id }
-        return EdgeFinder.independent(rows.map { it.r }).mapNotNull { byId[it.id] }
+        // V35.3: pillars pool all timeframes, so one window per moment across timeframes (as in the Edge Finder)
+        return EdgeFinder.independentAcross(rows.map { it.r }).mapNotNull { byId[it.id] }
     }
 
     /** Would the engine still have called [side] if [key]'s vote were WAIT? (weighted 68% gate or 5-of-7 count) */
@@ -47,9 +48,9 @@ object PillarCheck {
         TITLES.keys.mapNotNull { k -> r.sources["grp:$k"]?.let { k to it } }.toMap()
 
     private fun verdict(g: EdgeFinder.Group): String = when (g.verdict) {
-        "PROVEN EDGE" -> "HELPS"
-        "WORSE THAN CHANCE" -> "HURTS (wrong more often than chance)"
-        "TOO FEW" -> "too few to judge"
+        EdgeFinder.HIST -> "HELPS (past data)"
+        EdgeFinder.WORSE -> "HURTS (wrong more often than chance)"
+        EdgeFinder.FEW -> "too few to judge"
         else -> "not proven either way"
     }
 
@@ -119,9 +120,9 @@ object PillarCheck {
         }
         val rf = rangeFilter(state)
         val rfLine = if (rf.n == 0) emptyList() else listOf("Range filter: the calls it blocked would have been ${pct(rf)} · " + when (rf.verdict) {
-            "PROVEN EDGE" -> "the filter is blocking calls that worked"
-            "WORSE THAN CHANCE" -> "the filter is helping"
-            "TOO FEW" -> "too few to judge"
+            EdgeFinder.HIST -> "the filter is blocking calls that worked"
+            EdgeFinder.WORSE -> "the filter is helping"
+            EdgeFinder.FEW -> "too few to judge"
             else -> "no proof either way"
         })
         return lines + rfLine + "Close direction beyond the noise threshold; flat windows excluded. Evidence only: this check changes no pillar, weight or filter. Since E22.1 Macro votes only 1 h before to 30 min after high-impact USD news."

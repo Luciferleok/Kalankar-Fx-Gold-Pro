@@ -97,8 +97,8 @@ object DecisionTraceText {
         evidenceRows.add(t(lang, "Cross-market", "क्रॉस-मार्केट", "क्रॉस-मार्केट") to
             (if (p.crossMarketAvailable) t(lang, "available (context)", "उपलब्ध (संदर्भ)", "उपलब्ध (संदर्भ)") else t(lang, "UNAVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही")))
         val evidence = Section(t(lang, "Research details", "रिसर्च विवरण", "रिसर्च तपशील"), evidenceRows,
-            t(lang, "Factors are the 7 pillars' weighted votes. Agreement is not a probability.",
-                "कारक 7 पिलरों के भारित वोट हैं। सहमति संभावना नहीं है।", "घटक म्हणजे 7 पिलरची भारित मते. सहमती म्हणजे शक्यता नाही."), collapsed = true)
+            t(lang, "Factors are the voting pillars' weighted votes (Macro only around high-impact USD news). Agreement is not a probability.",
+                "कारक वोटिंग पिलरों के भारित वोट हैं (Macro सिर्फ़ बड़ी USD न्यूज़ के आसपास)। सहमति संभावना नहीं है।", "घटक म्हणजे मतदान करणाऱ्या पिलरची भारित मते (Macro फक्त मोठ्या USD न्यूजच्या आसपास). सहमती म्हणजे शक्यता नाही."), collapsed = true)
 
         val trust = Section(
             t(lang, "Historical evidence", "पिछला सबूत", "मागील पुरावा"),

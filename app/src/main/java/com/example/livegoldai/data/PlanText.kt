@@ -80,9 +80,9 @@ object PlanText {
         if (fromHistory) t(l, "What really happened after this app's past BUY/SELL calls (all timeframes). A track record, not the chance of this call.",
             "पिछली BUY/SELL कॉल्स के बाद असल में क्या हुआ (सभी टाइमफ़्रेम)। ट्रैक रिकॉर्ड, इस कॉल की संभावना नहीं।",
             "मागील BUY/SELL कॉल्सनंतर प्रत्यक्षात काय झाले (सर्व टाइमफ्रेम). ट्रॅक रेकॉर्ड, या कॉलची शक्यता नाही.")
-        else t(l, "Indicator agreement only — not historical performance or calibrated probability. Shares of rule-based indicator pillars (7 pillars, sums to 100%). Not probabilities of future market outcomes.",
-            "सिर्फ़ इंडिकेटर सहमति — पिछला प्रदर्शन या कैलिब्रेटेड संभावना नहीं। 7 पिलरों में BUY / WAIT / SELL वोट का हिस्सा (कुल 100%)।",
-            "फक्त इंडिकेटर सहमती — मागील कामगिरी किंवा कॅलिब्रेटेड शक्यता नाही. 7 पिलरपैकी BUY / WAIT / SELL मतांचा वाटा (एकूण 100%).")
+        else t(l, "Indicator agreement only — not historical performance or calibrated probability. Shares of the voting rule pillars (6, or 7 around high-impact USD news; sums to 100%). Not probabilities of future market outcomes.",
+            "सिर्फ़ इंडिकेटर सहमति — पिछला प्रदर्शन या कैलिब्रेटेड संभावना नहीं। वोटिंग पिलरों (6, या बड़ी USD न्यूज़ के आसपास 7) में BUY / WAIT / SELL वोट का हिस्सा (कुल 100%)।",
+            "फक्त इंडिकेटर सहमती — मागील कामगिरी किंवा कॅलिब्रेटेड शक्यता नाही. मतदान करणाऱ्या पिलरपैकी (6, किंवा मोठ्या USD न्यूजच्या आसपास 7) BUY / WAIT / SELL मतांचा वाटा (एकूण 100%).")
 
     private val hm = SimpleDateFormat("dd MMM HH:mm:ss", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
     private fun time(ms: Long) = if (ms <= 0L) "UNKNOWN" else synchronized(hm) { hm.format(Date(ms)) } + " UTC"

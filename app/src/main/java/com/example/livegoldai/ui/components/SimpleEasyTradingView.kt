@@ -804,7 +804,7 @@ fun SimpleEasyTradingView(
                         border = BorderStroke(0.8.dp, GoldPrimary.copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = "${analysis.groups.count { it.verdict == analysis.overallSignal }}/7 Agree",
+                            text = "${analysis.groups.count { it.active && it.verdict == analysis.overallSignal }}/${analysis.totalGroups} Agree",
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
