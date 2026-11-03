@@ -94,3 +94,49 @@ object NewsMacro {
         return MacroMarketIndex("^TNX", "US 10-Yr Yield", last, m.change / base * 100.0, sig, why)
     }
 }
+
+/**
+ * V35.3-G: Macro news-window data from the user's own OANDA practice account (read-only candles, explicit "complete" flag).
+ *  - US Dollar Index COMPUTED with the ICE formula from the six OANDA FX pairs it is defined on:
+ *    DXY = 50.14348112 x EURUSD^-0.576 x USDJPY^0.136 x GBPUSD^-0.119 x USDCAD^0.091 x USDSEK^0.042 x USDCHF^0.036,
+ *    only for 5-minute bars where ALL six pairs have a completed candle (no filling, no guessing).
+ *  - US 10-year T-Note price (USB10Y_USD): the price moves opposite to the yield (price down = yields up).
+ * Yahoo stays the fallback. An instrument this account cannot use simply gives no data.
+ */
+object OandaMacro {
+    val DXY_PAIRS = linkedMapOf("EUR_USD" to -0.576, "USD_JPY" to 0.136, "GBP_USD" to -0.119, "USD_CAD" to 0.091, "USD_SEK" to 0.042, "USD_CHF" to 0.036)
+    const val DXY_CONST = 50.14348112
+    const val NOTE = "USB10Y_USD"
+    /** a 2 bp yield move is about 0.15% of the 10Y note price (duration about 8) */
+    const val NOTE_MIN_PCT = 0.15
+
+    /** completed bars per pair -> computed dollar index (bar start ms, value) where all six are present */
+    fun dxy(pairs: Map<String, List<CandleAggregator.Bar>>): List<Pair<Long, Double>> {
+        if (DXY_PAIRS.keys.any { pairs[it].isNullOrEmpty() }) return emptyList()
+        val maps = DXY_PAIRS.keys.associateWith { k -> pairs.getValue(k).filter { it.complete && it.close > 0 }.associate { it.startMs to it.close } }
+        val times = maps.values.map { it.keys }.reduce { a, b -> a intersect b }
+        return times.sorted().map { t -> t to DXY_CONST * DXY_PAIRS.entries.fold(1.0) { acc, (k, w) -> acc * Math.pow(maps.getValue(k).getValue(t), w) } }
+    }
+
+    fun dollarIndex(pairs: Map<String, List<CandleAggregator.Bar>>, eventMs: Long, now: Long, event: String): MacroMarketIndex? {
+        val series = dxy(pairs)
+        val r = NewsMacro.dxy(series, eventMs, now, event) ?: return null
+        return r.copy(explanation = r.explanation.replace("US Dollar", "US Dollar Index (computed from 6 OANDA FX pairs, ICE formula)"))
+    }
+
+    fun note(bars: List<CandleAggregator.Bar>, eventMs: Long, now: Long, event: String): MacroMarketIndex? {
+        val s = bars.filter { it.complete && it.close > 0 }.map { it.startMs to it.close }
+        val m = NewsMacro.move(s, eventMs, now) ?: return null
+        val base = s.first { it.first == m.fromMs }.second; val last = s.first { it.first == m.toMs }.second
+        val pct = m.change / base * 100.0
+        // note price UP = yields DOWN = support for gold
+        val sig = when { pct >= NOTE_MIN_PCT -> Signal.BUY; pct <= -NOTE_MIN_PCT -> Signal.SELL; else -> Signal.WAIT }
+        val p = String.format(Locale.US, "%+.2f", pct)
+        val why = when (sig) {
+            Signal.BUY -> "News window ($event): US 10Y T-Note price $p% ${m.label} (yields down = support for gold)"
+            Signal.SELL -> "News window ($event): US 10Y T-Note price $p% ${m.label} (yields up = headwind for gold)"
+            Signal.WAIT -> "News window ($event): US 10Y T-Note price $p% ${m.label}, too small to vote"
+        }
+        return MacroMarketIndex(NOTE, "US 10Y T-Note (OANDA price; yield moves the other way)", last, pct, sig, why)
+    }
+}

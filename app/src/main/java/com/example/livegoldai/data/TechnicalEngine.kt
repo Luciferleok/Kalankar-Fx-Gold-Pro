@@ -598,7 +598,12 @@ object TechnicalEngine {
         val macroRaw = decide(macroItems.map { it.signal })
         // V35.0: Macro votes only from 1 h before to 30 min after a high-impact USD event (see MacroWindow)
         val macroEvent = MacroWindow.activeEvent(customEvents, nowMs)
-        val macroActive = macroEvent != null
+        // V35.3-G (owner, 3 Nov 2026: "clear prediction"): in a news window with NO usable minute-level dollar / yield data
+        // Macro takes no part at all (no vote, no weight), instead of sitting in the gate as a 2.5-weight WAIT that dilutes
+        // the other pillars (same chart: 100% -> 83.9%). The window and the missing data are shown, not hidden.
+        fun usable(m: MacroMarketIndex?) = m != null && !m.explanation.contains("unavailable", true) && !m.explanation.contains("waiting for the first", true)
+        val macroData = usable(customDxy) || usable(customUs10y)
+        val macroActive = macroEvent != null && macroData
         val macroVerdict = if (macroActive) macroRaw else Signal.WAIT
 
         // Group Summaries (7 Institutional Pillars ordered in professional trading sequence)
@@ -612,7 +617,8 @@ object TechnicalEngine {
             GroupAnalysis(key = "macro",
                 title = if (macroActive) "Macro & News Sentiment (ACTIVE: ${macroEvent!!.title} [${MacroWindow.eventId(macroEvent)}], " +
                     (if (macroEvent.title.endsWith("(BLS)") || macroEvent.title.endsWith("(Fed)")) "official schedule" else "live calendar") + ")"
-                    else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news)",
+                    else if (macroEvent != null) "Macro & News Sentiment (NEWS WINDOW: ${macroEvent.title} [${MacroWindow.eventId(macroEvent)}] but MACRO DATA UNAVAILABLE: no vote, no weight)"
+                    else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news; Fed press conference: 60 min)",
                 verdict = macroVerdict, indicators = macroItems, rawVerdict = macroRaw, active = macroActive)
         )
         // V35.0: only active pillars take part (Macro is inactive outside its news window)

@@ -134,6 +134,10 @@ object OandaCandles {
     fun url(granularity: String, count: Int) = OandaEndpoints.REST + "/instruments/" + OandaEndpoints.INSTRUMENT +
         "/candles?granularity=$granularity&count=${count.coerceIn(1, MAX_COUNT)}&price=M&dailyAlignment=0&alignmentTimezone=UTC"
 
+    /** V35.3-G: latest candles of another read-only instrument (FX pairs / T-note for the Macro news window). */
+    fun instrumentUrl(instrument: String, granularity: String, count: Int) = OandaEndpoints.REST + "/instruments/" + instrument +
+        "/candles?granularity=$granularity&count=${count.coerceIn(1, MAX_COUNT)}&price=M"
+
     /** RFC3339 UTC, e.g. 2026-10-27T08:00:00Z */
     fun rfc(ms: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(java.util.Date(ms))
 
@@ -201,6 +205,10 @@ class OandaCandleStore(
 
     fun candles(granularity: String, count: Int, maxWaitMs: Long = 3_000L): OandaCandles.Fetch =
         fetch("$granularity:$count", OandaCandles.url(granularity, count), maxWaitMs)
+
+    /** V35.3-G: candles of another instrument (read-only GET, same limiter and cache). */
+    fun instrumentCandles(instrument: String, granularity: String, count: Int, maxWaitMs: Long = 3_000L): OandaCandles.Fetch =
+        fetch("$instrument:$granularity:$count", OandaCandles.instrumentUrl(instrument, granularity, count), maxWaitMs)
 
     /** A fixed past range: cached the same way; [toMs] in the past means the answer cannot change. */
     fun range(granularity: String, fromMs: Long, toMs: Long, maxWaitMs: Long = 3_000L): OandaCandles.Fetch =

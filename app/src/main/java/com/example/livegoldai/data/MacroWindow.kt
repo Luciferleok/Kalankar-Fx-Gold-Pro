@@ -9,7 +9,7 @@ import com.example.livegoldai.model.EconomicEvent
  * 36-49%), i.e. wrong more often than chance. It votes from the DAY's DXY / 10Y-yield change on every 5m-1d candle.
  *
  * Rule: the pillar is ACTIVE from [PRE_MS] (1 hour) before a high-impact USD event until [POST_MS] (30 minutes)
- * after it. At all other times it takes no part in the forecast: no vote, no weight in the 68% gate, not counted in
+ * after it (V35.3-G: 60 minutes after the start of a Fed press conference, so it covers the whole conference). At all other times it takes no part in the forecast: no vote, no weight in the 68% gate, not counted in
  * the 5-of-7 rule (the gate then uses the other 6 pillars). With no calendar loaded, it stays OFF (no evidence of news).
  * Its data is still shown as context, and its raw vote is still recorded ("ctx:macro") for research.
  */
@@ -23,10 +23,14 @@ object MacroWindow {
      * is trading), else the earliest upcoming one. Before: the nearest in time, so 16 min after an FOMC statement the press
      * conference (14 min ahead) was chosen and the statement's reaction was read as "pre-release" drift.
      */
+    /** V35.3-G (owner, 3 Nov 2026): Macro stays on through the Fed press conference (about an hour), then switches off */
+    const val PRESS_POST_MS = 60 * 60_000L
+    fun postMs(ev: EconomicEvent): Long = if (OfficialCalendar.kind(ev.title) == "FOMC_PRESS") PRESS_POST_MS else POST_MS
+
     fun activeEvent(events: List<EconomicEvent>, now: Long): EconomicEvent? {
         val c = events.filter { it.impact.equals("High", true) && it.country.equals("USD", true) }
             .mapNotNull { ev -> EventTime.parseMs(ev.isoTime)?.let { ev to it } }
-            .filter { (_, t) -> now >= t - PRE_MS && now <= t + POST_MS }
+            .filter { (ev, t) -> now >= t - PRE_MS && now <= t + postMs(ev) }
         return (c.filter { it.second <= now }.maxByOrNull { it.second } ?: c.minByOrNull { it.second })?.first
     }
 

@@ -542,9 +542,12 @@ class GoldApiService(
         if (ev != null && t != null) {
             val name = ev.title
             if (dollar) {
+                // V35.3-G: 1st choice the dollar index computed from six OANDA FX pairs (completed candles), then Yahoo
+                if (oandaConfigured()) oandaMacroPairs()?.let { p -> OandaMacro.dollarIndex(p, t, now, name)?.let { return it } }
                 NewsMacro.dxy(yahooIntraday("DX-Y.NYB"), t, now, name)?.let { return it }
                 NewsMacro.usdProxy(yahooIntraday("EURUSD=X"), t, now, name)?.let { return it }
             } else {
+                if (oandaConfigured()) oandaMacroBars(OandaMacro.NOTE)?.let { b -> OandaMacro.note(b, t, now, name)?.let { return it } }
                 NewsMacro.yield10(yahooIntraday("%5ETNX"), t, now, name)?.let { return it }
             }
             // V35.3-B: no fresh minute-level price -> NO vote (before: the day's change voted, the input that was wrong
@@ -557,6 +560,16 @@ class GoldApiService(
                     else "News window ($name): MACRO DATA UNAVAILABLE for the $what (no fresh completed 5-minute price): no vote")
         }
         return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
+    }
+
+    /** V35.3-G: OANDA M5 candles of one instrument (read-only), null when this account cannot use it */
+    private fun oandaMacroBars(instrument: String): List<CandleAggregator.Bar>? {
+        val f = oandaStore.instrumentCandles(instrument, "M5", 40)
+        return if (f.status == OandaStatus.CONNECTED && f.bars.isNotEmpty()) f.bars else null
+    }
+    private fun oandaMacroPairs(): Map<String, List<CandleAggregator.Bar>>? {
+        val m = OandaMacro.DXY_PAIRS.keys.associateWith { oandaMacroBars(it) ?: return null }
+        return m
     }
 
     private fun fetchLiveDxy(): MacroMarketIndex? {

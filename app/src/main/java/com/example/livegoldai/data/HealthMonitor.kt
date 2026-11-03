@@ -293,6 +293,8 @@ object CockpitInsightsBuilder {
     /** V35.3-B: NEWS WINDOW ACTIVE / EVENT SCHEDULE / INTRADAY EVIDENCE / MACRO VOTE ELIGIBLE, from the analysis itself. */
     fun macroWindowCheck(a: GoldAnalysisResult): HealthCheck {
         val g = a.groups.firstOrNull { it.key == "macro" } ?: return HealthCheck("Macro news window", "WARN", "No Macro pillar in this analysis")
+        if (!g.active && g.title.contains("NEWS WINDOW")) return HealthCheck("Macro news window", "WARN",
+            "NEWS WINDOW " + (Regex("NEWS WINDOW: (.*) but").find(g.title)?.groupValues?.get(1) ?: "") + " · MACRO DATA UNAVAILABLE (no completed minute data from OANDA or Yahoo): Macro has no vote and no weight")
         if (!g.active) return HealthCheck("Macro news window", "OK", "OFF: no high-impact USD news within 1 h (Macro takes no part in the forecast)")
         val src = Regex("ACTIVE: (.*)\\)$").find(g.title)?.groupValues?.get(1) ?: "news window"
         val missing = g.indicators.count { it.detail.contains("unavailable", ignoreCase = true) }
