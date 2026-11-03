@@ -44,6 +44,8 @@ class AIOrchestrator(
 
     @Volatile private var lastReport: AiCouncilReport? = null
     fun latest(interval: String): AiCouncilReport? = lastReport?.takeIf { it.interval == interval }
+    /** V35.3-E: the last council only when it was made on this timeframe, candle and data provider */
+    fun latest(interval: String, snapshotPrefix: String): AiCouncilReport? = lastReport?.takeIf { it.interval == interval && it.snapshotId.startsWith(snapshotPrefix) }
 
     fun freshnessWindowMs(interval: String): Long {
         if (freshnessOverrideSec > 0) return freshnessOverrideSec * 1000L

@@ -185,7 +185,8 @@ class GoldViewModel @JvmOverloads constructor(
         val feats = com.example.livegoldai.data.brain.FeatureCatalog.compute(a, xm, anomaly, now)
         val st = learning.currentState()
         // store the features once, for the prediction that was recorded on this refresh
-        st.records.lastOrNull { it.interval == a.interval && now - it.createdAt < 120_000L }
+        // V35.3-E: only the record of this timeframe, candle and provider (else UNLINKED: not stored)
+        com.example.livegoldai.data.RecordLink.forAnalysis(st.records, a)
             ?.let { r -> featureStore.recordIfAbsent(r.id, r.createdAt, r.interval, feats) }
         return com.example.livegoldai.data.brain.MarketBrain.build(a, xm, feats, featureStore, st, council, now)
     }
@@ -274,7 +275,7 @@ class GoldViewModel @JvmOverloads constructor(
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
                         // keep showing the last AI council for this timeframe until the next run finishes
-                        val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval) else null } catch (_: Exception) { null }
+                        val council = try { if (aiConfigs().any { it.isConfigured && it.enabled }) aiOrchestrator.latest(currentInterval, com.example.livegoldai.data.RecordLink.snapshotPrefix(learned)) else null } catch (_: Exception) { null }
                         val full = learned.copy(health = HealthMonitor.withAi(health, council), insights = insights, aiCouncil = council)
                         val pulse = try {
                             com.example.livegoldai.data.LedgerPulseBuilder.build(
@@ -420,7 +421,8 @@ class GoldViewModel @JvmOverloads constructor(
                         orch.freshnessOverrideSec = s0.aiFreshnessSec
                         val st = learning.currentState()
                         val now = System.currentTimeMillis()
-                        val rid = st.records.lastOrNull { it.interval == s0.selectedInterval && now < it.expiresAt }?.id ?: ""
+                        // V35.3-E: same timeframe, candle and provider, else UNLINKED ("") and never scored
+                        val rid = com.example.livegoldai.data.RecordLink.forAnalysis(st.records, data)?.id ?: com.example.livegoldai.data.RecordLink.UNLINKED
                         val rep = orch.run(data, cfgs, rid, st)
                         // refresh the brain so its AI line and budget use this council
                         rep to (try { buildBrain(data.copy(aiCouncil = rep), rep) } catch (_: Exception) { null })

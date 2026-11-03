@@ -149,9 +149,8 @@ class LearningCoordinator(
             // never used inside an XAU/USD decision, filter or record
             val htf: Signal? = null
             // one prediction per candle: same bar id, or (if the data source switched) a record younger than ~one candle
-            val existing = state.records.lastOrNull {
-                it.interval == interval && (it.barId == analysis.lastUpdated || now - it.createdAt < ivMin * 60_000L * 9 / 10)
-            }
+            // V35.3-E: an OLDER candle's record no longer blocks this candle (see RecordLink.sameCandle)
+            val existing = state.records.lastOrNull { RecordLink.sameCandle(it, interval, analysis.lastUpdated, now, ivMin) }
             val canRecord = !analysis.isSimulatedFallback && !PredictionLedger.isMarketClosed(now) && analysis.lastUpdated.isNotBlank()
 
             val draft = buildRecord(analysis, analysis, interval, now, newsActive, htf, "")

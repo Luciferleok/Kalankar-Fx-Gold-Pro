@@ -41,7 +41,8 @@ object MarketSnapshotBuilder {
 
         val snap = LinkedHashMap<String, Any?>()
         val bucket = floor(a.currentPrice / max(atr * 0.5, 0.5)).toLong()
-        val id = "S-${interval}-${a.lastUpdated.replace(" ", "T")}-$bucket"
+        // V35.3-E: the data provider is part of the id, so a cached AI answer is never reused for another provider's data
+        val id = com.example.livegoldai.data.RecordLink.snapshotPrefix(a) + bucket
         snap["snapshot_id"] = id
         snap["timestamp_utc"] = iso(now)
         snap["symbol"] = "XAU/USD"
