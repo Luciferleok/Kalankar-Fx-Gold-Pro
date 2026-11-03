@@ -138,6 +138,8 @@ object Freshness {
      * used; OANDA's "not tradeable" means CLOSED. Without it (Twelve Data), a quote can be LIVE only while the newest
      * candle is the current one (opened within one candle + 2 min); a successful download of an older price is at best
      * DELAYED. Before: a fetch 3 s ago made a price LIVE even when no new candle had arrived for a whole interval.
+     * V35.3-C: LIVE also needs a current candle with a provider quote, and the shown price within max($3, 10 x spread) of
+     * the quote mid; a provider time more than 60 s in the future is ignored.
      */
     fun assess(a: GoldAnalysisResult, now: Long): String {
         val f = a.feed
@@ -145,14 +147,20 @@ object Freshness {
         if (SessionClock.marketClosed(now)) return CLOSED       // V34.5: weekend or a full-day holiday
         if (f.tradeable == false) return CLOSED
         val ivMs = RealityEngine.intervalMinutes(a.interval) * 60_000L
-        val providerTime = f.quoteTimeMs > 0L
+        // V35.3-C: a provider time more than 60 s in the future is not trusted (clock or feed error): download time is used
+        val providerTime = f.quoteTimeMs > 0L && f.quoteTimeMs <= now + 60_000L
         val quoteAge = now - (if (providerTime) f.quoteTimeMs else f.fetchedAtMs)
         val candleAge = ShadowLive.barMs(a.lastUpdated)?.let { now - it } ?: Long.MAX_VALUE
         val candleCurrent = candleAge <= ivMs + 120_000L
+        // V35.3-C: LIVE needs the chart itself to be current AND (with a provider quote) the shown price near the quote.
+        // Before: a fresh OANDA quote made a chart LIVE even with a candle missing, and the shown price (candle close)
+        // was never compared with the quote.
+        val mid = if (f.bid > 0.0 && f.ask >= f.bid) (f.bid + f.ask) / 2 else 0.0
+        val priceMatches = mid <= 0.0 || kotlin.math.abs(a.currentPrice - mid) <= maxOf(3.0, 10 * (f.ask - f.bid))
         return when {
             f.fetchedAtMs <= 0L -> OFFLINE
             candleAge > 2 * ivMs + 120_000L -> STALE
-            quoteAge <= 120_000L && (providerTime || candleCurrent) -> LIVE
+            quoteAge in -60_000L..120_000L && candleCurrent && priceMatches -> LIVE
             quoteAge <= maxOf(120_000L, ivMs) -> DELAYED
             else -> STALE
         }
