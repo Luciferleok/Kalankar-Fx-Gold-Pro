@@ -290,7 +290,11 @@ class LearningCoordinator(
         // V35.0: an inactive pillar (Macro outside its news window) is not a vote: no "grp:" entry. Macro's own raw vote
         // is always kept as "ctx:macro" (research only), so its news-window and off-window behaviour can be compared.
         raw.groups.forEach { g -> if (g.active) sources["grp:${g.key}"] = g.verdict }
-        raw.groups.firstOrNull { it.key == "macro" }?.let { g -> sources["ctx:macro"] = g.rawVerdict ?: g.verdict }
+        raw.groups.firstOrNull { it.key == "macro" }?.let { g ->
+            sources["ctx:macro"] = g.rawVerdict ?: g.verdict
+            // V35.3-F: votes from the inverted EUR/USD proxy are tracked apart from dollar-index votes
+            if (g.indicators.any { it.name == NewsMacro.PROXY_NAME }) sources["ctx:macroProxy"] = g.verdict
+        }
         shown.multiAiConsensus?.modelInsights?.forEach { sources["eng:${it.provider.name}"] = it.signal }
         shown.multiBotEnsemble?.allBots?.forEach { sources["bot:${it.id}"] = it.signal }
         shown.multiBotEnsemble?.let { sources["bots:ensemble"] = it.ensembleSignal }

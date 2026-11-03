@@ -97,9 +97,19 @@ object EdgeFinder {
     private fun callsAcross(state: LedgerState): List<Call> = independentAcross(decided(state)).map { toCall(it, state) }
 
     fun groups(state: LedgerState): List<Group> {
-        val per = calls(state); val across = callsAcross(state)
+        val per = calls(state)
         fun of(dim: String, cs: List<Call>) = cs.groupBy { it.keys.getValue(dim) }.map { (v, list) -> Group(dim, v, list.count { it.right }, list.size) }
-        return of("Timeframe", per) + CROSS.flatMap { of(it, across) }
+        // V35.3-F: pooled dimensions are thinned WITHIN each group (group first, then one call per time window across
+        // timeframes). Before: one global thinning first, which kept whichever provider / engine came first in a window and
+        // under-counted the other (a provider with 10 clean calls showed n=0). Group counts are not additive: no grand total.
+        val dec = decided(state)
+        val pooled = CROSS.flatMap { dim ->
+            dec.groupBy { toCall(it, state).keys.getValue(dim) }.map { (v, rs) ->
+                val kept = independentAcross(rs).map { toCall(it, state) }
+                Group(dim, v, kept.count { it.right }, kept.size)
+            }
+        }
+        return of("Timeframe", per) + pooled
     }
 
     /** SYSTEM lines: all calls, historical edges, worse-than-chance groups, the current engine, then a one-line summary */

@@ -91,11 +91,13 @@ object PillarCheck {
         }
         val fresh = rows.filter { newRule(it.r) }
         if (fresh.isEmpty()) return emptyList()
-        val inWin = fresh.filter { it.r.sources.containsKey("grp:macro") }
+        val inWin = fresh.filter { it.r.sources.containsKey("grp:macro") && !it.r.sources.containsKey("ctx:macroProxy") }
+        val inWinProxy = fresh.filter { it.r.sources.containsKey("grp:macro") && it.r.sources.containsKey("ctx:macroProxy") }
         val outWin = fresh.filter { !it.r.sources.containsKey("grp:macro") }
         val empty = EdgeFinder.Group("Needed", "", 0, 0)
         return listOf(
             PillarLine("macro", score(inWin) { it.sources["grp:macro"] }.copy(value = "Macro & News (news window, used)"), empty, "Macro & News (news window, used)"),
+            PillarLine("macro", score(inWinProxy) { it.sources["grp:macro"] }.copy(value = "Macro & News (news window, dollar via EUR/USD proxy)"), empty, "Macro & News (news window, dollar via EUR/USD proxy)"),
             PillarLine("macro", score(outWin) { it.sources["ctx:macro"] }.copy(value = "Macro & News (outside window, NOT used)"), empty, "Macro & News (outside window, NOT used)")
         )
     }

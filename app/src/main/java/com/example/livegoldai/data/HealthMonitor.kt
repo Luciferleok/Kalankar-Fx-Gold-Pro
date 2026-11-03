@@ -96,7 +96,7 @@ class HealthMonitor {
             HealthCheck("Economic calendar", if ((feed?.calendarEvents ?: 0) > 0 && feed?.calendarIssue.isNullOrBlank()) "OK" else "WARN",
                 when {
                     (feed?.calendarEvents ?: 0) > 0 && feed?.calendarIssue.isNullOrBlank() -> "${feed?.calendarEvents} USD events (Forex Factory + official schedule)"
-                    (feed?.calendarEvents ?: 0) > 0 -> "${feed?.calendarEvents} USD events from the official BLS / Fed schedule only. ${feed?.calendarIssue}"
+                    (feed?.calendarEvents ?: 0) > 0 -> "${feed?.calendarEvents} USD events from the official BLS / Fed schedule only. ${OfficialCalendar.coverage(now)}. ${feed?.calendarIssue}"
                     else -> "Calendar not loaded" + (feed?.calendarIssue?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
                 }),
             // V35.3-B: the four Macro states kept apart (window / schedule source / minute data / vote)
@@ -297,7 +297,9 @@ object CockpitInsightsBuilder {
         val src = Regex("ACTIVE: (.*)\\)$").find(g.title)?.groupValues?.get(1) ?: "news window"
         val missing = g.indicators.count { it.detail.contains("unavailable", ignoreCase = true) }
         val votes = g.indicators.count { it.signal != Signal.WAIT }
-        val evidence = when (missing) { 0 -> "minute data: dollar + 10Y"; g.indicators.size -> "minute data: NONE"; else -> "minute data: partial" }
+        val proxy = g.indicators.any { it.name == NewsMacro.PROXY_NAME }
+        val evidence = when (missing) { 0 -> "minute data: dollar + 10Y"; g.indicators.size -> "minute data: NONE"; else -> "minute data: partial" } +
+            if (proxy) " (dollar via inverted EUR/USD proxy)" else ""
         return HealthCheck("Macro news window", if (missing == g.indicators.size) "WARN" else "OK",
             "ACTIVE: $src · $evidence · " + if (votes > 0) "Macro votes ${g.verdict.name}" else "no Macro vote (moves too small or no data)")
     }

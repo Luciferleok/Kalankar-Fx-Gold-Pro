@@ -581,9 +581,11 @@ object TechnicalEngine {
 
         val macroItems = listOf(
             IndicatorItem(
-                name = "US Dollar Index (DXY)",
+                // V35.3-F: an inverted EUR/USD proxy is named as such, never as the dollar index
+                name = if (dxyData.symbol == NewsMacro.PROXY_SYMBOL) NewsMacro.PROXY_NAME else "US Dollar Index (DXY)",
                 signal = dxyData.impactOnGold,
-                valueDisplay = "${format2(dxyData.value)} (${if (dxyData.changePercent >= 0) "+" else ""}${format2(dxyData.changePercent)}%)",
+                valueDisplay = if (dxyData.symbol == NewsMacro.PROXY_SYMBOL) "EUR/USD ${String.format(java.util.Locale.US, "%.4f", dxyData.value)} (USD ${if (dxyData.changePercent >= 0) "+" else ""}${format2(dxyData.changePercent)}%)"
+                    else "${format2(dxyData.value)} (${if (dxyData.changePercent >= 0) "+" else ""}${format2(dxyData.changePercent)}%)",
                 detail = dxyData.explanation
             ),
             IndicatorItem(
@@ -608,7 +610,7 @@ object TechnicalEngine {
             GroupAnalysis(key = "volatility", title = "Volatility Bands", verdict = volatilityVerdict, indicators = volatilityItems),
             GroupAnalysis(key = "candlestick", title = "Candlestick Action", verdict = candleVerdict, indicators = candleItems),
             GroupAnalysis(key = "macro",
-                title = if (macroActive) "Macro & News Sentiment (ACTIVE: ${macroEvent!!.title}, " +
+                title = if (macroActive) "Macro & News Sentiment (ACTIVE: ${macroEvent!!.title} [${MacroWindow.eventId(macroEvent)}], " +
                     (if (macroEvent.title.endsWith("(BLS)") || macroEvent.title.endsWith("(Fed)")) "official schedule" else "live calendar") + ")"
                     else "Macro & News Sentiment (OFF: votes only 1 h before to 30 min after high-impact USD news)",
                 verdict = macroVerdict, indicators = macroItems, rawVerdict = macroRaw, active = macroActive)

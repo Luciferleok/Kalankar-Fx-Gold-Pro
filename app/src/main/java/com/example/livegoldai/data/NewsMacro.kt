@@ -16,7 +16,7 @@ import java.util.Locale
 object NewsMacro {
     const val DXY_MIN_PCT = 0.08          // dollar index move worth a vote
     const val YIELD_MIN_BP = 2.0          // 10Y yield move in basis points worth a vote
-    const val MAX_AGE_MS = 20 * 60_000L
+    const val MAX_AGE_MS = 20 * 60_000L          // V35.3-F: measured from the END of the newest completed bar
 
     data class Move(val change: Double, val fromMs: Long, val toMs: Long, val label: String)
 
@@ -33,16 +33,36 @@ object NewsMacro {
      * Bars stamped in the future are ignored; a latest bar older than [MAX_AGE_MS] means no vote.
      */
     fun move(bars: List<Pair<Long, Double>>, eventMs: Long, now: Long): Move? {
-        val b = bars.filter { it.first <= now && it.second.isFinite() && it.second > 0 }.sortedBy { it.first }
+        // V35.3-F: two different values for one timestamp = untrustworthy series: no move
+        if (bars.groupBy { it.first }.values.any { g -> g.map { it.second }.distinct().size > 1 }) return null
+        // completed bars only (a bar's close is final once its 5 minutes are over)
+        val b = bars.distinctBy { it.first }.filter { it.first + BAR_MS <= now && it.second.isFinite() && it.second > 0 }.sortedBy { it.first }
         val cur = b.lastOrNull() ?: return null
-        if (now - cur.first > MAX_AGE_MS) return null
+        if (now - (cur.first + BAR_MS) > MAX_AGE_MS) return null
         val after = now >= eventMs
         val (baseAt, label) = if (!after) (now - 60 * 60_000L) to "last 60 min" else eventMs to "since the release"
+        // after the release the latest price must come from a COMPLETED bar that started at or after it
         if (after && cur.first < eventMs) return null
         val base = b.lastOrNull { it.first + BAR_MS <= baseAt } ?: return null
         if (base.first >= cur.first) return null
         return Move(cur.second - base.second, base.first, cur.first, label)
     }
+
+    /**
+     * V35.3-F: the US-dollar DIRECTION from EUR/USD (EUR/USD down = dollar up). Not the dollar index: its own symbol, the
+     * real EUR/USD price as value, and a label saying so. The 0.08% threshold was set for the dollar index and has not been
+     * validated separately for this proxy (said in the text).
+     */
+    fun usdProxy(eurUsd: List<Pair<Long, Double>>, eventMs: Long, now: Long, event: String): MacroMarketIndex? {
+        val r = dxy(eurUsd.map { it.first to 1.0 / it.second }, eventMs, now, event) ?: return null
+        val m = move(eurUsd, eventMs, now) ?: return null
+        val eur = eurUsd.first { it.first == m.toMs }.second
+        return r.copy(symbol = PROXY_SYMBOL, name = PROXY_NAME, value = eur,
+            explanation = r.explanation.replace("US Dollar", "USD DIRECTION PROXY — INVERTED EUR/USD (EUR/USD ${String.format(Locale.US, "%.4f", eur)}): dollar") +
+                " · proxy threshold not separately validated")
+    }
+    const val PROXY_SYMBOL = "EURUSD=X (inverted)"
+    const val PROXY_NAME = "USD direction proxy (inverted EUR/USD)"
 
     fun dxy(bars: List<Pair<Long, Double>>, eventMs: Long, now: Long, event: String): MacroMarketIndex? {
         val m = move(bars, eventMs, now) ?: return null

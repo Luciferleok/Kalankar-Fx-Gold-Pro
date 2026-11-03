@@ -31,8 +31,28 @@ object OfficialCalendar {
         E("Non-Farm Employment Change (BLS)", "2027-02-05 08:30"), E("CPI (BLS)", "2027-02-11 08:30"), E("PPI (BLS)", "2027-02-12 08:30"),
         E("Non-Farm Employment Change (BLS)", "2027-03-05 08:30"), E("CPI (BLS)", "2027-03-10 08:30"), E("PPI (BLS)", "2027-03-12 08:30"),
         E("Non-Farm Employment Change (BLS)", "2027-04-02 08:30"), E("CPI (BLS)", "2027-04-13 08:30"), E("PPI (BLS)", "2027-04-14 08:30"),
+        // V35.3-F: BLS 2027 May-Oct (bls.gov/schedule/2027/MM_sched_list.htm, copied 3 Nov 2026)
+        E("Non-Farm Employment Change (BLS)", "2027-05-07 08:30"), E("CPI (BLS)", "2027-05-12 08:30"), E("PPI (BLS)", "2027-05-13 08:30"),
+        E("Non-Farm Employment Change (BLS)", "2027-06-04 08:30"), E("CPI (BLS)", "2027-06-10 08:30"), E("PPI (BLS)", "2027-06-11 08:30"),
+        E("Non-Farm Employment Change (BLS)", "2027-07-02 08:30"), E("CPI (BLS)", "2027-07-14 08:30"), E("PPI (BLS)", "2027-07-15 08:30"),
+        E("Non-Farm Employment Change (BLS)", "2027-08-06 08:30"), E("PPI (BLS)", "2027-08-10 08:30"), E("CPI (BLS)", "2027-08-11 08:30"),
+        E("Non-Farm Employment Change (BLS)", "2027-09-03 08:30"), E("PPI (BLS)", "2027-09-10 08:30"), E("CPI (BLS)", "2027-09-14 08:30"),
+        E("Non-Farm Employment Change (BLS)", "2027-10-08 08:30"), E("CPI (BLS)", "2027-10-14 08:30"), E("PPI (BLS)", "2027-10-15 08:30"),
     ) + listOf("2026-12-09", "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08")
         .flatMap { d -> listOf(E("FOMC Statement (Fed)", "$d 14:00"), E("FOMC Press Conference (Fed)", "$d 14:30")) }
+
+    /**
+     * V35.3-F: the backup is PARTIAL by design (only NFP, CPI, PPI and FOMC; no GDP, PCE, retail sales, ISM, speeches...).
+     * Update procedure: copy new dates from bls.gov/schedule/<year>/MM_sched_list.htm and federalreserve.gov FOMC calendar
+     * into LIST with the copy date in the comment; the coverage line below then shows the new end dates.
+     */
+    fun coverage(now: Long): String {
+        val bls = LIST.filter { it.title.endsWith("(BLS)") }.maxOf { ms(it.et) }
+        val fed = LIST.filter { it.title.endsWith("(Fed)") }.maxOf { ms(it.et) }
+        val d = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+        val ended = if (now > bls) " (BLS list ENDED: update needed)" else ""
+        return "PARTIAL CALENDAR COVERAGE: backup lists only NFP, CPI, PPI until ${d.format(java.util.Date(bls))} and FOMC until ${d.format(java.util.Date(fed))}$ended; other high-impact news is not covered"
+    }
 
     fun ms(et: String): Long = LocalDateTime.parse(et.replace(' ', 'T')).atZone(NY).toInstant().toEpochMilli()
 

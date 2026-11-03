@@ -17,12 +17,21 @@ object MacroWindow {
     const val PRE_MS = 60 * 60_000L
     const val POST_MS = 30 * 60_000L
 
-    /** The high-impact USD event whose window contains [now], or null (Macro OFF). */
-    fun activeEvent(events: List<EconomicEvent>, now: Long): EconomicEvent? =
-        events.filter { it.impact.equals("High", true) && it.country.equals("USD", true) }
+    /**
+     * The high-impact USD event whose window contains [now], or null (Macro OFF).
+     * V35.3-F: deterministic when windows overlap: the most recent event ALREADY released (its reaction is what the market
+     * is trading), else the earliest upcoming one. Before: the nearest in time, so 16 min after an FOMC statement the press
+     * conference (14 min ahead) was chosen and the statement's reaction was read as "pre-release" drift.
+     */
+    fun activeEvent(events: List<EconomicEvent>, now: Long): EconomicEvent? {
+        val c = events.filter { it.impact.equals("High", true) && it.country.equals("USD", true) }
             .mapNotNull { ev -> EventTime.parseMs(ev.isoTime)?.let { ev to it } }
             .filter { (_, t) -> now >= t - PRE_MS && now <= t + POST_MS }
-            .minByOrNull { (_, t) -> kotlin.math.abs(t - now) }?.first
+        return (c.filter { it.second <= now }.maxByOrNull { it.second } ?: c.minByOrNull { it.second })?.first
+    }
+
+    /** stable id of an event: kind of release + its time */
+    fun eventId(ev: EconomicEvent): String = OfficialCalendar.kind(ev.title) + "@" + (EventTime.parseMs(ev.isoTime) ?: 0L)
 
     fun isActive(events: List<EconomicEvent>, now: Long): Boolean = activeEvent(events, now) != null
 

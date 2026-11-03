@@ -543,8 +543,7 @@ class GoldApiService(
             val name = ev.title
             if (dollar) {
                 NewsMacro.dxy(yahooIntraday("DX-Y.NYB"), t, now, name)?.let { return it }
-                NewsMacro.dxy(yahooIntraday("EURUSD=X").map { it.first to 1.0 / it.second }, t, now, name)
-                    ?.let { return it.copy(explanation = it.explanation.replace("US Dollar", "US Dollar (via EUR/USD)")) }
+                NewsMacro.usdProxy(yahooIntraday("EURUSD=X"), t, now, name)?.let { return it }
             } else {
                 NewsMacro.yield10(yahooIntraday("%5ETNX"), t, now, name)?.let { return it }
             }
@@ -553,7 +552,9 @@ class GoldApiService(
             val daily = if (dollar) fetchLiveDxy() else fetchLiveUs10y()
             val what = if (dollar) "US Dollar" else "10Y yield"
             return (daily ?: MacroMarketIndex(if (dollar) "DXY" else "^TNX", if (dollar) "US Dollar Index" else "US 10-Yr Yield", 0.0, 0.0, Signal.WAIT, ""))
-                .copy(impactOnGold = Signal.WAIT, explanation = "News window ($name): MACRO DATA UNAVAILABLE for the $what (no fresh 5-minute price): no vote")
+                .copy(impactOnGold = Signal.WAIT, explanation = if (now >= t && now < t + 10 * 60_000L)
+                    "News window ($name): waiting for the first COMPLETED 5-minute candle after the release ($what): MACRO DATA UNAVAILABLE, no vote yet"
+                    else "News window ($name): MACRO DATA UNAVAILABLE for the $what (no fresh completed 5-minute price): no vote")
         }
         return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
     }
