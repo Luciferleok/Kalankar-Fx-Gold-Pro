@@ -382,6 +382,9 @@ fun V8CockpitScreen(
             }
         }
 
+        // ---------------- V35.5-D forecast trust card (display only)
+        V8TrustCard(analysis, lang, now)
+
         // ---------------- health strip
         if (health != null) {
             V8Card(level = 2, onClick = onOpenHealth) {
