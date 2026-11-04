@@ -101,8 +101,9 @@ class HealthMonitor {
                 }),
             // V35.3-B: the four Macro states kept apart (window / schedule source / minute data / vote)
             CockpitInsightsBuilder.macroWindowCheck(a),
-            HealthCheck("US Dollar Index (daily context)", if (feed?.dxyAvailable == true) "OK" else "WARN", if (feed?.dxyAvailable == true) "Live" else "Unavailable (no vote)"),
-            HealthCheck("US 10Y yield (daily context)", if (feed?.us10yAvailable == true) "OK" else "WARN", if (feed?.us10yAvailable == true) "Live" else "Unavailable (no vote)")
+            // V35.5-A: from the analysis' own typed evidence (before: "a non-null object came back" = Live, even with no data)
+            MacroEvidenceView.health("US Dollar (Macro data)", MacroEvidenceView.dollar(a)).let { HealthCheck(it.first, it.second, it.third) },
+            MacroEvidenceView.health("US 10Y (Macro data)", MacroEvidenceView.tenY(a)).let { HealthCheck(it.first, it.second, it.third) }
         )
         categories.add(category("NEWS", "News & macro", newsChecks))
 
@@ -293,16 +294,20 @@ object CockpitInsightsBuilder {
     /** V35.3-B: NEWS WINDOW ACTIVE / EVENT SCHEDULE / INTRADAY EVIDENCE / MACRO VOTE ELIGIBLE, from the analysis itself. */
     fun macroWindowCheck(a: GoldAnalysisResult): HealthCheck {
         val g = a.groups.firstOrNull { it.key == "macro" } ?: return HealthCheck("Macro news window", "WARN", "No Macro pillar in this analysis")
-        if (!g.active && g.title.contains("NEWS WINDOW")) return HealthCheck("Macro news window", "WARN",
-            "NEWS WINDOW " + (Regex("NEWS WINDOW: (.*) but").find(g.title)?.groupValues?.get(1) ?: "") + " · MACRO DATA UNAVAILABLE (no completed minute data from OANDA or Yahoo): Macro has no vote and no weight")
-        if (!g.active) return HealthCheck("Macro news window", "OK", "OFF: no high-impact USD news within 1 h (Macro takes no part in the forecast)")
-        val src = Regex("ACTIVE: (.*)\\)$").find(g.title)?.groupValues?.get(1) ?: "news window"
-        val missing = g.indicators.count { it.detail.contains("unavailable", ignoreCase = true) }
+        // V35.5-A: data states from the typed evidence of the same analysis; the title only supplies the event's name
+        val ev = listOf(MacroEvidenceView.dollar(a).evidence, MacroEvidenceView.tenY(a).evidence)
+        val inWindow = g.active || g.title.contains("NEWS WINDOW")
+        if (!inWindow) return HealthCheck("Macro news window", "OK", "OFF: no high-impact USD news within 1 h (Macro takes no part in the forecast)")
+        val event = Regex("NEWS WINDOW: (.*) but").find(g.title)?.groupValues?.get(1) ?: Regex("ACTIVE: (.*)\\)$").find(g.title)?.groupValues?.get(1) ?: "news window"
+        val states = "dollar ${ev[0].status.name}, 10Y ${ev[1].status.name}"
+        if (!g.active) return HealthCheck("Macro news window", "WARN",
+            "NEWS WINDOW $event · $states: Macro has no vote and no weight")
+        val usable = ev.count { it.usableInWindow }
         val votes = g.indicators.count { it.signal != Signal.WAIT }
-        val proxy = g.indicators.any { it.name == NewsMacro.PROXY_NAME }
-        val evidence = when (missing) { 0 -> "minute data: dollar + 10Y"; g.indicators.size -> "minute data: NONE"; else -> "minute data: partial" } +
+        val proxy = MacroEvidenceView.dollar(a).evidence.sourceKind == "PROXY"
+        val evidence = (if (usable == 2) "minute data: dollar + 10Y" else "minute data: partial") + " ($states)" +
             if (proxy) " (dollar via inverted EUR/USD proxy)" else ""
-        return HealthCheck("Macro news window", if (missing == g.indicators.size) "WARN" else "OK",
-            "ACTIVE: $src · $evidence · " + if (votes > 0) "Macro votes ${g.verdict.name}" else "no Macro vote (moves too small or no data)")
+        return HealthCheck("Macro news window", "OK",
+            "ACTIVE: $event · $evidence · " + if (votes > 0) "Macro votes ${g.verdict.name}" else "no Macro vote (moves too small)")
     }
 }

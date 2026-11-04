@@ -99,8 +99,39 @@ data class MacroMarketIndex(
     val value: Double,
     val changePercent: Double,
     val impactOnGold: Signal,
-    val explanation: String
+    val explanation: String,
+    // V35.5-A: typed evidence. Vote eligibility and health come from here, never from the explanation text.
+    val evidence: MacroEvidence = MacroEvidence()
 )
+
+/** V35.5-A: how good a Macro reading is. Only OBSERVED_COMPLETE inside a news window may vote. */
+@Serializable
+enum class EvidenceStatus {
+    OBSERVED_COMPLETE,  // completed 5-min bars around the event, fresh enough
+    DELAYED,            // the newest completed bar is older than the age limit
+    INCOMPLETE,         // bars exist but not the ones needed (e.g. no completed bar after the release yet)
+    CONTEXT_ONLY,       // the day's change: shown for context, never a news-window vote
+    UNAVAILABLE,        // nothing usable from any source
+    UNTRUSTED           // conflicting values for one timestamp
+}
+
+/** V35.5-A: where a Macro reading came from and how it was measured. */
+@Serializable
+data class MacroEvidence(
+    val status: EvidenceStatus = EvidenceStatus.UNAVAILABLE,   // no source stated = no data (never assumed good)
+    val provider: String = "",        // OANDA / YAHOO / NONE
+    val instrument: String = "",      // e.g. "6 OANDA FX pairs", "EUR_USD", "USB10Y_USD", "DX-Y.NYB", "^TNX"
+    val sourceKind: String = "",      // DIRECT / COMPUTED / PROXY / DAILY
+    val unit: String = "",            // "index points", "EUR/USD rate", "note price", "yield %"
+    val barStartMs: Long = 0L,        // newest completed bar used (start)
+    val barEndMs: Long = 0L,          //   ... and end (= when its close became final)
+    val fetchedAtMs: Long = 0L,
+    val eventId: String = "",
+    val voteEligible: Boolean = false
+) {
+    /** inside a news window only fully observed evidence may vote */
+    val usableInWindow: Boolean get() = status == EvidenceStatus.OBSERVED_COMPLETE && voteEligible
+}
 
 @Serializable
 data class NewsSentimentItem(

@@ -39,6 +39,26 @@ object MacroWindow {
 
     fun isActive(events: List<EconomicEvent>, now: Long): Boolean = activeEvent(events, now) != null
 
+    /**
+     * V35.5-A: the news phase an analysis was made in: "OFF", "<eventId>:PRE" (window open, before the release) or
+     * "<eventId>:POST" (release out). A cached analysis is only reused inside the SAME phase.
+     */
+    fun phase(events: List<EconomicEvent>, now: Long): String {
+        val ev = activeEvent(events, now) ?: return "OFF"
+        val t = EventTime.parseMs(ev.isoTime) ?: return "OFF"
+        return eventId(ev) + if (now >= t) ":POST" else ":PRE"
+    }
+
+    /** inside a window a new 5-minute bar can change Macro's evidence, so a cached analysis lives at most this long */
+    const val IN_WINDOW_CACHE_MS = 5 * 60_000L
+
+    /** V35.5-A: may the screen reuse a cached analysis? Never across a phase change (OFF -> PRE -> POST -> OFF). */
+    fun cacheReusable(cachedAtMs: Long, cachedPhase: String?, now: Long, phaseNow: String, ttlMs: Long): Boolean {
+        if (cachedPhase != phaseNow) return false
+        val ttl = if (phaseNow != "OFF") minOf(ttlMs, IN_WINDOW_CACHE_MS) else ttlMs
+        return now - cachedAtMs in 0 until ttl
+    }
+
     /** Weights that take part in the gate: Macro's weight only while it is active. */
     fun weights(macroActive: Boolean): Map<String, Double> =
         if (macroActive) TechnicalEngine.PILLAR_WEIGHTS else TechnicalEngine.PILLAR_WEIGHTS - "macro"

@@ -50,6 +50,19 @@ object TrustCard {
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
     private fun pts(x: Double) = String.format(Locale.US, "%+.0f", x)
 
+    /** "OFF", or "NFP@1793971800000 · dollar OBSERVED_COMPLETE (OANDA COMPUTED) · 10Y INCOMPLETE · Macro votes BUY" */
+    fun newsLine(a: GoldAnalysisResult, l: AppLanguage): String {
+        val g = a.groups.firstOrNull { it.key == "macro" }
+        val d = MacroEvidenceView.dollar(a).evidence; val y = MacroEvidenceView.tenY(a).evidence
+        val id = d.eventId.ifBlank { y.eventId }
+        if (id.isBlank() || g == null) return t(l, "OFF (no high-impact USD news within 1 h)", "बंद (1 घंटे में कोई बड़ी USD न्यूज़ नहीं)", "बंद (1 तासात मोठी USD न्यूज नाही)")
+        fun one(name: String, e: com.example.livegoldai.model.MacroEvidence) = "$name ${e.status.name}" + if (e.usableInWindow) " (${e.provider} ${e.sourceKind})" else ""
+        val vote = if (g.active) t(l, "Macro votes ", "Macro वोट ", "Macro मत ") + g.verdict.name else t(l, "Macro no vote, no weight", "Macro का वोट/वज़न नहीं", "Macro ला मत/वजन नाही")
+        val ms = id.substringAfter("@").toLongOrNull()
+        val name = id.substringBefore("@") + (ms?.let { " " + java.text.SimpleDateFormat("dd MMM HH:mm", Locale.US).format(java.util.Date(it)) } ?: "")
+        return "$name · ${one("dollar", d)} · ${one("10Y", y)} · $vote"
+    }
+
     fun build(a: GoldAnalysisResult, now: Long, l: AppLanguage): Card {
         val sig = a.overallSignal
         val ts = a.tradeSetup
@@ -82,7 +95,8 @@ object TrustCard {
         val f = a.feed
         val spread = f?.takeIf { it.bid > 0 && it.ask >= it.bid }?.let { " · spread " + String.format(Locale.US, "%.2f", it.ask - it.bid) } ?: ""
         val src = SourceRegistry.identify(f?.source).provider.name.replace('_', ' ')
-        val macro = CockpitInsightsBuilder.macroWindowCheck(a).detail.substringBefore(" (").substringBefore(":").trim()
+        // V35.5-A: news event identity and Macro evidence from the same typed data SYSTEM shows
+        val macro = newsLine(a, l)
         metrics += Metric(Kind.DATA_HEALTH, "$fresh" + (if (age >= 0) " · ${age / 1000}s" else "") + " · $src$spread",
             t(l, "Macro news window: ", "Macro न्यूज़ विंडो: ", "Macro न्यूज विंडो: ") + macro, fresh == Freshness.LIVE)
         // 5. experimental research (Shadow Lab), never used in this forecast

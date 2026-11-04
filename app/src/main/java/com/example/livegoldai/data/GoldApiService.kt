@@ -29,6 +29,8 @@ class GoldApiService(
     private val json = Json { ignoreUnknownKeys = true }
     // shared by the screen and the background recorder (two threads)
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, GoldAnalysisResult>>()
+    /** V35.5-A: the news phase each cached analysis was made in */
+    private val cachePhase = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val cacheTtlMs = 15_000L // 15 seconds cache to avoid API burnout
 
     class VolBar(val t: Long, val v: Double, val buy: Double)
@@ -108,7 +110,7 @@ class GoldApiService(
 
     fun setApiKey(newKey: String) {
         apiKey = newKey.trim()
-        memoryCache.clear()
+        memoryCache.clear(); cachePhase.clear()
     }
 
     fun getApiKey(): String = apiKey
@@ -118,7 +120,7 @@ class GoldApiService(
     @Volatile private var oandaToken: () -> String = { "" }
     fun setOandaTokenProvider(p: () -> String) { oandaToken = p }
     /** The provider changed (token saved / removed): do not reuse results from the other feed. */
-    fun clearCache() = memoryCache.clear()
+    fun clearCache() { memoryCache.clear(); cachePhase.clear() }
     private fun oandaTok(): String = try { oandaToken().trim() } catch (_: Exception) { "" }
     fun oandaConfigured(): Boolean = oandaTok().isNotEmpty()
     /** Real OkHttp transport; replaceable only so tests can answer like OANDA without a network. Set before first use. */
@@ -205,7 +207,10 @@ class GoldApiService(
         val useOanda = oandaConfigured()
         // Twelve Data credit pacing only matters when Twelve Data is the feed
         val ttl = maxAgeMs ?: if (useOanda) cacheTtlMs else maxOf(cacheTtlMs, minOf(creditBudget.screenPaceMs(now), RealityEngine.intervalMinutes(normInterval) * 60_000L))
-        if (cached != null && (now - cached.first) < ttl) {
+        // V35.5-A: never reuse an analysis made in another news phase (OFF / before release / after release); the phase
+        // comes from the calendar already in memory (no download here). Unknown at fetch time = refetch once, never stale.
+        val phase = MacroWindow.phase(OfficialCalendar.merge(calendarCache?.second ?: emptyList()), now)
+        if (cached != null && MacroWindow.cacheReusable(cached.first, cachePhase[normInterval], now, phase, ttl)) {
             return@withContext Result.success(cached.second)
         }
 
@@ -224,8 +229,8 @@ class GoldApiService(
                     val analysis = TechnicalEngine.analyze(candles = oc, interval = interval, customDxy = dxyDeferred.await(),
                         customUs10y = us10yDeferred.await(), customEvents = eventsDeferred.await())
                     val finalResult = withOandaQuote(withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), OANDA_SOURCE, now, 1,
-                        dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, ""))
-                    memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
+                        MacroEvidenceView.hasData(dxyDeferred.await()), MacroEvidenceView.hasData(us10yDeferred.await()), eventsDeferred.await().size, ""))
+                    memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult); cachePhase[normInterval] = phase
                     return@withContext Result.success(finalResult)
                 }
             } catch (e: Exception) {
@@ -311,8 +316,8 @@ class GoldApiService(
                                 customUs10y = us10yDeferred.await(),
                                 customEvents = eventsDeferred.await()
                             )
-                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), if (useOanda) "Twelve Data XAU/USD (backup)" else "Twelve Data XAU/USD", now, 1 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, volSource)
-                            memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
+                            val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), if (useOanda) "Twelve Data XAU/USD (backup)" else "Twelve Data XAU/USD", now, 1 + step, MacroEvidenceView.hasData(dxyDeferred.await()), MacroEvidenceView.hasData(us10yDeferred.await()), eventsDeferred.await().size, volSource)
+                            memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult); cachePhase[normInterval] = phase
                             return@withContext Result.success(finalResult)
                         }
                     }
@@ -397,8 +402,8 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, VOLUME_SOURCE)
-                        memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Binance PAXG/USDT", now, 2 + step, MacroEvidenceView.hasData(dxyDeferred.await()), MacroEvidenceView.hasData(us10yDeferred.await()), eventsDeferred.await().size, VOLUME_SOURCE)
+                        memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult); cachePhase[normInterval] = phase
                         return@withContext Result.success(finalResult)
                     }
                 }
@@ -461,8 +466,8 @@ class GoldApiService(
                             customUs10y = us10yDeferred.await(),
                             customEvents = eventsDeferred.await()
                         )
-                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3 + step, dxyDeferred.await() != null, us10yDeferred.await() != null, eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures • futures volume, not XAU/USD spot" else "")
-                        memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult)
+                        val finalResult = withFeed(applyNewsMode(analysis.copy(isSimulatedFallback = false), eventsDeferred.await()), "Yahoo GC=F", now, 3 + step, MacroEvidenceView.hasData(dxyDeferred.await()), MacroEvidenceView.hasData(us10yDeferred.await()), eventsDeferred.await().size, if (volumes != null) "COMEX GC=F futures • futures volume, not XAU/USD spot" else "")
+                        memoryCache[normInterval] = Pair(System.currentTimeMillis(), finalResult); cachePhase[normInterval] = phase
                         return@withContext Result.success(finalResult)
                     }
                 }
@@ -541,26 +546,29 @@ class GoldApiService(
         val t = ev?.let { EventTime.parseMs(it.isoTime) }
         if (ev != null && t != null) {
             val name = ev.title
+            val id = MacroWindow.eventId(ev)
+            // V35.5-A: every reading carries its event and fetch time; every source tried leaves a typed reason
+            fun stamp(m: MacroMarketIndex) = m.copy(evidence = m.evidence.copy(fetchedAtMs = now, eventId = id))
+            val tried = ArrayList<EvidenceStatus>()
+            fun tried(series: List<Pair<Long, Double>>) { tried += NewsMacro.assess(series, t, now).second }
             if (dollar) {
                 // V35.3-G: 1st choice the dollar index computed from six OANDA FX pairs (completed candles), then Yahoo
-                if (oandaConfigured()) oandaMacroPairs()?.let { p -> OandaMacro.dollarIndex(p, t, now, name)?.let { return it } }
+                if (oandaConfigured()) oandaMacroPairs()?.let { p -> OandaMacro.dollarIndex(p, t, now, name)?.let { return stamp(it) }; tried(OandaMacro.dxy(p)) }
                 // V35.4: six-pair index not possible (a pair missing on this account) -> OANDA EUR/USD as the dollar proxy
-                if (oandaConfigured()) oandaMacroBars("EUR_USD")?.let { b -> NewsMacro.usdProxy(b.filter { it.complete }.map { it.startMs to it.close }, t, now, name)?.let { return it.copy(
-                    explanation = it.explanation.replace("INVERTED EUR/USD (", "INVERTED EUR/USD (OANDA, ")) } }
-                NewsMacro.dxy(yahooIntraday("DX-Y.NYB"), t, now, name)?.let { return it }
-                NewsMacro.usdProxy(yahooIntraday("EURUSD=X"), t, now, name)?.let { return it }
+                if (oandaConfigured()) oandaMacroBars("EUR_USD")?.let { b -> val s = b.filter { it.complete }.map { it.startMs to it.close }
+                    NewsMacro.usdProxy(s, t, now, name)?.let { return stamp(it.copy(
+                        explanation = it.explanation.replace("INVERTED EUR/USD (", "INVERTED EUR/USD (OANDA, "),
+                        evidence = it.evidence.copy(provider = "OANDA", instrument = "EUR_USD"))) }
+                    tried(s) }
+                yahooIntraday("DX-Y.NYB").let { s -> NewsMacro.dxy(s, t, now, name)?.let { return stamp(it) }; tried(s) }
+                yahooIntraday("EURUSD=X").let { s -> NewsMacro.usdProxy(s, t, now, name)?.let { return stamp(it) }; tried(s) }
             } else {
-                if (oandaConfigured()) oandaMacroBars(OandaMacro.NOTE)?.let { b -> OandaMacro.note(b, t, now, name)?.let { return it } }
-                NewsMacro.yield10(yahooIntraday("%5ETNX"), t, now, name)?.let { return it }
+                if (oandaConfigured()) oandaMacroBars(OandaMacro.NOTE)?.let { b -> OandaMacro.note(b, t, now, name)?.let { return stamp(it) }
+                    tried(b.filter { it.complete && it.close > 0 }.map { it.startMs to it.close }) }
+                yahooIntraday("%5ETNX").let { s -> NewsMacro.yield10(s, t, now, name)?.let { return stamp(it) }; tried(s) }
             }
-            // V35.3-B: no fresh minute-level price -> NO vote (before: the day's change voted, the input that was wrong
-            // 58% of the time). The day's value is still shown as context.
-            val daily = if (dollar) fetchLiveDxy() else fetchLiveUs10y()
-            val what = if (dollar) "US Dollar" else "10Y yield"
-            return (daily ?: MacroMarketIndex(if (dollar) "DXY" else "^TNX", if (dollar) "US Dollar Index" else "US 10-Yr Yield", 0.0, 0.0, Signal.WAIT, ""))
-                .copy(impactOnGold = Signal.WAIT, explanation = if (now >= t && now < t + 10 * 60_000L)
-                    "News window ($name): waiting for the first COMPLETED 5-minute candle after the release ($what): MACRO DATA UNAVAILABLE, no vote yet"
-                    else "News window ($name): MACRO DATA UNAVAILABLE for the $what (no fresh completed 5-minute price): no vote")
+            // V35.3-B: no fresh minute-level price -> NO vote. The day's value is still shown as context.
+            return NewsMacro.windowFallback(if (dollar) fetchLiveDxy() else fetchLiveUs10y(), dollar, tried, t, now, name, id)
         }
         return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
     }
@@ -583,7 +591,8 @@ class GoldApiService(
             Signal.SELL -> "US Dollar up +${String.format(Locale.US, "%.2f", changePct)}% today (usually a headwind for gold)"
             Signal.WAIT -> "US Dollar almost flat (${String.format(Locale.US, "%.2f", changePct)}%), no vote"
         }
-        return MacroMarketIndex("DXY", "US Dollar Index", price, changePct, impact, expl)
+        return MacroMarketIndex("DXY", "US Dollar Index", price, changePct, impact, expl,
+            MacroEvidence(EvidenceStatus.CONTEXT_ONLY, "YAHOO", "DX-Y.NYB", "DAILY", "index points", fetchedAtMs = System.currentTimeMillis()))
     }
 
     private fun fetchLiveUs10y(): MacroMarketIndex? {
@@ -594,7 +603,8 @@ class GoldApiService(
             Signal.SELL -> "10Y yield up +${String.format(Locale.US, "%.2f", changePct)}% today (usually a headwind for gold)"
             Signal.WAIT -> "10Y yield almost flat (${String.format(Locale.US, "%.2f", changePct)}%), no vote"
         }
-        return MacroMarketIndex("^TNX", "US 10-Yr Yield", yieldVal, changePct, impact, expl)
+        return MacroMarketIndex("^TNX", "US 10-Yr Yield", yieldVal, changePct, impact, expl,
+            MacroEvidence(EvidenceStatus.CONTEXT_ONLY, "YAHOO", "^TNX", "DAILY", "yield %", fetchedAtMs = System.currentTimeMillis()))
     }
 
     // V35.0: one calendar download per hour, shared by every timeframe (before: one per timeframe per refresh, which the

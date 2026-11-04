@@ -561,7 +561,8 @@ object TechnicalEngine {
             value = 0.0,
             changePercent = 0.0,
             impactOnGold = Signal.WAIT,
-            explanation = "DXY data unavailable right now (no vote)"
+            explanation = "DXY data unavailable right now (no vote)",
+            evidence = com.example.livegoldai.model.MacroEvidence(com.example.livegoldai.model.EvidenceStatus.UNAVAILABLE, provider = "NONE")
         )
         val us10yData = customUs10y ?: MacroMarketIndex(
             symbol = "^TNX",
@@ -569,7 +570,8 @@ object TechnicalEngine {
             value = 0.0,
             changePercent = 0.0,
             impactOnGold = Signal.WAIT,
-            explanation = "US 10Y yield data unavailable right now (no vote)"
+            explanation = "US 10Y yield data unavailable right now (no vote)",
+            evidence = com.example.livegoldai.model.MacroEvidence(com.example.livegoldai.model.EvidenceStatus.UNAVAILABLE, provider = "NONE")
         )
 
         // real calendar only; empty if it could not be loaded. V35.0: the feed now passes the whole (cached) week, so the
@@ -603,7 +605,8 @@ object TechnicalEngine {
         // V35.3-G (owner, 3 Nov 2026: "clear prediction"): in a news window with NO usable minute-level dollar / yield data
         // Macro takes no part at all (no vote, no weight), instead of sitting in the gate as a 2.5-weight WAIT that dilutes
         // the other pillars (same chart: 100% -> 83.9%). The window and the missing data are shown, not hidden.
-        fun usable(m: MacroMarketIndex?) = m != null && !m.explanation.contains("unavailable", true) && !m.explanation.contains("waiting for the first", true)
+        // V35.5-A: typed evidence decides, never the explanation text (before: a reworded "no data" message counted as data)
+        fun usable(m: MacroMarketIndex?) = m?.evidence?.usableInWindow == true
         val macroData = usable(customDxy) || usable(customUs10y)
         val macroActive = macroEvent != null && macroData
         val macroVerdict = if (macroActive) macroRaw else Signal.WAIT
