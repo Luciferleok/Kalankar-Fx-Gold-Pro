@@ -54,6 +54,34 @@ object PlanText {
         else -> t(l, "NO MEASURED EDGE", "कोई मापी बढ़त नहीं", "मोजलेली आघाडी नाही")
     }
 
+    /**
+     * V35.9: the title follows the CANONICAL decision ([canonical] = analysis.overallSignal). A WAIT whose levels came
+     * from a raw BUY / SELL that a filter or the gate blocked is called a blocked-signal scenario; a plain WAIT shows the
+     * engine's fixed upside example.
+     */
+    fun planTitle(ts: TradeSetup, l: AppLanguage, canonical: com.example.livegoldai.model.Signal): String =
+        if (canonical == com.example.livegoldai.model.Signal.WAIT && ts.planStatus != PlanStamp.ACTIVE) {
+            if (ts.signal == com.example.livegoldai.model.Signal.WAIT)
+                t(l, "UPSIDE BREAKOUT EXAMPLE (NOT A LEAN, NOT A TRADE)", "ऊपर ब्रेकआउट का उदाहरण (झुकाव नहीं, ट्रेड नहीं)", "वर ब्रेकआउटचे उदाहरण (कल नाही, ट्रेड नाही)")
+            else t(l, "BLOCKED ${ts.signal.name} SIGNAL: SCENARIO ONLY (FINAL = WAIT)", "रोका गया ${ts.signal.name} सिग्नल: सिर्फ़ परिदृश्य (फ़ाइनल = WAIT)", "थांबवलेला ${ts.signal.name} सिग्नल: फक्त परिस्थिती (अंतिम = WAIT)")
+        } else planTitle(ts, l)
+
+    /** V35.9: WAIT research card title (never "next expected target") */
+    fun liveVsLevelTitle(canonical: com.example.livegoldai.model.Signal, actionable: Boolean, l: AppLanguage): String =
+        if (actionable) t(l, "🔴 LIVE STATUS VS NEXT TARGET", "🔴 अभी का भाव vs अगला टारगेट", "🔴 सध्याचा भाव vs पुढील टार्गेट")
+        else if (canonical == com.example.livegoldai.model.Signal.WAIT) t(l, "LIVE PRICE VS RESEARCH EXAMPLE LEVEL (NOT A TARGET)", "लाइव भाव vs रिसर्च उदाहरण लेवल (टारगेट नहीं)", "लाइव्ह भाव vs रिसर्च उदाहरण लेव्हल (टार्गेट नाही)")
+        else t(l, "LIVE PRICE VS SCENARIO LEVEL (NOT A TRADE)", "लाइव भाव vs परिदृश्य लेवल (ट्रेड नहीं)", "लाइव्ह भाव vs परिस्थिती लेव्हल (ट्रेड नाही)")
+
+    /** V35.9: research invalidation is not an execution stop, and not how the ledger scores a call */
+    fun researchInvalidationText(level: Double, l: AppLanguage): String {
+        val x = String.format(java.util.Locale.US, "%.2f", level)
+        return t(l, "Research only: this example would be void if a candle closed beyond \$$x. It is not an execution stop. The ledger scores every call by whichever of its own stop or target is touched first.",
+            "सिर्फ़ रिसर्च: कैंडल \$$x के पार क्लोज़ हो तो यह उदाहरण रद्द। यह असली स्टॉप-लॉस नहीं है। लेजर हर कॉल को उसके अपने स्टॉप या टारगेट में से जो पहले छुए, उससे जाँचता है।",
+            "फक्त रिसर्च: कँडल \$$x च्या पलीकडे बंद झाली तर हे उदाहरण रद्द. हा खरा स्टॉप-लॉस नाही. लेजर प्रत्येक कॉल तिच्या स्टॉप किंवा टार्गेटपैकी जे आधी लागेल त्यावरून तपासतो.")
+    }
+
+    fun researchSandboxTitle(l: AppLanguage) = t(l, "RESEARCH SANDBOX — HYPOTHETICAL ILLUSTRATION, NOT A FORECAST", "रिसर्च सैंडबॉक्स — काल्पनिक उदाहरण, फ़ोरकास्ट नहीं", "रिसर्च सँडबॉक्स — काल्पनिक उदाहरण, अंदाज नाही")
+
     fun planTitle(ts: TradeSetup, l: AppLanguage): String = when (ts.planStatus) {
         PlanStamp.ACTIVE -> t(l, "ACTION PLAN (ACTIVE)", "एक्शन प्लान (सक्रिय)", "अ‍ॅक्शन प्लॅन (सक्रिय)")
         PlanStamp.STOPPED -> t(l, "PLAN CLOSED: STOP-LOSS HIT", "प्लान बंद: STOP-LOSS लगा", "प्लॅन बंद: STOP-LOSS लागला")

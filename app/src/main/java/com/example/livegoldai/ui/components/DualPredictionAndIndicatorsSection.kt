@@ -121,7 +121,7 @@ fun DualPredictionAndIndicatorsSection(
                             Text(
                                 text = modeSub,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
                                 color = if (isSelected) ObsidianBackground.copy(alpha = 0.85f) else TextMuted
                             )
@@ -329,7 +329,7 @@ fun PredictionBigCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondary,
-                        fontSize = 9.sp
+                        fontSize = 10.sp
                     )
                 }
             }
@@ -354,14 +354,14 @@ fun PredictionBigCard(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "RULE COUNCIL: 5 local rules (no AI call)",
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 fontWeight = FontWeight.Bold,
                                 color = GoldLight
                             )
                         }
                         Text(
                             text = "${consensus.agreeingModelsCount}/${consensus.totalModelsCount} AGREE",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             fontWeight = FontWeight.Black,
                             color = NeonGreen
                         )
@@ -461,7 +461,7 @@ fun PredictionBigCard(
                         )
                         Text(
                             text = com.example.livegoldai.data.ResearchScenario.outcomeNote(scenario, currentLanguage),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = TextMuted
                         )
                     }
@@ -550,7 +550,7 @@ fun PredictionBigCard(
                                             AppLanguage.HINDI -> "लिस्ट देखें"
                                             AppLanguage.MARATHI -> "यादी पहा"
                                         },
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = TextSecondary
                                     )
                                 }
@@ -583,7 +583,7 @@ fun PredictionBigCard(
                                             AppLanguage.HINDI -> "लिस्ट देखें"
                                             AppLanguage.MARATHI -> "यादी पहा"
                                         },
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = SignalSell
                                     )
                                 }
@@ -608,7 +608,7 @@ fun PredictionBigCard(
                                     )
                                     Text(
                                         text = "Net Pips",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = TextSecondary
                                     )
                                 }
@@ -632,7 +632,7 @@ fun PredictionBigCard(
                                 )
                                 Text(
                                     text = "AI Self-Calibrated 🧠",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                     color = GoldLight
                                 )
                             }
@@ -692,7 +692,7 @@ fun PredictionBigCard(
                                             AppLanguage.HINDI -> if (learnedCount > 0) "जाँची गई कॉल से सीखे $learnedCount फ़िल्टर लागू · कोई गारंटी नहीं" else "सिर्फ़ तय नियम · अभी कोई सीखा हुआ सुधार लागू नहीं"
                                             AppLanguage.MARATHI -> if (learnedCount > 0) "तपासलेल्या कॉलमधून शिकलेले $learnedCount फिल्टर लागू · हमी नाही" else "फक्त ठरलेले नियम · अजून शिकलेली सुधारणा लागू नाही"
                                         },
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = TextSecondary
                                     )
                                 }
@@ -706,7 +706,7 @@ fun PredictionBigCard(
                                     Text(
                                         text = "$ruleCount RULES",
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         fontWeight = FontWeight.Bold,
                                         color = NeonGreen
                                     )
@@ -749,7 +749,7 @@ fun PredictionBigCard(
                                             Text(
                                                 text = corr.badgeTag,
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 fontWeight = FontWeight.Bold,
                                                 color = SignalBuy
                                             )
@@ -923,21 +923,21 @@ fun PredictionBigCard(
                     Text(
                         text = "🟢 Bullish: $bullishProb%",
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = SignalBuy
                     )
                     Text(
                         text = "🟡 Sideways: $sidewaysProb%",
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = SignalWait
                     )
                     Text(
                         text = "🔴 Bearish: $bearishProb%",
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = SignalSell
                     )
@@ -1014,7 +1014,7 @@ fun PredictionBigCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(text = "ENTRY ZONE", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                            Text(text = "ENTRY ZONE", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.Bold)
                             Text(
                                 text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.entryPrice)}",
                                 fontSize = 12.sp,
@@ -1024,7 +1024,7 @@ fun PredictionBigCard(
                         }
 
                         Column {
-                            Text(text = "STOP LOSS (SL)", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                            Text(text = "STOP LOSS (SL)", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.Bold)
                             Text(
                                 text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.stopLoss)}",
                                 fontSize = 12.sp,
@@ -1033,14 +1033,14 @@ fun PredictionBigCard(
                             )
                             Text(
                                 text = "-${analysis.tradeSetup.stopLossPips.toInt()} Pips",
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = SignalSell
                             )
                         }
 
                         Column {
-                            Text(text = "TARGET 1 (SAFE)", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                            Text(text = "TARGET 1 (SAFE)", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.Bold)
                             Text(
                                 text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit1)}",
                                 fontSize = 12.sp,
@@ -1049,14 +1049,14 @@ fun PredictionBigCard(
                             )
                             Text(
                                 text = "+${analysis.tradeSetup.takeProfit1Pips.toInt()} Pips",
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = SignalBuy
                             )
                         }
 
                         Column {
-                            Text(text = "TARGET 2 (RUNNER)", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                            Text(text = "TARGET 2 (RUNNER)", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.Bold)
                             Text(
                                 text = "$${String.format(Locale.US, "%.2f", analysis.tradeSetup.takeProfit2)}",
                                 fontSize = 12.sp,
@@ -1065,7 +1065,7 @@ fun PredictionBigCard(
                             )
                             Text(
                                 text = "+${analysis.tradeSetup.takeProfit2Pips.toInt()} Pips",
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GoldLight
                             )
@@ -1309,7 +1309,7 @@ fun IndicatorsOverallBigCard(
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondary,
-                        fontSize = 9.sp
+                        fontSize = 10.sp
                     )
                 }
             }
@@ -1385,7 +1385,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$buyCount BUY", fontWeight = FontWeight.Black, color = SignalBuy, fontSize = 12.sp)
-                                Text(text = LocalizationStrings.buySignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.buySignalsLabel(currentLanguage), fontSize = 10.sp, color = TextMuted)
                             }
                         }
 
@@ -1400,7 +1400,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$sellCount SELL", fontWeight = FontWeight.Black, color = SignalSell, fontSize = 12.sp)
-                                Text(text = LocalizationStrings.sellSignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.sellSignalsLabel(currentLanguage), fontSize = 10.sp, color = TextMuted)
                             }
                         }
 
@@ -1415,7 +1415,7 @@ fun IndicatorsOverallBigCard(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(text = "$waitCount WAIT", fontWeight = FontWeight.Black, color = SignalWait, fontSize = 12.sp)
-                                Text(text = LocalizationStrings.waitSignalsLabel(currentLanguage), fontSize = 8.sp, color = TextMuted)
+                                Text(text = LocalizationStrings.waitSignalsLabel(currentLanguage), fontSize = 10.sp, color = TextMuted)
                             }
                         }
                     }
@@ -1632,13 +1632,13 @@ private fun CategoryStatusRow(
                             Text(
                                 text = "🔬 Deep-Dive",
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                fontSize = 8.sp,
+                                fontSize = 10.sp,
                                 color = GoldLight,
                                 fontWeight = FontWeight.Black
                             )
                         }
                     }
-                    Text(text = indicators, fontSize = 9.sp, color = TextMuted)
+                    Text(text = indicators, fontSize = 10.sp, color = TextMuted)
                     Text(text = statusText, fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                 }
             }

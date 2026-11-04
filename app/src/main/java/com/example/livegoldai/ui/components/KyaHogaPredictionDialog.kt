@@ -168,7 +168,7 @@ fun KyaHogaPredictionDialog(
                                             // V35.7: short enough for the badge (was "58% hit-rate", clipped to "58% hit-r")
                                             else "${prediction?.winProbabilityPercent ?: baseProb}% " + when (analysis.presentation?.headlineKind) { "HISTORICAL" -> "hist."; else -> "agr" },
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 9.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Black,
                                         color = primaryColor,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -255,7 +255,7 @@ fun KyaHogaPredictionDialog(
                                 Text(
                                     text = prediction?.urgencyTag ?: "HIGH CONVICTION",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 9.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Black,
                                     color = primaryColor
                                 )
@@ -474,7 +474,7 @@ fun KyaHogaPredictionDialog(
                                                     AppLanguage.HINDI -> "लिस्ट देखें"
                                                     AppLanguage.MARATHI -> "यादी पहा"
                                                 },
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextSecondary
                                             )
                                         }
@@ -508,7 +508,7 @@ fun KyaHogaPredictionDialog(
                                                     AppLanguage.HINDI -> "लिस्ट देखें"
                                                     AppLanguage.MARATHI -> "यादी पहा"
                                                 },
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = SignalSell
                                             )
                                         }
@@ -532,7 +532,7 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = PT.pointsLabel(currentLanguage),
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextSecondary
                                             )
                                         }
@@ -608,7 +608,7 @@ fun KyaHogaPredictionDialog(
                                                     AppLanguage.HINDI -> PT.safetyChecksNote(AppLanguage.HINDI)
                                                     AppLanguage.MARATHI -> PT.safetyChecksNote(AppLanguage.MARATHI)
                                                 },
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextSecondary
                                             )
                                         }
@@ -623,7 +623,7 @@ fun KyaHogaPredictionDialog(
                                         Text(
                                             text = PT.safetyChecksBadge(corrections.size, currentLanguage),
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             fontWeight = FontWeight.Bold,
                                             color = NeonGreen
                                         )
@@ -653,7 +653,7 @@ fun KyaHogaPredictionDialog(
                                                 )
                                                 Text(
                                                     text = corr.badgeTag,
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                     color = SignalBuy,
                                                     fontWeight = FontWeight.Bold,
                                                     maxLines = 1,
@@ -670,7 +670,7 @@ fun KyaHogaPredictionDialog(
                                             Spacer(modifier = Modifier.height(3.dp))
                                             Text(
                                                 text = "🔍 ${corr.getErrorAddressed(currentLanguage)}",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextMuted
                                             )
                                         }
@@ -750,7 +750,7 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = PT.councilNote(currentLanguage),
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextSecondary
                                             )
                                         }
@@ -765,7 +765,7 @@ fun KyaHogaPredictionDialog(
                                         Text(
                                             text = PT.councilBadge(consensus.agreeingModelsCount, consensus.totalModelsCount, consensus.consensusSignal, currentLanguage),
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                             fontWeight = FontWeight.Bold,
                                             color = primaryColor
                                         )
@@ -793,14 +793,14 @@ fun KyaHogaPredictionDialog(
                                                 Text(text = model.provider.iconEmoji, fontSize = 12.sp)
                                                 Text(
                                                     text = model.provider.displayName.substringBefore(" "),
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                     fontWeight = FontWeight.Bold,
                                                     color = TextPrimary
                                                 )
                                                 val voteColor = if (model.signal == Signal.BUY) SignalBuy else if (model.signal == Signal.SELL) SignalSell else SignalWait
                                                 Text(
                                                     text = model.signal.name,
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                     fontWeight = FontWeight.Black,
                                                     color = voteColor
                                                 )
@@ -860,7 +860,7 @@ fun KyaHogaPredictionDialog(
                                     AppLanguage.HINDI -> PT.evidenceNote(split.fromHistory, AppLanguage.HINDI)
                                     AppLanguage.MARATHI -> PT.evidenceNote(split.fromHistory, AppLanguage.MARATHI)
                                 },
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 color = TextMuted
                             )
 
@@ -981,11 +981,8 @@ fun KyaHogaPredictionDialog(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = when (currentLanguage) {
-                                    AppLanguage.ENGLISH -> "🔴 LIVE STATUS VS NEXT EXPECTED TARGET"
-                                    AppLanguage.HINDI -> "🔴 अभी क्या चल रहा है vs अगला टारगेट"
-                                    AppLanguage.MARATHI -> "🔴 सध्या काय स्थिती आहे विरुद्ध पुढील टार्गेट"
-                                },
+                                // V35.9: no "next expected target" unless an ACTIVE plan exists
+                                text = PT.liveVsLevelTitle(analysis.overallSignal, actionable, currentLanguage),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Black,
                                 color = GoldLight
@@ -1053,7 +1050,8 @@ fun KyaHogaPredictionDialog(
                                         fontWeight = FontWeight.Black,
                                         color = primaryColor
                                     )
-                                    Text(
+                                    // V35.9: no second target on WAIT (it read as an upside plan)
+                                    if (actionable || !(analysis.overallSignal == Signal.WAIT)) Text(
                                         text = "TP2: $${String.format(Locale.US, "%.2f", tradeSetup.takeProfit2)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 10.sp,
@@ -1090,7 +1088,7 @@ fun KyaHogaPredictionDialog(
 
                     }
                     if (actionable || showResearch) {
-                        if (!actionable) Text(text = PT.researchScenarioTitle(currentLanguage), color = SignalWait, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                        if (!actionable) Text(text = if (analysis.overallSignal == Signal.WAIT) PT.researchSandboxTitle(currentLanguage) else PT.researchScenarioTitle(currentLanguage), color = SignalWait, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp, modifier = Modifier.padding(horizontal = 4.dp))
                         if (actionable || analysis.presentation?.compatibleWithModel != false) {
                     // 4. Action Playbook (Entry, SL, TP)
                     Surface(
@@ -1108,13 +1106,14 @@ fun KyaHogaPredictionDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = PT.planTitle(tradeSetup, currentLanguage),
+                                    text = PT.planTitle(tradeSetup, currentLanguage, analysis.overallSignal),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Black,
                                     color = GoldLight,
                                     modifier = Modifier.weight(1f)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                // V35.9: risk:reward only for a BUY / SELL call, never for the WAIT example
+                                if (!(analysis.overallSignal == Signal.WAIT)) { Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = primaryColor.copy(alpha = 0.2f),
@@ -1123,11 +1122,12 @@ fun KyaHogaPredictionDialog(
                                     Text(
                                         text = "risk:reward ${tradeSetup.riskRewardRatio}",
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 9.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Black,
                                         color = primaryColor,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
+                                }
                                 }
                             }
 
@@ -1234,7 +1234,8 @@ fun KyaHogaPredictionDialog(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = when (currentLanguage) {
+                                    // V35.9: a research example has no execution stop; say how the ledger really scores calls
+                                    text = if (!actionable) PT.researchInvalidationText(tradeSetup.stopLoss, currentLanguage) else when (currentLanguage) {
                                         AppLanguage.ENGLISH -> "If a candle closes beyond $${String.format(Locale.US, "%.2f", tradeSetup.stopLoss)}, this trade setup is immediately invalid. Always maintain Stop Loss."
                                         AppLanguage.HINDI -> "अगर कैंडल $${String.format(Locale.US, "%.2f", tradeSetup.stopLoss)} के पार क्लोज हो जाए, तो सेटअप तुरंत इनवैलिड हो जाएगा। स्टॉप लॉस लगाना अनिवार्य है।"
                                         AppLanguage.MARATHI -> "जर कँडल $${String.format(Locale.US, "%.2f", tradeSetup.stopLoss)} च्या पलीकडे बंद झाली, तर हा सेटअप तत्काळ रद्द होईल. स्टॉप लॉस लावणे अत्यंत आवश्यक आहे."
@@ -1364,7 +1365,7 @@ private fun ActionItemPill(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 color = TextMuted
             )

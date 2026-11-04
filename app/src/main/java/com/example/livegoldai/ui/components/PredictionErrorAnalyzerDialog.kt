@@ -940,6 +940,10 @@ private fun PrecisionLabCard(list: List<com.example.livegoldai.model.PrecisionSt
             "हर चैलेंजर सिर्फ़ BUY/SELL को WAIT कर सकता है। कॉल बनते समय तय, V35.8 से रिकॉर्ड हुई उन्हीं कॉल पर ऐप से तुलना। जो आप देखते हैं वह नहीं बदलता; आपकी मंज़ूरी के बिना कुछ लागू नहीं।",
             "प्रत्येक चॅलेंजर फक्त BUY/SELL ला WAIT करू शकतो. कॉल बनताना ठरते, V35.8 पासून नोंदलेल्या त्याच कॉलवर ॲपशी तुलना. तुम्हाला दिसणारे बदलत नाही; तुमच्या मंजुरीशिवाय काही लागू नाही."),
             color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
+        // V35.9: honest about the test itself
+        Note(t(lang, "Three challengers are tested at the same time, so one can look better by chance. PROMISING means \"worth a longer test\", never proven; any change still needs more data and your approval. All providers and timeframes are pooled; current engine only.",
+            "तीन चैलेंजर एक साथ टेस्ट हो रहे हैं, इसलिए कोई एक संयोग से बेहतर दिख सकता है। PROMISING का मतलब \"लंबा टेस्ट करने लायक\", साबित नहीं; कोई बदलाव और डेटा और आपकी मंज़ूरी से ही। सभी प्रोवाइडर और टाइमफ़्रेम मिलाकर; सिर्फ़ मौजूदा इंजन।",
+            "तीन चॅलेंजर एकाच वेळी तपासले जात आहेत, त्यामुळे एखादा योगायोगाने चांगला दिसू शकतो. PROMISING म्हणजे \"जास्त काळ तपासण्यासारखा\", सिद्ध नाही; कोणताही बदल अधिक डेटा आणि तुमच्या मंजुरीनेच. सर्व प्रोव्हायडर आणि टाइमफ्रेम एकत्र; फक्त सध्याचे इंजिन."))
         list.forEach { p ->
             val vc = when (p.verdict) { "PROMISING" -> SignalBuy; "WORSE" -> SignalSell; "COLLECTING" -> GoldPrimary; else -> TextSecondary }
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {

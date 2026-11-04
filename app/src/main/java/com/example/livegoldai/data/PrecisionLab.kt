@@ -72,7 +72,9 @@ object PrecisionLab {
             Triple(QUIET, "RANGE / NEWS", "WAIT in a range market or a news event"),
             Triple(SHORT, "SHORT TIMEFRAMES (2m–4m)", "WAIT on 2m, 3m and 4m")
         ).map { (key, title, rule) ->
-            val pool = all.filter { key in it.sources }          // only calls recorded after the challenger existed
+            // only calls recorded after the challenger existed, and (V35.9) only the current engine: another engine's calls are
+            // a different production to compare with
+            val pool = all.filter { key in it.sources && it.engineVersion == PredictionLedger.ENGINE_VERSION }
             val kept = pool.filter { it.sources[key] != Signal.WAIT }
             val skipped = pool.filter { it.sources[key] == Signal.WAIT }
             val pH = pct(pool.count { right(state, it) }, pool.size)
