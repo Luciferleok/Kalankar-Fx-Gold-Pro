@@ -44,23 +44,33 @@ object TrustCard {
         val regime: String,
         val alignment: String,
         val evidence: String,
-        val footer: String
+        val footer: String,
+        // V35.5-E: status NOW (re-checked every second), apart from the status at publication (never rewritten)
+        val nowStatus: String = "",
+        val nowReasons: List<String> = emptyList(),
+        val diagnostics: List<Diag> = emptyList()
     )
+    /** V35.5-E: one factual check; state OK / WARN / FAIL / NA. Never combined into a score. */
+    data class Diag(val name: String, val state: String, val detail: String)
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
     private fun pts(x: Double) = String.format(Locale.US, "%+.0f", x)
 
     /** "OFF", or "NFP@1793971800000 · dollar OBSERVED_COMPLETE (OANDA COMPUTED) · 10Y INCOMPLETE · Macro votes BUY" */
-    fun newsLine(a: GoldAnalysisResult, l: AppLanguage): String {
+    fun newsLine(a: GoldAnalysisResult, l: AppLanguage, now: Long = System.currentTimeMillis()): String {
         val g = a.groups.firstOrNull { it.key == "macro" }
         val d = MacroEvidenceView.dollar(a).evidence; val y = MacroEvidenceView.tenY(a).evidence
         val id = d.eventId.ifBlank { y.eventId }
         if (id.isBlank() || g == null) return t(l, "OFF (no high-impact USD news within 1 h)", "बंद (1 घंटे में कोई बड़ी USD न्यूज़ नहीं)", "बंद (1 तासात मोठी USD न्यूज नाही)")
         fun one(name: String, e: com.example.livegoldai.model.MacroEvidence) = "$name ${e.status.name}" + if (e.usableInWindow) " (${e.provider} ${e.sourceKind})" else ""
-        val vote = if (g.active) t(l, "Macro votes ", "Macro वोट ", "Macro मत ") + g.verdict.name else t(l, "Macro no vote, no weight", "Macro का वोट/वज़न नहीं", "Macro ला मत/वजन नाही")
+        // V35.5-E: whether Macro took part in THIS decision, and how old its newest completed bar is
+        val vote = if (g.active) t(l, "Macro votes ", "Macro वोट ", "Macro मत ") + g.verdict.name + t(l, " (used in decision)", " (फ़ैसले में शामिल)", " (निर्णयात वापर)")
+            else t(l, "Macro no vote, no weight (not used in decision)", "Macro का वोट/वज़न नहीं (फ़ैसले में नहीं)", "Macro ला मत/वजन नाही (निर्णयात नाही)")
+        val newest = listOf(d, y).filter { it.usableInWindow }.maxOfOrNull { it.barEndMs } ?: 0L
+        val age = if (newest > 0L && now >= newest) t(l, " · data ", " · डेटा ", " · डेटा ") + "${(now - newest) / 60_000L}m" + t(l, " old", " पुराना", " जुना") else ""
         val ms = id.substringAfter("@").toLongOrNull()
         val name = id.substringBefore("@") + (ms?.let { " " + java.text.SimpleDateFormat("dd MMM HH:mm", Locale.US).format(java.util.Date(it)) } ?: "")
-        return "$name · ${one("dollar", d)} · ${one("10Y", y)} · $vote"
+        return "$name · ${one("dollar", d)} · ${one("10Y", y)}$age · $vote"
     }
 
     fun build(a: GoldAnalysisResult, now: Long, l: AppLanguage): Card {
@@ -76,27 +86,58 @@ object TrustCard {
             else -> "NOT ACTIONABLE" to ts.planStatus
         }
 
+        // V35.5-E: the publication status above is the record; this is whether it still holds NOW (same checks as the
+        // one execution policy, ResearchGate), so an old snapshot is never shown as currently actionable
+        val fresh = Freshness.assess(a, now)
+        val refusals = if (wait) emptyList() else ResearchGate.authorize(a, ts.snapshotId, a.interval, now).refusals
+        val nowReasons = refusals.mapNotNull { r -> when (r) {
+            ResearchGate.EXPIRED -> if (ts.expiresAtMs > 0L) t(l, "expired ", "समाप्त ", "मुदत संपली ") + "${(now - ts.expiresAtMs).coerceAtLeast(0L) / 60_000L}m" + t(l, " ago", " पहले", " आधी")
+                else t(l, "no expiry", "समाप्ति नहीं", "मुदत नाही")
+            ResearchGate.DATA_NOT_FRESH -> t(l, "price ", "प्राइस ", "प्राइस ") + fresh
+            ResearchGate.PROVIDER_MISMATCH -> t(l, "provider changed since publication", "प्रकाशन के बाद प्रोवाइडर बदला", "प्रकाशनानंतर प्रोव्हायडर बदलला")
+            ResearchGate.STOP_TOUCHED -> t(l, "stop touched", "स्टॉप छू गया", "स्टॉप लागला")
+            ResearchGate.NO_LIVE_DATA -> t(l, "no live data", "लाइव डेटा नहीं", "लाइव्ह डेटा नाही")
+            ResearchGate.INSTRUMENT_NOT_XAU -> t(l, "not XAU/USD spot", "XAU/USD स्पॉट नहीं", "XAU/USD स्पॉट नाही")
+            else -> null } }
+        val nowStatus = when {
+            wait -> "WAIT"
+            status == "QUALIFIED" && refusals.isEmpty() -> "ACTIONABLE"
+            status == "QUALIFIED" -> "NOT ACTIONABLE"
+            nowReasons.isNotEmpty() -> "OUTDATED"
+            status == "RESEARCH" -> "RESEARCH ONLY"
+            else -> "NOT ACTIONABLE"
+        }
+
         val metrics = ArrayList<Metric>()
         // 1. rule agreement (only for a call: a WAIT has no agreement number to trade on)
         val votes = a.groups.count { it.active && it.verdict == sig }
         metrics += Metric(Kind.RULE_AGREEMENT,
             if (wait) t(l, "below the gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}% · $votes/${a.totalGroups} " + t(l, "pillars", "पिलर", "पिलर"),
             t(l, "weighted vote share, gate 68%: not a probability", "वेटेड वोट हिस्सा, गेट 68%: संभावना नहीं", "वेटेड मत वाटा, गेट 68%: शक्यता नाही"))
-        // 2. historical hit-rate of the same agreement band
+        // 2. V35.5-E: hit-rate of past calls matching THIS forecast; the agreement-band number only as general context
+        val general = if (p != null && p.hitRatePct >= 0 && p.hitRateN > 0) t(l, "GENERAL HISTORICAL CONTEXT (this timeframe and agreement band, all sides, providers and engines, overlapping windows): ",
+            "सामान्य पुराना संदर्भ (यही टाइमफ़्रेम और सहमति बैंड, सभी दिशा/प्रोवाइडर/इंजन, ओवरलैपिंग विंडो): ", "सामान्य जुना संदर्भ (हाच टाइमफ्रेम आणि सहमती बँड, सर्व दिशा/प्रोव्हायडर/इंजिन, ओव्हरलॅपिंग विंडो): ") +
+            "${p.hitRatePct}% · N=${p.hitRateN}" else ""
         metrics += Metric(Kind.HISTORICAL_HIT_RATE,
-            when { wait -> t(l, "no call: none", "कॉल नहीं: कुछ नहीं", "कॉल नाही: काही नाही"); p != null && p.hitRatePct >= 0 && p.hitRateN > 0 -> "${p.hitRatePct}% · N=${p.hitRateN}"
-                else -> t(l, "not enough history", "पर्याप्त इतिहास नहीं", "पुरेसा इतिहास नाही") },
-            t(l, "past calls of this agreement band, sideways excluded: not today's chance", "इसी सहमति बैंड की पुरानी कॉल, साइडवेज़ छोड़कर: आज का मौका नहीं", "याच सहमती बँडच्या जुन्या कॉल, साइडवेज वगळून: आजची शक्यता नाही"))
+            when {
+                wait -> t(l, "no call: none", "कॉल नहीं: कुछ नहीं", "कॉल नाही: काही नाही")
+                p != null && p.exactHitPct >= 0 -> "${p.exactHitPct}% · N=${p.exactHitN} " + t(l, "exact match", "सटीक मिलान", "अचूक जुळणी")
+                else -> t(l, "INSUFFICIENT EVIDENCE", "पर्याप्त प्रमाण नहीं", "पुरेसा पुरावा नाही") + " · N=${p?.exactHitN ?: 0}/${EdgeFinder.EXACT_MIN_N} " + t(l, "exact", "सटीक", "अचूक")
+            },
+            (if (wait || p == null || p.exactScope.isBlank()) "" else t(l, "Exact: ", "सटीक: ", "अचूक: ") + p.exactScope +
+                t(l, ", one call per window, regime not matched. ", ", हर विंडो में एक कॉल, रेजीम मिलाया नहीं। ", ", प्रत्येक विंडोत एक कॉल, रेजीम जुळवला नाही. ")) +
+            t(l, "Past calls, sideways excluded: not today's chance.", "पुरानी कॉल, साइडवेज़ छोड़कर: आज का मौका नहीं।", "जुन्या कॉल, साइडवेज वगळून: आजची शक्यता नाही.") +
+            (if (!wait && general.isNotEmpty()) " $general" else ""))
         // 3. calibrated probability: honestly absent
         metrics += Metric(Kind.CALIBRATED_PROBABILITY, t(l, "NOT AVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही"),
             t(l, "no model here is calibrated on forward data", "यहाँ कोई मॉडल आगे के डेटा पर कैलिब्रेटेड नहीं", "इथे कोणतेही मॉडेल पुढील डेटावर कॅलिब्रेटेड नाही"), false)
         // 4. data health: freshness, source, spread, Macro window
-        val fresh = Freshness.assess(a, now); val age = Freshness.priceAgeMs(a, now)
+        val age = Freshness.priceAgeMs(a, now)
         val f = a.feed
         val spread = f?.takeIf { it.bid > 0 && it.ask >= it.bid }?.let { " · spread " + String.format(Locale.US, "%.2f", it.ask - it.bid) } ?: ""
         val src = SourceRegistry.identify(f?.source).provider.name.replace('_', ' ')
         // V35.5-A: news event identity and Macro evidence from the same typed data SYSTEM shows
-        val macro = newsLine(a, l)
+        val macro = newsLine(a, l, now)
         metrics += Metric(Kind.DATA_HEALTH, "$fresh" + (if (age >= 0) " · ${age / 1000}s" else "") + " · $src$spread",
             t(l, "Macro news window: ", "Macro न्यूज़ विंडो: ", "Macro न्यूज विंडो: ") + macro, fresh == Freshness.LIVE)
         // 5. experimental research (Shadow Lab), never used in this forecast
@@ -130,6 +171,44 @@ object TrustCard {
         val evidence = if (wait) "" else a.pulse?.edgeForCurrent ?: ""
         return Card(sig, status, statusNote, metrics, forT, forL, agT, agL, levels, if (wait) 0L else ts.expiresAtMs, regime, alignment, evidence,
             t(l, "Research record, not financial advice. Past results do not guarantee future results.",
-                "रिसर्च रिकॉर्ड, वित्तीय सलाह नहीं। पिछले नतीजे भविष्य की गारंटी नहीं।", "रिसर्च नोंद, आर्थिक सल्ला नाही. मागील निकाल भविष्याची हमी नाहीत."))
+                "रिसर्च रिकॉर्ड, वित्तीय सलाह नहीं। पिछले नतीजे भविष्य की गारंटी नहीं।", "रिसर्च नोंद, आर्थिक सल्ला नाही. मागील निकाल भविष्याची हमी नाहीत."),
+            nowStatus, nowReasons, diagnostics(a, now, l, fresh, age, refusals, status))
+    }
+
+    /** V35.5-E: eight factual checks, each on its own; no total, no score, no probability */
+    private fun diagnostics(a: GoldAnalysisResult, now: Long, l: AppLanguage, fresh: String, age: Long, refusals: List<String>, published: String): List<Diag> {
+        val ts = a.tradeSetup; val p = a.presentation; val wait = a.overallSignal == Signal.WAIT
+        val out = ArrayList<Diag>()
+        out += Diag(t(l, "Price freshness", "प्राइस ताज़गी", "प्राइस ताजेपणा"), when (fresh) { Freshness.LIVE -> "OK"; Freshness.DELAYED -> "WARN"; Freshness.CLOSED -> "NA"; else -> "FAIL" },
+            fresh + if (age >= 0) " · ${age / 1000}s" else "")
+        val bar = ShadowLive.barMs(a.lastUpdated); val iv = RealityEngine.intervalMinutes(a.interval) * 60_000L
+        out += Diag(t(l, "Completed candle", "पूरी कैंडल", "पूर्ण कँडल"), when {
+            a.isSimulatedFallback -> "FAIL"; bar == null -> "FAIL"; fresh == Freshness.CLOSED -> "NA"; now - bar <= 2 * iv -> "OK"; else -> "WARN" },
+            if (a.isSimulatedFallback) t(l, "simulated data", "सिम्युलेटेड डेटा", "सिम्युलेटेड डेटा") else (a.lastUpdated.ifBlank { "--" } + " UTC"))
+        val inst = SourceRegistry.identify(a.feed?.source).instrument
+        out += Diag(t(l, "Provider consistency", "प्रोवाइडर एकरूपता", "प्रोव्हायडर सुसंगती"), when {
+            ResearchGate.PROVIDER_MISMATCH in refusals -> "FAIL"; inst != InstrumentId.XAU_USD_SPOT -> "WARN"; else -> "OK" },
+            (a.feed?.source ?: "--") + if (inst != InstrumentId.XAU_USD_SPOT) t(l, " (proxy, not XAU/USD spot)", " (प्रॉक्सी, XAU/USD स्पॉट नहीं)", " (प्रॉक्सी, XAU/USD स्पॉट नाही)") else "")
+        val d = MacroEvidenceView.dollar(a).evidence; val y = MacroEvidenceView.tenY(a).evidence
+        val inWindow = d.eventId.isNotBlank() || y.eventId.isNotBlank()
+        out += Diag(t(l, "News evidence", "न्यूज़ प्रमाण", "न्यूज पुरावा"), when {
+            !inWindow -> "NA"; d.usableInWindow && y.usableInWindow -> "OK"; else -> "WARN" }, newsLine(a, l, now))
+        out += Diag(t(l, "Forecast expiry", "फ़ोरकास्ट समाप्ति", "अंदाज मुदत"), when { wait || ts.expiresAtMs <= 0L -> "NA"; now < ts.expiresAtMs -> "OK"; else -> "FAIL" },
+            when { wait -> t(l, "no call", "कॉल नहीं", "कॉल नाही"); ts.expiresAtMs <= 0L -> "--"
+                now < ts.expiresAtMs -> t(l, "ends in ", "बाकी ", "उरले ") + "${(ts.expiresAtMs - now) / 60_000L}m"
+                else -> t(l, "expired ", "समाप्त ", "मुदत संपली ") + "${(now - ts.expiresAtMs) / 60_000L}m" + t(l, " ago", " पहले", " आधी") })
+        out += Diag(t(l, "Frozen levels saved", "फ़्रोज़न लेवल सेव", "गोठवलेले लेव्हल सेव्ह"), when {
+            wait -> "NA"; ts.levelsFixedAtMs > 0L && ts.levelsSaved -> "OK"; else -> "WARN" },
+            when { wait -> t(l, "no levels on WAIT", "WAIT पर लेवल नहीं", "WAIT वर लेव्हल नाहीत"); ts.levelsFixedAtMs <= 0L -> t(l, "not fixed yet", "अभी तय नहीं", "अजून निश्चित नाही")
+                ts.levelsSaved -> t(l, "fixed ", "तय ", "निश्चित ") + ResearchScenario.utc(ts.levelsFixedAtMs); else -> t(l, "fixed but not saved", "तय पर सेव नहीं", "निश्चित पण सेव्ह नाही") })
+        out += Diag(t(l, "Historical evidence", "पुराना प्रमाण", "जुना पुरावा"), when {
+            wait -> "NA"; p != null && p.exactHitPct >= 0 -> "OK"; else -> "WARN" },
+            if (wait) "--" else "N=${p?.exactHitN ?: 0} " + t(l, "exact (need ", "सटीक (चाहिए ", "अचूक (हवे ") + "${EdgeFinder.EXACT_MIN_N})")
+        out += Diag(t(l, "Research authorization", "रिसर्च अनुमति", "रिसर्च परवानगी"), when {
+            wait -> "NA"; published == "QUALIFIED" && refusals.isEmpty() -> "OK"; published == "QUALIFIED" -> "FAIL"; else -> "WARN" },
+            when { wait -> "--"; published == "QUALIFIED" && refusals.isEmpty() -> t(l, "authorized now", "अभी अनुमति", "आता परवानगी")
+                published == "QUALIFIED" -> t(l, "not now: ", "अभी नहीं: ", "आता नाही: ") + refusals.joinToString(", ")
+                else -> t(l, "research only: model not live-qualified", "सिर्फ़ रिसर्च: मॉडल लाइव-योग्य नहीं", "फक्त रिसर्च: मॉडेल लाइव्ह-पात्र नाही") })
+        return out
     }
 }

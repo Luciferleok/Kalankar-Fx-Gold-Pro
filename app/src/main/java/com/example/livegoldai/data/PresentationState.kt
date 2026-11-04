@@ -88,7 +88,11 @@ data class PredictionPresentationState(
     val outcome: String = "",                       // ledger outcome of this forecast once checked ("" = not yet)
     val metrics: List<MetricStat> = emptyList(),
     // V32: true when the multi-timeframe context is XAU/USD itself (OANDA), false for the PAXG/USDT proxy
-    val mtfXau: Boolean = false
+    val mtfXau: Boolean = false,
+    // V35.5-E: hit-rate of past calls matching THIS forecast (timeframe, side, provider, engine; independent), -1 = too few
+    val exactHitPct: Int = -1,
+    val exactHitN: Int = 0,
+    val exactScope: String = ""
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -113,6 +117,8 @@ object PresentationBuilder {
         val (code, text) = RealityEngine.waitReason(a).let { if (it.first.isEmpty()) "ELIGIBLE" to "Published: passed the source, data and filter checks" else it }
         val raw = a.agreementPercent.roundToInt()
         val band = RealityEngine.bandRecord(a.learning, raw)
+        val exact = if (state != null && a.overallSignal != Signal.WAIT)
+            EdgeFinder.exactMatch(state, a.interval, a.overallSignal, a.feed?.source, PredictionLedger.ENGINE_VERSION) else null
         val calErr = a.learning?.calibrationErrorPoints ?: -1.0
         val ins = a.insights
         val contrib = ins?.contributions ?: emptyList()
@@ -154,6 +160,9 @@ object PresentationBuilder {
             uncertainty = b?.totalUncertainty ?: UNKNOWN,
             evidenceAgreementPct = raw,
             ruleSetupStrength = b?.qualityIndex ?: -1,
+            exactHitPct = exact?.pct ?: -1,
+            exactHitN = exact?.n ?: 0,
+            exactScope = exact?.scope ?: "",
             hitRatePct = band?.accuracyPercent?.roundToInt() ?: -1,
             hitRateN = band?.decided ?: 0,
             headlineKind = when { a.overallSignal == Signal.WAIT -> "NONE"; band != null -> "HISTORICAL"; else -> "HEURISTIC" },

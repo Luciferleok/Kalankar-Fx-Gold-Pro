@@ -65,6 +65,23 @@ object EdgeFinder {
     }
     fun engineOf(v: String): String = v.ifBlank { "older" }
 
+    /**
+     * V35.5-E: hit-rate of past calls that match THIS forecast: same timeframe, same side, same provider, same engine
+     * version, decided (sideways excluded, invalidated = wrong), one call per time window (no overlapping windows).
+     * The regime is NOT matched (the ledger's regime label is a different scale from the screen's), said in [scope].
+     * pct = -1 below [EXACT_MIN_N] independent calls: then the card says INSUFFICIENT EVIDENCE.
+     */
+    data class Exact(val pct: Int, val n: Int, val scope: String)
+    const val EXACT_MIN_N = 20
+    fun exactMatch(state: LedgerState, interval: String, side: Signal, dataSource: String?, engine: String): Exact {
+        val prov = providerOf(dataSource ?: "")
+        val ind = thin(decided(state).filter { it.interval.equals(interval, true) && it.finalSignal == side &&
+            providerOf(it.dataSource) == prov && it.engineVersion == engine })
+        val right = ind.count { state.resultOf(it.id)?.outcome == LedgerOutcome.CORRECT }
+        return Exact(if (ind.size >= EXACT_MIN_N) Math.round(100.0 * right / ind.size).toInt() else -1, ind.size,
+            "${interval.uppercase()} · ${side.name} · $prov · ${engineOf(engine)}")
+    }
+
     /** decided v1 calls with their dimension values */
     private data class Call(val right: Boolean, val keys: Map<String, String>)
 
