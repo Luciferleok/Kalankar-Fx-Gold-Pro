@@ -334,6 +334,9 @@ class LearningCoordinator(
         raw.nextPrediction?.let { sources["playbook"] = it.verdict }
         // V29A: no PAXG/USDT multi-timeframe votes in an XAU/USD record
         if (htf != null && PredictionLedger.instrumentOf(raw.feed?.source ?: "") != "XAU") sources["mtf:higher"] = htf
+        // V35.8 Precision Lab: the three shadow challengers' calls, decided now and stored with the record (never shown)
+        sources.putAll(PrecisionLab.decide(if (filter.isNotEmpty()) Signal.WAIT else rawSig, raw.agreementPercent.toInt(),
+            PrecisionLab.stretch(candles, atr), PredictionLedger.regimeOf(candles, newsActive), newsActive, interval))
 
         return LedgerRecord(
             id = "P" + java.lang.Long.toString(now, 36).uppercase() + interval.uppercase(),

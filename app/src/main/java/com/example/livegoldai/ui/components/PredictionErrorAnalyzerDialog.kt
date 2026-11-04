@@ -576,6 +576,10 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
     InfoRow(t(lang, "Weakest market type", "सबसे कमजोर मार्केट", "सर्वात कमकुवत मार्केट"), worstReg?.let { "${it.label} ${pctB(it)}" } ?: "--")
     InfoRow(t(lang, "Top failure cause", "सबसे आम गलती", "सर्वात सामान्य चूक"), s.failureClusters.firstOrNull()?.let { "${it.label} (${it.decided})" } ?: "--")
 
+    // V35.8: why calls were wrong (measured tags + hit-rate by slice) and the shadow challengers
+    s.whyWrong?.let { WhyWrongCard(it, lang) }
+    if (s.precision.isNotEmpty()) PrecisionLabCard(s.precision, lang)
+
     Section(t(lang, "HOW A PREDICTION IS JUDGED", "प्रेडिक्शन कैसे जाँची जाती है", "अंदाज कसा तपासला जातो"))
     Note(t(lang,
         "Each new candle, the main BUY/SELL/WAIT is saved once with its stop and first target. It is then checked on real minute prices of the same instrument it was made on. Like a real trade, the FIRST touch decides: target reached first = CORRECT; stop reached first = WRONG. If neither is touched before the time ends: CORRECT if price moved at least 0.25×ATR the predicted way, WRONG if that much the other way, smaller = NO EDGE (not counted). WAIT calls are tracked separately. Weekend gaps are excluded.",
@@ -887,4 +891,72 @@ private fun sourceName(key: String): String = when {
     key.startsWith("bot:") -> "Bot: " + key.removePrefix("bot:bot_").replace('_', ' ')
     key.startsWith("mtf:") -> "Timeframe " + key.removePrefix("mtf:")
     else -> key
+}
+
+
+// ---------------------------------------------------------------- V35.8 Why Wrong + Precision Lab (shadow only)
+
+@Composable
+private fun WhyWrongCard(w: com.example.livegoldai.model.WhyWrongReport, lang: AppLanguage) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(16.dp)).background(ObsidianSurfaceCard)
+            .border(0.75.dp, SignalSell.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).padding(14.dp)
+    ) {
+        Text(text = t(lang, "WHY CALLS WERE WRONG", "कॉल गलत क्यों हुईं", "कॉल चुकीच्या का झाल्या"), color = GoldLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Text(text = t(lang, "${w.wrong} wrong of ${w.decided} checked calls, all timeframes. Measured at check time, not guessed.",
+            "${w.decided} जाँची कॉल में ${w.wrong} गलत, सभी टाइमफ़्रेम। जाँच के समय मापा, अंदाज़ नहीं।",
+            "${w.decided} तपासलेल्या कॉलपैकी ${w.wrong} चुकीच्या, सर्व टाइमफ्रेम. तपासणीवेळी मोजले, अंदाज नाही."), color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
+        if (w.causes.isEmpty()) Note(t(lang, "No wrong call with a measured cause yet.", "अभी कोई गलत कॉल नहीं जिसकी वजह मापी गई हो।", "अजून मोजलेल्या कारणासह चुकीची कॉल नाही."))
+        w.causes.take(5).forEach { c ->
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = c.label, color = TextPrimary, fontSize = 10.sp, modifier = Modifier.weight(0.6f))
+                LinearProgressIndicator(progress = { (c.pctOfWrong / 100f).coerceIn(0f, 1f) }, modifier = Modifier.weight(0.25f).height(4.dp), color = SignalSell, trackColor = ObsidianBorder)
+                Text(text = "  ${c.pctOfWrong}%", color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.15f))
+            }
+        }
+        Text(text = t(lang, "HIT-RATE BY SLICE", "हिस्से के हिसाब से हिट-रेट", "भागानुसार हिट-रेट"), color = GoldPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, modifier = Modifier.padding(top = 8.dp))
+        w.slices.groupBy { it.group }.forEach { (g, list) ->
+            Text(text = g, color = TextMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+            list.forEach { sl ->
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+                    Text(text = sl.name.replace('_', ' '), color = TextSecondary, fontSize = 10.sp, modifier = Modifier.weight(0.5f))
+                    Text(text = (if (sl.n < 10) "--" else "${sl.hit}%") + "  N=${sl.n}", color = if (sl.n < 10) TextMuted else if (sl.hit >= 55) SignalBuy else if (sl.hit >= 45) GoldLight else SignalSell,
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f))
+                }
+            }
+        }
+        Note(t(lang, "Below 10 calls a slice shows no %. Past record, not today's chance.", "10 कॉल से कम पर % नहीं दिखता। पुराना रिकॉर्ड, आज का मौका नहीं।", "10 कॉलपेक्षा कमी असल्यास % नाही. जुनी नोंद, आजची शक्यता नाही."))
+    }
+}
+
+@Composable
+private fun PrecisionLabCard(list: List<com.example.livegoldai.model.PrecisionStat>, lang: AppLanguage) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp).clip(RoundedCornerShape(16.dp)).background(ObsidianSurfaceCard)
+            .border(0.75.dp, GoldPrimary.copy(alpha = 0.45f), RoundedCornerShape(16.dp)).padding(14.dp)
+    ) {
+        Text(text = t(lang, "PRECISION LAB · SHADOW ONLY", "प्रिसीज़न लैब · सिर्फ़ शैडो", "प्रिसिजन लॅब · फक्त शॅडो"), color = GoldLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Text(text = t(lang, "Each challenger may only turn a BUY/SELL into WAIT. Decided when the call is made, compared with the app on the same calls recorded from V35.8 on. Never changes what you see; nothing is promoted without your approval.",
+            "हर चैलेंजर सिर्फ़ BUY/SELL को WAIT कर सकता है। कॉल बनते समय तय, V35.8 से रिकॉर्ड हुई उन्हीं कॉल पर ऐप से तुलना। जो आप देखते हैं वह नहीं बदलता; आपकी मंज़ूरी के बिना कुछ लागू नहीं।",
+            "प्रत्येक चॅलेंजर फक्त BUY/SELL ला WAIT करू शकतो. कॉल बनताना ठरते, V35.8 पासून नोंदलेल्या त्याच कॉलवर ॲपशी तुलना. तुम्हाला दिसणारे बदलत नाही; तुमच्या मंजुरीशिवाय काही लागू नाही."),
+            color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
+        list.forEach { p ->
+            val vc = when (p.verdict) { "PROMISING" -> SignalBuy; "WORSE" -> SignalSell; "COLLECTING" -> GoldPrimary; else -> TextSecondary }
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = p.title, color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(text = p.verdict, color = vc, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                Text(text = p.rule, color = TextMuted, fontSize = 9.sp)
+                fun h(x: Int) = if (x < 0) "--" else "$x%"
+                Text(text = t(lang, "App ", "ऐप ", "ॲप ") + "${h(p.prodHit)} (N=${p.prodN}) · " + t(lang, "kept ", "रखी ", "ठेवल्या ") + "${h(p.keptHit)} (N=${p.keptN}" +
+                    (if (p.keptLow >= 0) ", 95% ${p.keptLow}–${p.keptHigh}" else "") + ") · " + t(lang, "skipped ", "छोड़ी ", "सोडल्या ") + "${h(p.skippedHit)} (N=${p.skippedN})" +
+                    (if (p.coveragePct >= 0) " · " + t(lang, "coverage ", "कवरेज ", "कव्हरेज ") + "${p.coveragePct}%" else ""),
+                    color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
+                if (p.verdict == "COLLECTING") Text(text = t(lang, "Needs ${com.example.livegoldai.data.PrecisionLab.MIN_KEPT}+ kept and ${com.example.livegoldai.data.PrecisionLab.MIN_SKIPPED}+ skipped checked calls.",
+                    "${com.example.livegoldai.data.PrecisionLab.MIN_KEPT}+ रखी और ${com.example.livegoldai.data.PrecisionLab.MIN_SKIPPED}+ छोड़ी जाँची कॉल चाहिए।",
+                    "${com.example.livegoldai.data.PrecisionLab.MIN_KEPT}+ ठेवलेल्या आणि ${com.example.livegoldai.data.PrecisionLab.MIN_SKIPPED}+ सोडलेल्या तपासलेल्या कॉल हव्या."), color = TextMuted, fontSize = 9.sp)
+            }
+        }
+    }
 }

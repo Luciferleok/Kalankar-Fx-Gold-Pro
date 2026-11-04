@@ -125,7 +125,39 @@ data class LearningSnapshot(
     val driftDetail: String,
     val minimumSamples: Int,
     val lastCycleReport: List<String>,    // what the last learning cycle actually did
-    val pendingNote: String               // e.g. "Next check: 18:00 UTC"
+    val pendingNote: String,              // e.g. "Next check: 18:00 UTC"
+    // V35.8 Precision Lab (shadow only): challengers measured on calls recorded after they existed
+    val precision: List<PrecisionStat> = emptyList(),
+    val whyWrong: WhyWrongReport? = null
 ) {
     fun sourceAccuracy(key: String): BucketStat? = bySource.firstOrNull { it.key == key }
 }
+
+/** V35.8: one shadow challenger against the production call on the SAME recorded calls (forward only). */
+@Serializable
+data class PrecisionStat(
+    val key: String,
+    val title: String,
+    val rule: String,
+    val prodN: Int, val prodHit: Int,          // production: decided calls and % right (one call per window)
+    val keptN: Int, val keptHit: Int,          // calls the challenger would also have shown
+    val skippedN: Int, val skippedHit: Int,    // calls it would have turned into WAIT
+    val keptLow: Int, val keptHigh: Int,       // 95% interval of keptHit (Wilson)
+    val coveragePct: Int,
+    val verdict: String                        // COLLECTING / PROMISING / NO IMPROVEMENT / WORSE
+)
+
+/** V35.8: what the wrong calls had in common, and the hit-rate of each slice (measured facts, not guesses). */
+@Serializable
+data class WhyWrongReport(
+    val decided: Int,
+    val wrong: Int,
+    val causes: List<WhyCause>,                // share of wrong calls carrying each tag
+    val slices: List<WhySlice>                 // hit-rate by agreement band / market type / news / timeframe
+)
+
+@Serializable
+data class WhyCause(val tag: String, val label: String, val count: Int, val pctOfWrong: Int)
+
+@Serializable
+data class WhySlice(val group: String, val name: String, val n: Int, val hit: Int)

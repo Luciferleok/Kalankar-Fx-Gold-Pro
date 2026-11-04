@@ -329,6 +329,7 @@ object LearningEngine {
             val entries = r.sources.entries.toMutableList()
             entries.add(java.util.AbstractMap.SimpleEntry("main:raw", r.rawSignal))
             for ((k, s) in entries) {
+                if (k.startsWith("ch:")) continue      // V35.8: shadow challengers are measured in PrecisionLab, not as sources
                 val score = PredictionLedger.directionScore(s, res.move, res.threshold)
                 if (score < 0) continue
                 val arr = srcCount.getOrPut(k) { IntArray(2) }
@@ -426,6 +427,8 @@ object LearningEngine {
             bySource = bySource,
             failures = failures.take(40),
             failureClusters = clusters,
+            precision = PrecisionLab.evaluate(state),
+            whyWrong = PrecisionLab.whyWrong(state),
             candidates = candidates,
             history = history,
             driftLevel = driftLevel,
