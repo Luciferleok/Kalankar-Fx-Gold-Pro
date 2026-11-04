@@ -112,6 +112,9 @@ data class GoldUiState(
     // V35.5-F: NFP readiness check result (on request only; read-only)
     val macroReadiness: com.example.livegoldai.data.MacroReadiness.Report? = null,
     val macroReadinessRunning: Boolean = false,
+    val macroReadinessFailedAt: Long = 0L,           // V35.7: last check failed; the report shown is the last successful one
+    // V35.7: SAHI / GALAT list (explicit destination: kind + timeframe); null = closed
+    val outcomePage: com.example.livegoldai.data.OutcomeBrowser.Page? = null,
     val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
     val feedKeySaved: Boolean = false,             // true when the user saved their own Twelve Data key
     // ---- V32 OANDA practice (stage 1: connection check only; the token itself is never in UI state)
@@ -375,7 +378,8 @@ class GoldViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(macroReadinessRunning = true) }
         viewModelScope.launch {
             val r = try { apiService.macroReadiness() } catch (_: Exception) { null }
-            _uiState.update { it.copy(macroReadinessRunning = false, macroReadiness = r ?: it.macroReadiness) }
+            _uiState.update { it.copy(macroReadinessRunning = false, macroReadiness = r ?: it.macroReadiness,
+                macroReadinessFailedAt = if (r == null) System.currentTimeMillis() else 0L) }
         }
     }
 
@@ -709,6 +713,27 @@ class GoldViewModel @JvmOverloads constructor(
     fun toggleNewsMode() {
         val newActive = !_uiState.value.isManualNewsMode
         setNewsModeActive(newActive)
+    }
+
+    /**
+     * V35.7: open the actual ledger records behind a SAHI / GALAT / pending / no-edge number of the shown timeframe.
+     * The destination is explicit (kind + the timeframe of the analysis on screen), kept in the ViewModel state, so a
+     * rotation keeps it and a timeframe change cannot mix populations.
+     */
+    fun openOutcomes(kind: String) {
+        val k = runCatching { com.example.livegoldai.data.OutcomeBrowser.Kind.valueOf(kind) }.getOrNull() ?: return
+        val interval = _uiState.value.data?.interval ?: _uiState.value.selectedInterval
+        viewModelScope.launch {
+            val page = withContext(Dispatchers.Default) {
+                try { com.example.livegoldai.data.OutcomeBrowser.build(learning.currentState(), interval, k) } catch (_: Exception) { null }
+            }
+            // the prediction dialog stays open underneath: Back on the list returns to it
+            _uiState.update { it.copy(outcomePage = page) }
+        }
+    }
+
+    fun closeOutcomes() {
+        _uiState.update { it.copy(outcomePage = null) }
     }
 
     fun openPredictionErrorAnalyzer() {

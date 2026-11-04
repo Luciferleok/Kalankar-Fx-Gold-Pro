@@ -211,7 +211,18 @@ fun GoldHomeScreen(
             analysis = uiState.data!!,
             onOpenLotCalculator = { slPips -> viewModel.openLotCalculator(slPips, uiState.data?.tradeSetup?.snapshotId) },
             onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+            onOpenOutcomes = { kind -> viewModel.openOutcomes(kind) },
             onDismiss = { viewModel.closePredictionDialog() }
+        )
+    }
+
+    // V35.7: SAHI / GALAT / pending / no-edge records of the shown timeframe (explicit destination)
+    uiState.outcomePage?.let { page ->
+        com.example.livegoldai.ui.components.OutcomeBrowserDialog(
+            page = page,
+            lang = uiState.language,
+            onSelect = { kind -> viewModel.openOutcomes(kind) },
+            onDismiss = { viewModel.closeOutcomes() }
         )
     }
 
@@ -429,7 +440,8 @@ fun GoldHomeScreen(
                         onToggleBackground = { viewModel.setBackgroundRecording(it) },
                         readiness = uiState.macroReadiness,
                         readinessRunning = uiState.macroReadinessRunning,
-                        onRunReadiness = { viewModel.runMacroReadiness() }
+                        onRunReadiness = { viewModel.runMacroReadiness() },
+                        readinessFailedAt = uiState.macroReadinessFailedAt
                     )
                     4 -> LearningCenterContent(
                         analysis = analysis,
@@ -813,6 +825,7 @@ fun GoldHomeScreen(
                                         analysis = analysis,
                                         onOpenCalculator = { slPips -> viewModel.openLotCalculator(slPips, analysis.tradeSetup.snapshotId) },
                                         onOpenPredictionErrorAnalyzer = { viewModel.openPredictionErrorAnalyzer() },
+                                        onOpenOutcomes = { kind -> viewModel.openOutcomes(kind) },
                                         onPillarClick = { group -> viewModel.openPillarDeepDive(group) },
                                         onOpenPassport = { viewModel.openPassport() }
                                     )

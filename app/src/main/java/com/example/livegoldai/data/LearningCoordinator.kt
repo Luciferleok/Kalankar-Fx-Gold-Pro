@@ -215,14 +215,21 @@ class LearningCoordinator(
         lastReport = listOf("Cycle at ${PredictionLedger.utcLabel(now, true)}", audit.headline) + out.report
     }
 
+    /** V35.7: when each unchecked record was last tried (memory only), so a stuck one cannot block the queue */
+    private val lastTriedAt = HashMap<String, Long>()
+
     private suspend fun verifyDue(now: Long, limit: Int = MAX_CHECKS_PER_REFRESH): Int {
+        // V35.7: least-recently-tried first, then oldest. Before: always the oldest [limit] due records, so records whose
+        // price history never comes (e.g. made in the daily trading break) kept every slot for up to 72 h and newer
+        // calls stayed "running" for hours (phone: 12 waiting, oldest 12 h).
         val due = state.records.filter { state.resultOf(it.id) == null && now >= it.expiresAt + SETTLE_MS }
-            .sortedBy { it.expiresAt }
+            .sortedWith(compareBy({ lastTriedAt[it.id] ?: 0L }, { it.expiresAt }))
             .take(limit)
         if (due.isEmpty()) return 0
         lastVerifyAttemptAt = now
         val newResults = LinkedHashMap<String, LedgerResult>()
         for (r in due) {
+            lastTriedAt[r.id] = now
             val res: LedgerResult? = when {
                 PredictionLedger.windowTouchesClosure(r.createdAt, r.expiresAt) ->
                     PredictionLedger.emptyResult(r, now, LedgerOutcome.MARKET_CLOSED, "weekend")
@@ -259,6 +266,7 @@ class LearningCoordinator(
         if (newResults.isEmpty()) return 0
         if (!safeAppend(newResults.values.map { PredictionLedger.encodeResult(it) })) return 0
         state = LedgerState(state.records, state.results + newResults, state.events, state.skippedLines)
+        newResults.keys.forEach { lastTriedAt.remove(it) }
         totalVerifiedThisSession += newResults.size
         return newResults.size
     }

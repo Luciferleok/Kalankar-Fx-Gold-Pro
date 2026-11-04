@@ -543,8 +543,12 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Tile(t(lang, "NO EDGE", "कोई नतीजा नहीं", "निकाल नाही"), "${s.sideways}", TextSecondary, Modifier.weight(1f))
         Tile(t(lang, "ACTIVE", "चल रही", "चालू"), "${s.active}", GoldPrimary, Modifier.weight(1f))
-        Tile(t(lang, "30D ACC.", "30 दिन", "30 दिवस"), d30?.let { pct(it) } ?: "--", GoldLight, Modifier.weight(1f))
+        Tile(t(lang, "30D HIT-RATE", "30 दिन हिट-रेट", "30 दिवस हिट-रेट"), d30?.let { pct(it) } ?: "--", GoldLight, Modifier.weight(1f))
     }
+    // V35.7: these tiles count EVERY timeframe; the SAHI / GALAT tiles in the forecast dialog count only the shown one
+    Note(t(lang, "These tiles: all timeframes together (target/stop or close direction beyond noise). The SAHI / GALAT numbers in the forecast show only that timeframe, and the Engine audit below uses close direction only, so the three numbers differ.",
+        "ये टाइल: सभी टाइमफ़्रेम मिलाकर (टारगेट/स्टॉप या शोर से आगे क्लोज़ दिशा)। फ़ोरकास्ट के SAHI / GALAT सिर्फ़ उसी टाइमफ़्रेम के हैं, और नीचे इंजन ऑडिट सिर्फ़ क्लोज़ दिशा देखता है, इसलिए तीनों नंबर अलग हैं।",
+        "हे टाइल: सर्व टाइमफ्रेम एकत्र (टार्गेट/स्टॉप किंवा आवाजापलीकडील क्लोज दिशा). अंदाजातील SAHI / GALAT फक्त त्या टाइमफ्रेमचे, आणि खालील इंजिन ऑडिट फक्त क्लोज दिशा पाहते, म्हणून तिन्ही आकडे वेगळे."))
     Spacer(modifier = Modifier.height(10.dp))
     InfoRow(t(lang, "Model", "मॉडल", "मॉडेल"), s.modelVersion)
     InfoRow(t(lang, "Engine state", "इंजन स्थिति", "इंजिन स्थिती"), s.engineState.replace('_', ' '))
@@ -554,7 +558,7 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
     InfoRow(t(lang, "Next check", "अगली जाँच", "पुढील तपासणी"), s.pendingNote)
     pulse?.let { p ->
         InfoRow(t(lang, "Recorder", "रिकॉर्डर", "रेकॉर्डर"), p.status.replace('_', ' '))
-        if (p.modelHealthLine.isNotEmpty()) InfoRow(t(lang, "Engine audit", "इंजन की जाँच", "इंजिन तपासणी"), p.modelHealthLine)
+        if (p.modelHealthLine.isNotEmpty()) InfoRow(t(lang, "Engine audit (all TF, close dir.)", "इंजन जाँच (सभी TF, क्लोज़ दिशा)", "इंजिन तपासणी (सर्व TF, क्लोज दिशा)"), p.modelHealthLine)
         InfoRow(t(lang, "Last recorded", "आखिरी रिकॉर्ड", "शेवटची नोंद"), p.lastRecorded)
         InfoRow(t(lang, "Last check", "आखिरी जाँच", "शेवटची तपासणी"), p.lastCheck)
         InfoRow(t(lang, "Ledger started", "लेजर शुरू", "लेजर सुरू"), p.ledgerStarted)

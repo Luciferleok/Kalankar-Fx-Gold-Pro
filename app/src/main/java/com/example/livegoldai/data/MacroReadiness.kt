@@ -13,6 +13,10 @@ import java.util.TimeZone
  * no ledger, no setting. A READY result now is not a promise for the release minute (providers can lag at news time).
  */
 object MacroReadiness {
+    /** V35.7: the computed index itself (bars where all six pairs have a completed candle at the same time) */
+    const val DXY_6 = "DXY (6 pairs, common bars)"
+    /** pre-release baseline needs common bars from at least this long ago (the 60-minute move) */
+    const val BASELINE_MS = 60 * 60_000L
     const val READY = "READY"; const val STALE = "STALE"; const val UNAVAILABLE = "UNAVAILABLE"; const val NOT_SET_UP = "NOT SET UP"
 
     data class Source(val provider: String, val instrument: String, val state: String, val detail: String)
@@ -37,11 +41,38 @@ object MacroReadiness {
             else Source(provider, instrument, STALE, "newest completed bar ${ageMin}m old (limit ${NewsMacro.MAX_AGE_MS / 60_000L}m)")
     }
 
+    /**
+     * V35.7: the computed dollar index from the six pairs' completed bars, joined on identical bar times. READY needs a
+     * fresh common bar AND a common bar from at least 60 minutes ago (the baseline of the pre-release move). Conflicting
+     * duplicate times in a pair make it UNAVAILABLE (as in NewsMacro). The post-release reaction can only be checked
+     * after the release.
+     */
+    fun index(pairs: Map<String, List<Pair<Long, Double>>>?, status: OandaStatus?, now: Long): Source {
+        if (status == OandaStatus.NOT_CONFIGURED) return Source("OANDA", DXY_6, NOT_SET_UP, "OANDA token not saved")
+        if (pairs == null) return Source("OANDA", DXY_6, UNAVAILABLE, "not all six pairs could be loaded")
+        val bad = pairs.filter { (_, b) -> b.groupBy { it.first }.values.any { g -> g.map { it.second }.distinct().size > 1 } }.keys
+        if (bad.isNotEmpty()) return Source("OANDA", DXY_6, UNAVAILABLE, "conflicting prices for one time in ${bad.joinToString()}")
+        val missing = OandaMacro.DXY_PAIRS.keys.filter { pairs[it].isNullOrEmpty() }
+        if (missing.isNotEmpty()) return Source("OANDA", DXY_6, UNAVAILABLE, "no bars for ${missing.joinToString()}")
+        val done = pairs.mapValues { (_, b) -> b.filter { it.first + NewsMacro.BAR_MS <= now && it.second > 0 }.map { it.first }.toSet() }
+        val common = done.values.reduce { x, y -> x intersect y }.sorted()
+        val newest = common.lastOrNull() ?: return Source("OANDA", DXY_6, UNAVAILABLE, "the six pairs have no completed bar at the same time")
+        val age = now - (newest + NewsMacro.BAR_MS)
+        val baseline = common.any { it + NewsMacro.BAR_MS <= now - BASELINE_MS }
+        val detail = "${common.size} common bars · newest ${age / 60_000L}m old · baseline ${if (baseline) "60 min available" else "missing"} · post-release: checked only after the release"
+        return when {
+            age > NewsMacro.MAX_AGE_MS -> Source("OANDA", DXY_6, STALE, detail)
+            !baseline -> Source("OANDA", DXY_6, STALE, detail)
+            else -> Source("OANDA", DXY_6, READY, detail)
+        }
+    }
+
     /** the same source order the news window uses (GoldApiService.macroIndex) */
     fun evaluate(now: Long, events: List<EconomicEvent>, sources: List<Source>, tz: TimeZone = TimeZone.getDefault()): Report {
         fun ok(p: String, i: String) = sources.any { it.provider == p && it.instrument == i && it.state == READY }
+        // V35.7: six pairs READY one by one is not enough: the index needs completed bars at the SAME times
         val dollar = when {
-            OandaMacro.DXY_PAIRS.keys.all { ok("OANDA", it) } -> "OANDA computed dollar index (6 pairs)"
+            ok("OANDA", DXY_6) -> "OANDA computed dollar index (6 pairs)"
             ok("OANDA", "EUR_USD") -> "OANDA EUR/USD proxy (inverted)"
             ok("YAHOO", "DX-Y.NYB") -> "Yahoo dollar index (can be delayed)"
             ok("YAHOO", "EURUSD=X") -> "Yahoo EUR/USD proxy (can be delayed)"

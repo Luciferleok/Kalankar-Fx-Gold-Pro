@@ -41,6 +41,7 @@ fun KyaHogaPredictionDialog(
     analysis: GoldAnalysisResult,
     onOpenLotCalculator: (Double) -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
+    onOpenOutcomes: (String) -> Unit = {},      // V35.7: SAHI / GALAT lists of this timeframe
     onDismiss: () -> Unit
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -164,7 +165,8 @@ fun KyaHogaPredictionDialog(
                                         maxLines = 1,
                                         softWrap = false,
                                         text = if (analysis.overallSignal == Signal.WAIT) "NO CALL"
-                                            else "${prediction?.winProbabilityPercent ?: baseProb}% " + when (analysis.presentation?.headlineKind) { "HISTORICAL" -> "hit-rate"; else -> "agr" },
+                                            // V35.7: short enough for the badge (was "58% hit-rate", clipped to "58% hit-r")
+                                            else "${prediction?.winProbabilityPercent ?: baseProb}% " + when (analysis.presentation?.headlineKind) { "HISTORICAL" -> "hist."; else -> "agr" },
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
@@ -407,7 +409,7 @@ fun KyaHogaPredictionDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                                         Text(text = "📊", fontSize = 14.sp)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
@@ -423,10 +425,13 @@ fun KyaHogaPredictionDialog(
                                         )
                                     }
                                     Text(
-                                        text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else PT.hitRateBadge(audit.winRatePercent, audit.totalSignalsTested, currentLanguage),
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        // V35.7: short "58% · N=859" (the long label wrapped into a 4-line column)
+                                        text = if (audit.totalSignalsTested == 0) "NO RESULTS YET" else "${audit.winRatePercent}% · N=${audit.totalSignalsTested}",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                         fontWeight = FontWeight.Black,
-                                        color = GoldLight
+                                        color = GoldLight,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 8.dp)
                                     )
                                 }
 
@@ -446,7 +451,11 @@ fun KyaHogaPredictionDialog(
                                         shape = RoundedCornerShape(10.dp),
                                         color = SignalBuy.copy(alpha = 0.12f),
                                         border = BorderStroke(1.dp, SignalBuy.copy(alpha = 0.4f)),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable { onOpenOutcomes("CORRECT") }
+                                            .testTag("dialog_tile_sahi")
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -460,9 +469,9 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "Correct (target / direction)"
-                                                    AppLanguage.HINDI -> "सही प्रेडिक्शन"
-                                                    AppLanguage.MARATHI -> "अचूक अंदाज"
+                                                    AppLanguage.ENGLISH -> "Correct · tap for list"
+                                                    AppLanguage.HINDI -> "सही · लिस्ट देखें"
+                                                    AppLanguage.MARATHI -> "बरोबर · यादी पहा"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = TextSecondary
@@ -477,10 +486,10 @@ fun KyaHogaPredictionDialog(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .clickable {
-                                                onDismiss()
-                                                onOpenPredictionErrorAnalyzer()
-                                            }
+                                            // V35.7: before, this closed the dialog and opened the general analyzer (OVERVIEW, all
+                                            // timeframes); now the wrong calls of THIS timeframe, dialog kept for Back
+                                            .clickable { onOpenOutcomes("WRONG") }
+                                            .testTag("dialog_tile_galat")
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -494,9 +503,9 @@ fun KyaHogaPredictionDialog(
                                             )
                                             Text(
                                                 text = when (currentLanguage) {
-                                                    AppLanguage.ENGLISH -> "Analyze (Tap) 🔬"
-                                                    AppLanguage.HINDI -> "जांचें (क्लिक करें) 🔬"
-                                                    AppLanguage.MARATHI -> "तपासा (क्लिक) 🔬"
+                                                    AppLanguage.ENGLISH -> "Wrong · tap for list"
+                                                    AppLanguage.HINDI -> "गलत · लिस्ट देखें"
+                                                    AppLanguage.MARATHI -> "चूक · यादी पहा"
                                                 },
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = SignalSell

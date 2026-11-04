@@ -41,7 +41,8 @@ fun V8HealthScreen(
     onToggleBackground: (Boolean) -> Unit = {},
     readiness: com.example.livegoldai.data.MacroReadiness.Report? = null,
     readinessRunning: Boolean = false,
-    onRunReadiness: () -> Unit = {}
+    onRunReadiness: () -> Unit = {},
+    readinessFailedAt: Long = 0L
 ) {
     var openKey by remember { mutableStateOf<String?>(null) }
     var showAllIndicators by remember { mutableStateOf(false) }
@@ -77,7 +78,7 @@ fun V8HealthScreen(
         }
 
         // ---------------- V35.5-F news readiness (on request, read-only)
-        MacroReadinessCard(readiness, readinessRunning, lang, onRunReadiness)
+        MacroReadinessCard(readiness, readinessRunning, lang, onRunReadiness, readinessFailedAt)
 
         // ---------------- prediction recorder pulse
         pulse?.let { p ->
@@ -284,14 +285,18 @@ private fun CategoryCard(c: HealthCategory, open: Boolean, lang: AppLanguage, on
 
 /** V35.5-F: "would Macro have data if the news were now?" One button, read-only GETs, nothing changed. */
 @Composable
-private fun MacroReadinessCard(r: com.example.livegoldai.data.MacroReadiness.Report?, running: Boolean, lang: AppLanguage, onRun: () -> Unit) {
+private fun MacroReadinessCard(r: com.example.livegoldai.data.MacroReadiness.Report?, running: Boolean, lang: AppLanguage, onRun: () -> Unit, failedAt: Long = 0L) {
     val vc = when (r?.verdict) { "READY" -> V8.Green; "PARTIAL" -> V8.Amber; null -> V8.Text3; else -> V8.Red }
     V8Card(level = 2, accent = vc.copy(alpha = 0.45f)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) { V8Label(tr(lang, "News readiness (Macro data)", "न्यूज़ तैयारी (Macro डेटा)", "न्यूज तयारी (Macro डेटा)"), V8.Gold) }
-            if (r != null) V8Badge(r.verdict, vc)
+            if (r != null) V8Badge(if (failedAt > 0L) "LAST: " + r.verdict else r.verdict, if (failedAt > 0L) V8.Text3 else vc)
         }
         Spacer(modifier = Modifier.height(6.dp))
+        // V35.7: a failed check never leaves an old READY looking current
+        if (failedAt > 0L) Text(text = tr(lang, "LAST CHECK FAILED at ", "आख़िरी जाँच फ़ेल ", "शेवटची तपासणी अयशस्वी ") +
+            com.example.livegoldai.data.TrustCard.localTs(failedAt) + if (r != null) tr(lang, " · below: the last successful check", " · नीचे: आख़िरी सफल जाँच", " · खाली: शेवटची यशस्वी तपासणी") else "",
+            color = V8.Red, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
         if (r == null) Text(text = tr(lang, "Checks now whether OANDA / Yahoo give the dollar and 10Y data the news window needs, and when the next high-impact USD news is. Read-only.",
             "अभी जाँचता है कि न्यूज़ विंडो के लिए OANDA / Yahoo से डॉलर और 10Y डेटा मिल रहा है या नहीं, और अगली बड़ी USD न्यूज़ कब है। सिर्फ़ पढ़ता है।",
             "न्यूज विंडोसाठी OANDA / Yahoo कडून डॉलर आणि 10Y डेटा मिळतो का, आणि पुढची मोठी USD न्यूज कधी आहे ते आता तपासते. फक्त वाचते."), color = V8.Text2, fontSize = 11.sp)

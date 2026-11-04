@@ -581,12 +581,17 @@ class GoldApiService(
         val now = System.currentTimeMillis()
         val out = ArrayList<MacroReadiness.Source>()
         val oanda = oandaConfigured()
+        val pairBars = HashMap<String, List<Pair<Long, Double>>>()
         for (inst in OandaMacro.DXY_PAIRS.keys + OandaMacro.NOTE) {
             if (!oanda) { out += MacroReadiness.source("OANDA", inst, OandaStatus.NOT_CONFIGURED, emptyList(), now); continue }
             val f = try { oandaStore.instrumentCandles(inst, "M5", 40) } catch (_: Exception) { null }
-            out += MacroReadiness.source("OANDA", inst, f?.status ?: OandaStatus.NETWORK,
-                f?.bars?.filter { it.complete && it.close > 0 }?.map { it.startMs to it.close } ?: emptyList(), now)
+            val bars = f?.bars?.filter { it.complete && it.close > 0 }?.map { it.startMs to it.close } ?: emptyList()
+            if (f?.status == OandaStatus.CONNECTED && inst in OandaMacro.DXY_PAIRS.keys) pairBars[inst] = bars
+            out += MacroReadiness.source("OANDA", inst, f?.status ?: OandaStatus.NETWORK, bars, now)
         }
+        // V35.7: the index itself, from bars at identical times in all six pairs
+        out.add(0, MacroReadiness.index(if (!oanda) null else pairBars.takeIf { it.size == OandaMacro.DXY_PAIRS.size },
+            if (!oanda) OandaStatus.NOT_CONFIGURED else OandaStatus.CONNECTED, now))
         for ((sym, name) in listOf("DX-Y.NYB" to "DX-Y.NYB", "EURUSD=X" to "EURUSD=X", "%5ETNX" to "^TNX"))
             out += MacroReadiness.source("YAHOO", name, null, try { yahooIntraday(sym) } catch (_: Exception) { emptyList() }, now)
         MacroReadiness.evaluate(now, fetchLiveEconomicEvents(), out)

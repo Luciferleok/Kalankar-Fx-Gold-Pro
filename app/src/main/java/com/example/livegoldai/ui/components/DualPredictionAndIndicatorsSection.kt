@@ -50,6 +50,7 @@ fun DualPredictionAndIndicatorsSection(
     analysis: GoldAnalysisResult,
     onOpenCalculator: (Double) -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
+    onOpenOutcomes: (String) -> Unit = {},      // V35.7: SAHI / GALAT lists
     onPillarClick: (GroupAnalysis) -> Unit = {},
     onOpenPassport: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -144,7 +145,8 @@ fun DualPredictionAndIndicatorsSection(
                             analysis = analysis,
                             onOpenCalculator = onOpenCalculator,
                             onOpenPassport = onOpenPassport,
-                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
+                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer,
+                            onOpenOutcomes = onOpenOutcomes
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -166,7 +168,8 @@ fun DualPredictionAndIndicatorsSection(
                             analysis = analysis,
                             onOpenCalculator = onOpenCalculator,
                             onOpenPassport = onOpenPassport,
-                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer
+                            onOpenPredictionErrorAnalyzer = onOpenPredictionErrorAnalyzer,
+                            onOpenOutcomes = onOpenOutcomes
                         )
                     }
 
@@ -194,6 +197,7 @@ fun PredictionBigCard(
     onOpenPassport: () -> Unit = {},
     onOpenCalculator: (Double) -> Unit,
     onOpenPredictionErrorAnalyzer: () -> Unit = {},
+    onOpenOutcomes: (String) -> Unit = {},      // V35.7: SAHI / GALAT lists
     modifier: Modifier = Modifier
 ) {
     val currentLanguage = LocalAppLanguage.current
@@ -523,7 +527,11 @@ fun PredictionBigCard(
                                 shape = RoundedCornerShape(8.dp),
                                 color = SignalBuy.copy(alpha = 0.12f),
                                 border = BorderStroke(1.dp, SignalBuy.copy(alpha = 0.4f)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onOpenOutcomes("CORRECT") }
+                                    .testTag("tile_sahi")
                             ) {
                                 Column(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
@@ -537,9 +545,9 @@ fun PredictionBigCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Correct (TP Hit)"
-                                            AppLanguage.HINDI -> "सही प्रेडिक्शन"
-                                            AppLanguage.MARATHI -> "अचूक अंदाज"
+                                            AppLanguage.ENGLISH -> "Correct · tap for list"
+                                            AppLanguage.HINDI -> "सही · लिस्ट देखें"
+                                            AppLanguage.MARATHI -> "बरोबर · यादी पहा"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         color = TextSecondary
@@ -555,7 +563,8 @@ fun PredictionBigCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .clickable { onOpenPredictionErrorAnalyzer() }
+                                    .clickable { onOpenOutcomes("WRONG") }
+                                    .testTag("tile_galat")
                             ) {
                                 Column(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
@@ -569,9 +578,9 @@ fun PredictionBigCard(
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Analyze (Tap) 🔬"
-                                            AppLanguage.HINDI -> "जांचें (क्लिक करें) 🔬"
-                                            AppLanguage.MARATHI -> "तपासा (क्लिक) 🔬"
+                                            AppLanguage.ENGLISH -> "Wrong · tap for list"
+                                            AppLanguage.HINDI -> "गलत · लिस्ट देखें"
+                                            AppLanguage.MARATHI -> "चूक · यादी पहा"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         color = SignalSell
