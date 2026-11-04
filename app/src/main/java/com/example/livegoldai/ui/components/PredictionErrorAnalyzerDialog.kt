@@ -546,9 +546,9 @@ private fun OverviewTab(s: LearningSnapshot, lang: AppLanguage, pulse: com.examp
         Tile(t(lang, "30D HIT-RATE", "30 दिन हिट-रेट", "30 दिवस हिट-रेट"), d30?.let { pct(it) } ?: "--", GoldLight, Modifier.weight(1f))
     }
     // V35.7: these tiles count EVERY timeframe; the SAHI / GALAT tiles in the forecast dialog count only the shown one
-    Note(t(lang, "These tiles: all timeframes together (target/stop or close direction beyond noise). The SAHI / GALAT numbers in the forecast show only that timeframe, and the Engine audit below uses close direction only, so the three numbers differ.",
-        "ये टाइल: सभी टाइमफ़्रेम मिलाकर (टारगेट/स्टॉप या शोर से आगे क्लोज़ दिशा)। फ़ोरकास्ट के SAHI / GALAT सिर्फ़ उसी टाइमफ़्रेम के हैं, और नीचे इंजन ऑडिट सिर्फ़ क्लोज़ दिशा देखता है, इसलिए तीनों नंबर अलग हैं।",
-        "हे टाइल: सर्व टाइमफ्रेम एकत्र (टार्गेट/स्टॉप किंवा आवाजापलीकडील क्लोज दिशा). अंदाजातील SAHI / GALAT फक्त त्या टाइमफ्रेमचे, आणि खालील इंजिन ऑडिट फक्त क्लोज दिशा पाहते, म्हणून तिन्ही आकडे वेगळे."))
+    Note(t(lang, "These tiles: all timeframes together (target/stop or close direction beyond noise). The Correct / Wrong numbers in the forecast show only that timeframe, and the Engine audit below uses close direction only, so the three numbers differ.",
+        "ये टाइल: सभी टाइमफ़्रेम मिलाकर (टारगेट/स्टॉप या शोर से आगे क्लोज़ दिशा)। फ़ोरकास्ट के सही / गलत सिर्फ़ उसी टाइमफ़्रेम के हैं, और नीचे इंजन ऑडिट सिर्फ़ क्लोज़ दिशा देखता है, इसलिए तीनों नंबर अलग हैं।",
+        "हे टाइल: सर्व टाइमफ्रेम एकत्र (टार्गेट/स्टॉप किंवा आवाजापलीकडील क्लोज दिशा). अंदाजातील बरोबर / चूक फक्त त्या टाइमफ्रेमचे, आणि खालील इंजिन ऑडिट फक्त क्लोज दिशा पाहते, म्हणून तिन्ही आकडे वेगळे."))
     Spacer(modifier = Modifier.height(10.dp))
     InfoRow(t(lang, "Model", "मॉडल", "मॉडेल"), s.modelVersion)
     InfoRow(t(lang, "Engine state", "इंजन स्थिति", "इंजिन स्थिती"), s.engineState.replace('_', ' '))

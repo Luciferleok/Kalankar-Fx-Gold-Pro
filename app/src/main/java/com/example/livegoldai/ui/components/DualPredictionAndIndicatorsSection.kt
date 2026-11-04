@@ -538,16 +538,17 @@ fun PredictionBigCard(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = "${audit.winCount} SAHI ✅",
+                                        // V35.7.2 (owner): CORRECT / WRONG in English, सही / गलत in Hindi, बरोबर / चूक in Marathi
+                                                text = "${audit.winCount} " + when (currentLanguage) { AppLanguage.ENGLISH -> "CORRECT"; AppLanguage.HINDI -> "सही"; AppLanguage.MARATHI -> "बरोबर" } + " ✅",
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                         fontWeight = FontWeight.Black,
                                         color = SignalBuy
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Correct · tap for list"
-                                            AppLanguage.HINDI -> "सही · लिस्ट देखें"
-                                            AppLanguage.MARATHI -> "बरोबर · यादी पहा"
+                                            AppLanguage.ENGLISH -> "tap for the list"
+                                            AppLanguage.HINDI -> "लिस्ट देखें"
+                                            AppLanguage.MARATHI -> "यादी पहा"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         color = TextSecondary
@@ -571,16 +572,16 @@ fun PredictionBigCard(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
-                                        text = "${audit.lossCount} GALAT ❌",
+                                        text = "${audit.lossCount} " + when (currentLanguage) { AppLanguage.ENGLISH -> "WRONG"; AppLanguage.HINDI -> "गलत"; AppLanguage.MARATHI -> "चूक" } + " ❌",
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                         fontWeight = FontWeight.Black,
                                         color = SignalSell
                                     )
                                     Text(
                                         text = when (currentLanguage) {
-                                            AppLanguage.ENGLISH -> "Wrong · tap for list"
-                                            AppLanguage.HINDI -> "गलत · लिस्ट देखें"
-                                            AppLanguage.MARATHI -> "चूक · यादी पहा"
+                                            AppLanguage.ENGLISH -> "tap for the list"
+                                            AppLanguage.HINDI -> "लिस्ट देखें"
+                                            AppLanguage.MARATHI -> "यादी पहा"
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                         color = SignalSell
