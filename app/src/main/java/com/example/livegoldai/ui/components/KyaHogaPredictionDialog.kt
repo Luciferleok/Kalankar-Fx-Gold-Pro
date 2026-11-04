@@ -571,7 +571,9 @@ fun KyaHogaPredictionDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // V35.8.1: the text side takes the remaining width (before: the badge was squeezed into a
+                                    // letter-wide column and the card became a tall empty box)
+                                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                                         Box(
                                             modifier = Modifier
                                                 .size(28.dp)
@@ -612,9 +614,11 @@ fun KyaHogaPredictionDialog(
                                         }
                                     }
 
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
-                                        color = NeonGreen.copy(alpha = 0.15f)
+                                        color = NeonGreen.copy(alpha = 0.15f),
+                                        modifier = Modifier.widthIn(max = 140.dp)
                                     ) {
                                         Text(
                                             text = PT.safetyChecksBadge(corrections.size, currentLanguage),
@@ -644,13 +648,17 @@ fun KyaHogaPredictionDialog(
                                                     text = "✓ ${corr.getTitle(currentLanguage)}",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Black,
-                                                    color = GoldLight
+                                                    color = GoldLight,
+                                                    modifier = Modifier.weight(1f)
                                                 )
                                                 Text(
                                                     text = corr.badgeTag,
                                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                     color = SignalBuy,
-                                                    fontWeight = FontWeight.Bold
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    softWrap = false,
+                                                    modifier = Modifier.padding(start = 8.dp)
                                                 )
                                             }
                                             Spacer(modifier = Modifier.height(3.dp))
@@ -725,7 +733,7 @@ fun KyaHogaPredictionDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                                         Text(text = "⚙", fontSize = 16.sp, color = GoldLight)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
@@ -748,9 +756,11 @@ fun KyaHogaPredictionDialog(
                                         }
                                     }
 
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
-                                        color = primaryColor.copy(alpha = 0.2f)
+                                        color = primaryColor.copy(alpha = 0.2f),
+                                        modifier = Modifier.widthIn(max = 130.dp)
                                     ) {
                                         Text(
                                             text = PT.councilBadge(consensus.agreeingModelsCount, consensus.totalModelsCount, consensus.consensusSignal, currentLanguage),
@@ -941,7 +951,8 @@ fun KyaHogaPredictionDialog(
                                         color = SignalBuy
                                     )
                                     Text(
-                                        text = "🟡 Range $sidewaysProb%",
+                                        // V35.8.1: this is the WAIT vote share (was labelled "Range")
+                                        text = "🟡 " + when (currentLanguage) { AppLanguage.ENGLISH -> "Wait"; AppLanguage.HINDI -> "रुकें"; AppLanguage.MARATHI -> "थांबा" } + " $sidewaysProb%",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
@@ -1100,11 +1111,14 @@ fun KyaHogaPredictionDialog(
                                     text = PT.planTitle(tradeSetup, currentLanguage),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Black,
-                                    color = GoldLight
+                                    color = GoldLight,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = primaryColor.copy(alpha = 0.2f)
+                                    color = primaryColor.copy(alpha = 0.2f),
+                                    modifier = Modifier.widthIn(max = 140.dp)
                                 ) {
                                     Text(
                                         text = "risk:reward ${tradeSetup.riskRewardRatio}",

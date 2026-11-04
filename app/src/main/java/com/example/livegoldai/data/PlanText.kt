@@ -59,7 +59,11 @@ object PlanText {
         PlanStamp.STOPPED -> t(l, "PLAN CLOSED: STOP-LOSS HIT", "प्लान बंद: STOP-LOSS लगा", "प्लॅन बंद: STOP-LOSS लागला")
         PlanStamp.RESEARCH -> t(l, "HYPOTHETICAL RESEARCH SCENARIO", "काल्पनिक रिसर्च परिदृश्य", "काल्पनिक रिसर्च परिस्थिती")
         PlanStamp.EXPIRED -> t(l, "PREDICTION EXPIRED", "प्रेडिक्शन की अवधि खत्म", "अंदाजाची मुदत संपली")
-        else -> t(l, "CONDITIONAL SCENARIO (NOT A TRADE)", "शर्त वाला परिदृश्य (ट्रेड नहीं)", "अटींवरील परिस्थिती (ट्रेड नाही)")
+        // V35.8.1: on WAIT the engine always draws the same UPSIDE breakout example (1.5 / 3 ATR above the price),
+        // whatever the votes; the title says so, so it is not read as an upward lean
+        else -> if (ts.signal == com.example.livegoldai.model.Signal.WAIT)
+            t(l, "UPSIDE BREAKOUT EXAMPLE (NOT A LEAN, NOT A TRADE)", "ऊपर ब्रेकआउट का उदाहरण (झुकाव नहीं, ट्रेड नहीं)", "वर ब्रेकआउटचे उदाहरण (कल नाही, ट्रेड नाही)")
+            else t(l, "CONDITIONAL SCENARIO (NOT A TRADE)", "शर्त वाला परिदृश्य (ट्रेड नहीं)", "अटींवरील परिस्थिती (ट्रेड नाही)")
     }
 
     fun targetLabel(ts: TradeSetup, l: AppLanguage): String =
