@@ -48,13 +48,20 @@ object TrustCard {
         // V35.5-E: status NOW (re-checked every second), apart from the status at publication (never rewritten)
         val nowStatus: String = "",
         val nowReasons: List<String> = emptyList(),
-        val diagnostics: List<Diag> = emptyList()
+        val diagnostics: List<Diag> = emptyList(),
+        val chips: List<Pair<String, String>> = emptyList(),   // V35.6 collapsed view: (label, value) x 3
+        val snapshotAt: String = "",      // when this snapshot (and its status stamp) was made, phone time zone
+        val ledgerAt: String = ""         // when the ledger recorded this candle's call ("" = not recorded)
     )
     /** V35.5-E: one factual check; state OK / WARN / FAIL / NA. Never combined into a score. */
     data class Diag(val name: String, val state: String, val detail: String)
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
     private fun pts(x: Double) = String.format(Locale.US, "%+.0f", x)
+    /** "15:52 IST" in the phone's time zone, with the zone named */
+    fun localTs(ms: Long, tz: java.util.TimeZone = java.util.TimeZone.getDefault()): String =
+        java.text.SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }.format(java.util.Date(ms)) + " " +
+            tz.getDisplayName(tz.inDaylightTime(java.util.Date(ms)), java.util.TimeZone.SHORT, Locale.US)
 
     /** "OFF", or "NFP@1793971800000 · dollar OBSERVED_COMPLETE (OANDA COMPUTED) · 10Y INCOMPLETE · Macro votes BUY" */
     fun newsLine(a: GoldAnalysisResult, l: AppLanguage, now: Long = System.currentTimeMillis()): String {
@@ -69,7 +76,7 @@ object TrustCard {
         val newest = listOf(d, y).filter { it.usableInWindow }.maxOfOrNull { it.barEndMs } ?: 0L
         val age = if (newest > 0L && now >= newest) t(l, " · data ", " · डेटा ", " · डेटा ") + "${(now - newest) / 60_000L}m" + t(l, " old", " पुराना", " जुना") else ""
         val ms = id.substringAfter("@").toLongOrNull()
-        val name = id.substringBefore("@") + (ms?.let { " " + java.text.SimpleDateFormat("dd MMM HH:mm", Locale.US).format(java.util.Date(it)) } ?: "")
+        val name = id.substringBefore("@") + (ms?.let { " " + java.text.SimpleDateFormat("dd MMM", Locale.US).format(java.util.Date(it)) + " " + localTs(it) } ?: "")
         return "$name · ${one("dollar", d)} · ${one("10Y", y)}$age · $vote"
     }
 
@@ -99,8 +106,12 @@ object TrustCard {
             ResearchGate.NO_LIVE_DATA -> t(l, "no live data", "लाइव डेटा नहीं", "लाइव्ह डेटा नाही")
             ResearchGate.INSTRUMENT_NOT_XAU -> t(l, "not XAU/USD spot", "XAU/USD स्पॉट नहीं", "XAU/USD स्पॉट नाही")
             else -> null } }
+        val delayedNote = if (!wait && status == "QUALIFIED" && refusals.isEmpty() && fresh == Freshness.DELAYED)
+            listOf(t(l, "price DELAYED: check the live price before acting", "प्राइस DELAYED: कुछ करने से पहले लाइव प्राइस देखें", "प्राइस DELAYED: काही करण्यापूर्वी लाइव्ह प्राइस तपासा")) else emptyList()
         val nowStatus = when {
             wait -> "WAIT"
+            // V35.6: the execution policy accepts DELAYED data; the card says so instead of a plain ACTIONABLE
+            status == "QUALIFIED" && refusals.isEmpty() && fresh == Freshness.DELAYED -> "DELAYED DATA"
             status == "QUALIFIED" && refusals.isEmpty() -> "ACTIONABLE"
             status == "QUALIFIED" -> "NOT ACTIONABLE"
             nowReasons.isNotEmpty() -> "OUTDATED"
@@ -114,20 +125,28 @@ object TrustCard {
         metrics += Metric(Kind.RULE_AGREEMENT,
             if (wait) t(l, "below the gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}% · $votes/${a.totalGroups} " + t(l, "pillars", "पिलर", "पिलर"),
             t(l, "weighted vote share, gate 68%: not a probability", "वेटेड वोट हिस्सा, गेट 68%: संभावना नहीं", "वेटेड मत वाटा, गेट 68%: शक्यता नाही"))
-        // 2. V35.5-E: hit-rate of past calls matching THIS forecast; the agreement-band number only as general context
-        val general = if (p != null && p.hitRatePct >= 0 && p.hitRateN > 0) t(l, "GENERAL HISTORICAL CONTEXT (this timeframe and agreement band, all sides, providers and engines, overlapping windows): ",
-            "सामान्य पुराना संदर्भ (यही टाइमफ़्रेम और सहमति बैंड, सभी दिशा/प्रोवाइडर/इंजन, ओवरलैपिंग विंडो): ", "सामान्य जुना संदर्भ (हाच टाइमफ्रेम आणि सहमती बँड, सर्व दिशा/प्रोव्हायडर/इंजिन, ओव्हरलॅपिंग विंडो): ") +
-            "${p.hitRatePct}% · N=${p.hitRateN}" else ""
+        // 2. V35.6 evidence tiers: A = same ledger regime too, B = same timeframe/side/provider/engine (regime mixed),
+        //    C = general context (agreement band, everything mixed). The value is the narrowest tier with enough calls.
+        fun cov(n: Int, w: Int) = if (w > 0) " · " + t(l, "coverage ", "कवरेज ", "कव्हरेज ") + "${100 * n / w}%" else ""
+        val tier = when { wait || p == null -> ""; p.tierAPct >= 0 -> "A"; p.exactHitPct >= 0 -> "B"; else -> "" }
+        val tierC = if (p != null && p.hitRatePct >= 0 && p.hitRateN > 0) "${p.hitRatePct}% · N=${p.hitRateN}" else ""
         metrics += Metric(Kind.HISTORICAL_HIT_RATE,
             when {
                 wait -> t(l, "no call: none", "कॉल नहीं: कुछ नहीं", "कॉल नाही: काही नाही")
-                p != null && p.exactHitPct >= 0 -> "${p.exactHitPct}% · N=${p.exactHitN} " + t(l, "exact match", "सटीक मिलान", "अचूक जुळणी")
-                else -> t(l, "INSUFFICIENT EVIDENCE", "पर्याप्त प्रमाण नहीं", "पुरेसा पुरावा नाही") + " · N=${p?.exactHitN ?: 0}/${EdgeFinder.EXACT_MIN_N} " + t(l, "exact", "सटीक", "अचूक")
+                tier == "A" -> "TIER A · ${p!!.tierAPct}% · N=${p.tierAN}"
+                tier == "B" -> "TIER B · ${p!!.exactHitPct}% · N=${p.exactHitN}"
+                else -> t(l, "INSUFFICIENT EVIDENCE", "पर्याप्त प्रमाण नहीं", "पुरेसा पुरावा नाही") + " · N=${p?.exactHitN ?: 0}/${EdgeFinder.EXACT_MIN_N}"
             },
-            (if (wait || p == null || p.exactScope.isBlank()) "" else t(l, "Exact: ", "सटीक: ", "अचूक: ") + p.exactScope +
-                t(l, ", one call per window, regime not matched. ", ", हर विंडो में एक कॉल, रेजीम मिलाया नहीं। ", ", प्रत्येक विंडोत एक कॉल, रेजीम जुळवला नाही. ")) +
-            t(l, "Past calls, sideways excluded: not today's chance.", "पुरानी कॉल, साइडवेज़ छोड़कर: आज का मौका नहीं।", "जुन्या कॉल, साइडवेज वगळून: आजची शक्यता नाही.") +
-            (if (!wait && general.isNotEmpty()) " $general" else ""))
+            if (wait || p == null) t(l, "Past calls, sideways excluded: not today's chance.", "पुरानी कॉल, साइडवेज़ छोड़कर: आज का मौका नहीं।", "जुन्या कॉल, साइडवेज वगळून: आजची शक्यता नाही.")
+            else listOf(
+                "A (" + t(l, "same regime", "same रेजीम", "same रेजीम") + "): " + (if (p.tierAScope.isBlank()) t(l, "this candle not in the ledger yet", "यह कैंडल अभी लेजर में नहीं", "ही कँडल अजून लेजरमध्ये नाही")
+                    else (if (p.tierAPct >= 0) "${p.tierAPct}%" else t(l, "too few", "बहुत कम", "खूप कमी")) + " · N=${p.tierAN}" + cov(p.tierAN, p.tierAWindows) + " · ${p.tierAScope}"),
+                "B (" + t(l, "regime mixed", "रेजीम मिश्रित", "रेजीम मिश्र") + "): " + (if (p.exactHitPct >= 0) "${p.exactHitPct}%" else t(l, "too few", "बहुत कम", "खूप कमी")) +
+                    " · N=${p.exactHitN}" + cov(p.exactHitN, p.exactWindows) + " · ${p.exactScope}",
+                "C (" + t(l, "GENERAL HISTORICAL CONTEXT: agreement band, all sides/providers/engines, overlapping windows", "सामान्य पुराना संदर्भ: सहमति बैंड, सभी दिशा/प्रोवाइडर/इंजन, ओवरलैपिंग विंडो", "सामान्य जुना संदर्भ: सहमती बँड, सर्व दिशा/प्रोव्हायडर/इंजिन, ओव्हरलॅपिंग विंडो") + "): " + tierC.ifBlank { "--" },
+                t(l, "One call per window; outcome: ", "हर विंडो में एक कॉल; नतीजा: ", "प्रत्येक विंडोत एक कॉल; निकाल: ") + EdgeFinder.OUTCOME_RULE + ".",
+                t(l, "In-sample past record, not a validated probability: not today's chance.", "पुराना रिकॉर्ड, सत्यापित संभावना नहीं: आज का मौका नहीं।", "जुनी नोंद, सत्यापित शक्यता नाही: आजची शक्यता नाही.")
+            ).joinToString(" | "))
         // 3. calibrated probability: honestly absent
         metrics += Metric(Kind.CALIBRATED_PROBABILITY, t(l, "NOT AVAILABLE", "उपलब्ध नहीं", "उपलब्ध नाही"),
             t(l, "no model here is calibrated on forward data", "यहाँ कोई मॉडल आगे के डेटा पर कैलिब्रेटेड नहीं", "इथे कोणतेही मॉडेल पुढील डेटावर कॅलिब्रेटेड नाही"), false)
@@ -172,7 +191,14 @@ object TrustCard {
         return Card(sig, status, statusNote, metrics, forT, forL, agT, agL, levels, if (wait) 0L else ts.expiresAtMs, regime, alignment, evidence,
             t(l, "Research record, not financial advice. Past results do not guarantee future results.",
                 "रिसर्च रिकॉर्ड, वित्तीय सलाह नहीं। पिछले नतीजे भविष्य की गारंटी नहीं।", "रिसर्च नोंद, आर्थिक सल्ला नाही. मागील निकाल भविष्याची हमी नाहीत."),
-            nowStatus, nowReasons, diagnostics(a, now, l, fresh, age, refusals, status))
+            nowStatus, nowReasons + delayedNote, diagnostics(a, now, l, fresh, age, refusals, status),
+            listOf(t(l, "AGREEMENT", "सहमति", "सहमती") to (if (wait) t(l, "below gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}%"),
+                t(l, "EVIDENCE", "प्रमाण", "पुरावा") to when { wait -> "--"; tier == "A" -> "A · ${p!!.tierAPct}%"; tier == "B" -> "B · ${p!!.exactHitPct}%"; else -> "N<${EdgeFinder.EXACT_MIN_N}" },
+                t(l, "DATA", "डेटा", "डेटा") to fresh),
+            // V35.6: "status" is this snapshot's stamp (re-made on every refresh), not a saved publication: say when it was
+            // made, and when the ledger recorded this candle (the ledger keeps the call, not the plan status)
+            a.feed?.fetchedAtMs?.takeIf { it > 0L }?.let { localTs(it) } ?: "--",
+            p?.ledgerRecordedAtMs?.takeIf { it > 0L }?.let { localTs(it) } ?: "")
     }
 
     /** V35.5-E: eight factual checks, each on its own; no total, no score, no probability */
@@ -202,8 +228,9 @@ object TrustCard {
             when { wait -> t(l, "no levels on WAIT", "WAIT पर लेवल नहीं", "WAIT वर लेव्हल नाहीत"); ts.levelsFixedAtMs <= 0L -> t(l, "not fixed yet", "अभी तय नहीं", "अजून निश्चित नाही")
                 ts.levelsSaved -> t(l, "fixed ", "तय ", "निश्चित ") + ResearchScenario.utc(ts.levelsFixedAtMs); else -> t(l, "fixed but not saved", "तय पर सेव नहीं", "निश्चित पण सेव्ह नाही") })
         out += Diag(t(l, "Historical evidence", "पुराना प्रमाण", "जुना पुरावा"), when {
-            wait -> "NA"; p != null && p.exactHitPct >= 0 -> "OK"; else -> "WARN" },
-            if (wait) "--" else "N=${p?.exactHitN ?: 0} " + t(l, "exact (need ", "सटीक (चाहिए ", "अचूक (हवे ") + "${EdgeFinder.EXACT_MIN_N})")
+            wait -> "NA"; p != null && (p.tierAPct >= 0 || p.exactHitPct >= 0) -> "OK"; else -> "WARN" },
+            if (wait) "--" else (if (p != null && p.tierAPct >= 0) "TIER A · N=${p.tierAN}" else if (p != null && p.exactHitPct >= 0) "TIER B · N=${p.exactHitN}"
+                else "N=${p?.exactHitN ?: 0}/${EdgeFinder.EXACT_MIN_N}") + t(l, " decided, one per window", " तय कॉल, हर विंडो में एक", " ठरलेल्या कॉल, प्रत्येक विंडोत एक"))
         out += Diag(t(l, "Research authorization", "रिसर्च अनुमति", "रिसर्च परवानगी"), when {
             wait -> "NA"; published == "QUALIFIED" && refusals.isEmpty() -> "OK"; published == "QUALIFIED" -> "FAIL"; else -> "WARN" },
             when { wait -> "--"; published == "QUALIFIED" && refusals.isEmpty() -> t(l, "authorized now", "अभी अनुमति", "आता परवानगी")

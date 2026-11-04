@@ -66,20 +66,26 @@ object EdgeFinder {
     fun engineOf(v: String): String = v.ifBlank { "older" }
 
     /**
-     * V35.5-E: hit-rate of past calls that match THIS forecast: same timeframe, same side, same provider, same engine
-     * version, decided (sideways excluded, invalidated = wrong), one call per time window (no overlapping windows).
-     * The regime is NOT matched (the ledger's regime label is a different scale from the screen's), said in [scope].
-     * pct = -1 below [EXACT_MIN_N] independent calls: then the card says INSUFFICIENT EVIDENCE.
+     * V35.5-E / V35.6: hit-rate of past calls that match THIS forecast: same timeframe, side, provider, engine version
+     * (and, for tier A, the same ledger regime). V35.6: windows are thinned FIRST over every resolved matching call
+     * (a sideways or uncertain call still takes its window), THEN the decided ones are counted. Before, the sideways
+     * calls were removed first, so a decided call overlapping a sideways one was counted too (N 521 -> 421 in a test).
+     * Outcome: direction at expiry; sideways / uncertain / no data are not counted; invalidated counts as wrong.
+     * pct = -1 below [EXACT_MIN_N] decided calls: INSUFFICIENT EVIDENCE. An in-sample record, not a validated probability.
      */
-    data class Exact(val pct: Int, val n: Int, val scope: String)
+    data class Exact(val pct: Int, val n: Int, val scope: String, val windows: Int = 0, val regime: String = "")
     const val EXACT_MIN_N = 20
-    fun exactMatch(state: LedgerState, interval: String, side: Signal, dataSource: String?, engine: String): Exact {
+    const val OUTCOME_RULE = "direction at expiry · sideways/uncertain not counted · invalidated = wrong"
+    fun exactMatch(state: LedgerState, interval: String, side: Signal, dataSource: String?, engine: String, regime: String? = null): Exact {
         val prov = providerOf(dataSource ?: "")
-        val ind = thin(decided(state).filter { it.interval.equals(interval, true) && it.finalSignal == side &&
-            providerOf(it.dataSource) == prov && it.engineVersion == engine })
-        val right = ind.count { state.resultOf(it.id)?.outcome == LedgerOutcome.CORRECT }
-        return Exact(if (ind.size >= EXACT_MIN_N) Math.round(100.0 * right / ind.size).toInt() else -1, ind.size,
-            "${interval.uppercase()} · ${side.name} · $prov · ${engineOf(engine)}")
+        val resolved = state.records.filter { r -> r.finalSignal == side && r.interval.equals(interval, true) &&
+            providerOf(r.dataSource) == prov && r.engineVersion == engine && (regime == null || r.regime == regime) &&
+            (state.resultOf(r.id)?.outcome ?: LedgerOutcome.PENDING) != LedgerOutcome.PENDING }
+        val windows = thin(resolved)
+        val dec = windows.filter { when (state.resultOf(it.id)?.outcome) { LedgerOutcome.CORRECT, LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> true; else -> false } }
+        val right = dec.count { state.resultOf(it.id)?.outcome == LedgerOutcome.CORRECT }
+        return Exact(if (dec.size >= EXACT_MIN_N) Math.round(100.0 * right / dec.size).toInt() else -1, dec.size,
+            "${interval.uppercase()} · ${side.name} · $prov · ${engineOf(engine)}" + (regime?.let { " · $it" } ?: ""), windows.size, regime ?: "")
     }
 
     /** decided v1 calls with their dimension values */

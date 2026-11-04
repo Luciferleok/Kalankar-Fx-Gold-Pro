@@ -92,7 +92,14 @@ data class PredictionPresentationState(
     // V35.5-E: hit-rate of past calls matching THIS forecast (timeframe, side, provider, engine; independent), -1 = too few
     val exactHitPct: Int = -1,
     val exactHitN: Int = 0,
-    val exactScope: String = ""
+    val exactScope: String = "",
+    // V35.6: windows behind the exact record (coverage = decided / windows), tier A (same ledger regime), ledger time
+    val exactWindows: Int = 0,
+    val tierAPct: Int = -1,
+    val tierAN: Int = 0,
+    val tierAWindows: Int = 0,
+    val tierAScope: String = "",
+    val ledgerRecordedAtMs: Long = 0L
 ) {
     @Serializable
     data class Factor(val title: String, val points: Double)
@@ -119,6 +126,10 @@ object PresentationBuilder {
         val band = RealityEngine.bandRecord(a.learning, raw)
         val exact = if (state != null && a.overallSignal != Signal.WAIT)
             EdgeFinder.exactMatch(state, a.interval, a.overallSignal, a.feed?.source, PredictionLedger.ENGINE_VERSION) else null
+        // V35.6: this candle's own ledger record (if recorded) gives the regime on the ledger's scale -> tier A
+        val own = state?.records?.lastOrNull { it.interval.equals(a.interval, true) && it.barId == a.lastUpdated }
+        val tierA = if (state != null && a.overallSignal != Signal.WAIT && own != null && own.regime.isNotBlank())
+            EdgeFinder.exactMatch(state, a.interval, a.overallSignal, a.feed?.source, PredictionLedger.ENGINE_VERSION, own.regime) else null
         val calErr = a.learning?.calibrationErrorPoints ?: -1.0
         val ins = a.insights
         val contrib = ins?.contributions ?: emptyList()
@@ -163,6 +174,12 @@ object PresentationBuilder {
             exactHitPct = exact?.pct ?: -1,
             exactHitN = exact?.n ?: 0,
             exactScope = exact?.scope ?: "",
+            exactWindows = exact?.windows ?: 0,
+            tierAPct = tierA?.pct ?: -1,
+            tierAN = tierA?.n ?: 0,
+            tierAWindows = tierA?.windows ?: 0,
+            tierAScope = tierA?.scope ?: "",
+            ledgerRecordedAtMs = own?.createdAt ?: 0L,
             hitRatePct = band?.accuracyPercent?.roundToInt() ?: -1,
             hitRateN = band?.decided ?: 0,
             headlineKind = when { a.overallSignal == Signal.WAIT -> "NONE"; band != null -> "HISTORICAL"; else -> "HEURISTIC" },

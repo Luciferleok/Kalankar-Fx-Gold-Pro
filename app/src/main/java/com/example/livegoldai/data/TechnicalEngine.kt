@@ -606,7 +606,9 @@ object TechnicalEngine {
         // Macro takes no part at all (no vote, no weight), instead of sitting in the gate as a 2.5-weight WAIT that dilutes
         // the other pillars (same chart: 100% -> 83.9%). The window and the missing data are shown, not hidden.
         // V35.5-A: typed evidence decides, never the explanation text (before: a reworded "no data" message counted as data)
-        fun usable(m: MacroMarketIndex?) = m?.evidence?.usableInWindow == true
+        // V35.6: and only for THIS window's event (two events close together: evidence of the other one never votes)
+        val windowEventId = macroEvent?.let { MacroWindow.eventId(it) }
+        fun usable(m: MacroMarketIndex?) = m?.evidence?.usableInWindow == true && m.evidence.eventId == windowEventId
         val macroData = usable(customDxy) || usable(customUs10y)
         val macroActive = macroEvent != null && macroData
         val macroVerdict = if (macroActive) macroRaw else Signal.WAIT
