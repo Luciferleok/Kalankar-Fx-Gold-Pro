@@ -109,6 +109,9 @@ data class GoldUiState(
     val aiTests: Map<String, com.example.livegoldai.model.AiTestUi> = emptyMap(),
     val aiRunning: Boolean = false,
     val bgRecording: Boolean = true,  // 24/7 background prediction recorder (foreground service)
+    // V35.5-F: NFP readiness check result (on request only; read-only)
+    val macroReadiness: com.example.livegoldai.data.MacroReadiness.Report? = null,
+    val macroReadinessRunning: Boolean = false,
     val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
     val feedKeySaved: Boolean = false,             // true when the user saved their own Twelve Data key
     // ---- V32 OANDA practice (stage 1: connection check only; the token itself is never in UI state)
@@ -366,6 +369,16 @@ class GoldViewModel @JvmOverloads constructor(
     }
 
     /** Turns the 24/7 background recorder (foreground service with a permanent notification) on or off. */
+    /** V35.5-F: read-only check of the Macro news-window sources; changes nothing */
+    fun runMacroReadiness() {
+        if (_uiState.value.macroReadinessRunning) return
+        _uiState.update { it.copy(macroReadinessRunning = true) }
+        viewModelScope.launch {
+            val r = try { apiService.macroReadiness() } catch (_: Exception) { null }
+            _uiState.update { it.copy(macroReadinessRunning = false, macroReadiness = r ?: it.macroReadiness) }
+        }
+    }
+
     fun setBackgroundRecording(on: Boolean) {
         prefs.edit().putBoolean("bg_recorder_on", on).apply()
         _uiState.update { it.copy(bgRecording = on) }

@@ -38,7 +38,10 @@ fun V8HealthScreen(
     lang: AppLanguage,
     pulse: com.example.livegoldai.model.LedgerPulse? = null,
     bgRecording: Boolean = false,
-    onToggleBackground: (Boolean) -> Unit = {}
+    onToggleBackground: (Boolean) -> Unit = {},
+    readiness: com.example.livegoldai.data.MacroReadiness.Report? = null,
+    readinessRunning: Boolean = false,
+    onRunReadiness: () -> Unit = {}
 ) {
     var openKey by remember { mutableStateOf<String?>(null) }
     var showAllIndicators by remember { mutableStateOf(false) }
@@ -72,6 +75,9 @@ fun V8HealthScreen(
                 color = V8.Text3, fontSize = 9.sp
             )
         }
+
+        // ---------------- V35.5-F news readiness (on request, read-only)
+        MacroReadinessCard(readiness, readinessRunning, lang, onRunReadiness)
 
         // ---------------- prediction recorder pulse
         pulse?.let { p ->
@@ -272,5 +278,43 @@ private fun CategoryCard(c: HealthCategory, open: Boolean, lang: AppLanguage, on
                 }
             }
         }
+    }
+}
+
+
+/** V35.5-F: "would Macro have data if the news were now?" One button, read-only GETs, nothing changed. */
+@Composable
+private fun MacroReadinessCard(r: com.example.livegoldai.data.MacroReadiness.Report?, running: Boolean, lang: AppLanguage, onRun: () -> Unit) {
+    val vc = when (r?.verdict) { "READY" -> V8.Green; "PARTIAL" -> V8.Amber; null -> V8.Text3; else -> V8.Red }
+    V8Card(level = 2, accent = vc.copy(alpha = 0.45f)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) { V8Label(tr(lang, "News readiness (Macro data)", "न्यूज़ तैयारी (Macro डेटा)", "न्यूज तयारी (Macro डेटा)"), V8.Gold) }
+            if (r != null) V8Badge(r.verdict, vc)
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        if (r == null) Text(text = tr(lang, "Checks now whether OANDA / Yahoo give the dollar and 10Y data the news window needs, and when the next high-impact USD news is. Read-only.",
+            "अभी जाँचता है कि न्यूज़ विंडो के लिए OANDA / Yahoo से डॉलर और 10Y डेटा मिल रहा है या नहीं, और अगली बड़ी USD न्यूज़ कब है। सिर्फ़ पढ़ता है।",
+            "न्यूज विंडोसाठी OANDA / Yahoo कडून डॉलर आणि 10Y डेटा मिळतो का, आणि पुढची मोठी USD न्यूज कधी आहे ते आता तपासते. फक्त वाचते."), color = V8.Text2, fontSize = 11.sp)
+        else {
+            Text(text = r.nextEvent, color = V8.Text1, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            V8KeyValue(tr(lang, "Dollar from", "डॉलर स्रोत", "डॉलर स्रोत"), r.dollarPath, if (r.dollarPath == "NONE") V8.Red else if (r.dollarPath.startsWith("OANDA")) V8.Green else V8.Amber)
+            V8KeyValue(tr(lang, "10Y from", "10Y स्रोत", "10Y स्रोत"), r.tenYPath, if (r.tenYPath == "NONE") V8.Red else if (r.tenYPath.startsWith("OANDA")) V8.Green else V8.Amber)
+            r.sources.forEach { s ->
+                val c = when (s.state) { "READY" -> V8.Green; "STALE" -> V8.Amber; "NOT SET UP" -> V8.Text3; else -> V8.Red }
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Text(text = if (s.state == "READY") "✓" else if (s.state == "STALE") "!" else "✕", color = c, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "${s.provider} ${s.instrument} · ${s.state}", color = V8.Text1, fontSize = 10.sp)
+                        Text(text = s.detail, color = V8.Text3, fontSize = 9.sp)
+                    }
+                }
+            }
+            Text(text = tr(lang, "Checked ", "जाँचा ", "तपासले ") + java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(r.atMs)) + " · " + r.note,
+                color = V8.Text3, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = if (running) tr(lang, "CHECKING…", "जाँच रहा है…", "तपासत आहे…") else tr(lang, "RUN CHECK  ›", "जाँच चलाएँ  ›", "तपासणी चालवा  ›"),
+            color = V8.Gold, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.2.sp,
+            modifier = (if (running) Modifier else Modifier.v8Press(onClick = onRun)).padding(vertical = 8.dp))
     }
 }

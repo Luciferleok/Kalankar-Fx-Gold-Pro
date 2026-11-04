@@ -573,6 +573,25 @@ class GoldApiService(
         return if (dollar) fetchLiveDxy() else fetchLiveUs10y()
     }
 
+    /**
+     * V35.5-F: NFP readiness check, on request only. Read-only GETs of the Macro instruments (OANDA practice candles,
+     * Yahoo 5-minute charts) and the calendar; nothing is stored, voted or changed.
+     */
+    suspend fun macroReadiness(): MacroReadiness.Report = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val out = ArrayList<MacroReadiness.Source>()
+        val oanda = oandaConfigured()
+        for (inst in OandaMacro.DXY_PAIRS.keys + OandaMacro.NOTE) {
+            if (!oanda) { out += MacroReadiness.source("OANDA", inst, OandaStatus.NOT_CONFIGURED, emptyList(), now); continue }
+            val f = try { oandaStore.instrumentCandles(inst, "M5", 40) } catch (_: Exception) { null }
+            out += MacroReadiness.source("OANDA", inst, f?.status ?: OandaStatus.NETWORK,
+                f?.bars?.filter { it.complete && it.close > 0 }?.map { it.startMs to it.close } ?: emptyList(), now)
+        }
+        for ((sym, name) in listOf("DX-Y.NYB" to "DX-Y.NYB", "EURUSD=X" to "EURUSD=X", "%5ETNX" to "^TNX"))
+            out += MacroReadiness.source("YAHOO", name, null, try { yahooIntraday(sym) } catch (_: Exception) { emptyList() }, now)
+        MacroReadiness.evaluate(now, fetchLiveEconomicEvents(), out)
+    }
+
     /** V35.3-G: OANDA M5 candles of one instrument (read-only), null when this account cannot use it */
     private fun oandaMacroBars(instrument: String): List<CandleAggregator.Bar>? {
         val f = oandaStore.instrumentCandles(instrument, "M5", 40)

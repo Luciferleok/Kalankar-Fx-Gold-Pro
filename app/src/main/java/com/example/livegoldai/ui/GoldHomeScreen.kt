@@ -426,7 +426,10 @@ fun GoldHomeScreen(
                         lang = uiState.language,
                         pulse = analysis.pulse,
                         bgRecording = uiState.bgRecording,
-                        onToggleBackground = { viewModel.setBackgroundRecording(it) }
+                        onToggleBackground = { viewModel.setBackgroundRecording(it) },
+                        readiness = uiState.macroReadiness,
+                        readinessRunning = uiState.macroReadinessRunning,
+                        onRunReadiness = { viewModel.runMacroReadiness() }
                     )
                     4 -> LearningCenterContent(
                         analysis = analysis,
