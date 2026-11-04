@@ -118,6 +118,8 @@ interface LedgerStore {
     fun readAll(): List<String>
     fun append(lines: List<String>)
     fun sizeBytes(): Long = -1L
+    /** V35.7.1: owner-confirmed "Reset prediction history" only. */
+    fun clear() {}
 }
 
 class FileLedgerStore(private val file: File) : LedgerStore {
@@ -132,12 +134,17 @@ class FileLedgerStore(private val file: File) : LedgerStore {
     }
 
     override fun sizeBytes(): Long = if (file.exists()) file.length() else 0L
+
+    /** V35.7.1: empties the file under the same lock as every read and append */
+    @Synchronized
+    override fun clear() { if (file.exists()) file.writeText("") }
 }
 
 class InMemoryLedgerStore : LedgerStore {
     val lines = mutableListOf<String>()
     override fun readAll(): List<String> = lines.toList()
     override fun append(lines: List<String>) { this.lines.addAll(lines) }
+    override fun clear() { lines.clear() }
 }
 
 object PredictionLedger {

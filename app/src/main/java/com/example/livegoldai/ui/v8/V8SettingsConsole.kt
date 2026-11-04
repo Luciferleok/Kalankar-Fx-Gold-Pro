@@ -60,7 +60,8 @@ data class SettingsConsoleState(
     val oandaPanel: List<Pair<String, String>> = emptyList(),
     val oandaTesting: Boolean = false,
     val oandaSyncRows: List<Pair<String, String>> = emptyList(),
-    val oandaSyncing: Boolean = false
+    val oandaSyncing: Boolean = false,
+    val historyResetLine: String = ""   // V35.7.1
 )
 
 class SettingsConsoleActions(
@@ -81,7 +82,8 @@ class SettingsConsoleActions(
     val onSaveOandaToken: (String) -> Unit = {},
     val onRemoveOandaToken: () -> Unit = {},
     val onTestOanda: () -> Unit = {},
-    val onSyncOanda: () -> Unit = {}
+    val onSyncOanda: () -> Unit = {},
+    val onResetHistory: () -> Unit = {}   // V35.7.1
 )
 
 /**
@@ -233,6 +235,29 @@ fun V8SettingsConsole(s: SettingsConsoleState, a: SettingsConsoleActions) {
                 if (show("reset", "chart", "timeframe")) Row1(tr(lang, "Reset chart settings", "चार्ट सेटिंग रीसेट", "चार्ट सेटिंग रीसेट"), if (confirm == "chart") tr(lang, "Tap again to confirm", "पक्का करने के लिए फिर दबाएँ", "खात्रीसाठी पुन्हा दाबा") else tr(lang, "Default timeframe back to 4H", "डिफ़ॉल्ट टाइमफ्रेम 4H", "डिफॉल्ट टाइमफ्रेम 4H")) {
                     SmallAction(if (confirm == "chart") tr(lang, "CONFIRM", "पक्का", "खात्री") else tr(lang, "RESET", "रीसेट", "रीसेट"), danger = confirm == "chart") {
                         if (confirm == "chart") { a.onResetChart(); confirm = "" } else confirm = "chart"
+                    }
+                }
+            }
+
+            // ================= V35.7.1 DATA MANAGEMENT
+            if (show("data", "reset", "history", "ledger", "sahi", "galat", "backup")) {
+                Section(tr(lang, "DATA MANAGEMENT", "डेटा प्रबंधन", "डेटा व्यवस्थापन"))
+                val armed = confirm == "history"
+                val status = when {
+                    s.historyResetLine == "RUNNING" -> tr(lang, "Resetting… (waiting for the recorder to finish its write)", "रीसेट हो रहा है… (रिकॉर्डर का लिखना पूरा होने तक)", "रीसेट होत आहे… (रेकॉर्डरचे लेखन पूर्ण होईपर्यंत)")
+                    s.historyResetLine.startsWith("DONE") -> tr(lang, "Reset done at ", "रीसेट हुआ ", "रीसेट झाले ") + s.historyResetLine.removePrefix("DONE ") + tr(lang, ": history starts from zero", ": हिस्ट्री शून्य से", ": हिस्ट्री शून्यापासून")
+                    s.historyResetLine == "BUSY" -> tr(lang, "Not reset: a check was running. Nothing changed, try again.", "रीसेट नहीं हुआ: जाँच चल रही थी। कुछ नहीं बदला, फिर कोशिश करें।", "रीसेट झाले नाही: तपासणी चालू होती. काही बदलले नाही, पुन्हा प्रयत्न करा.")
+                    armed -> tr(lang, "REMOVES: every SAHI / GALAT record and result, AI council votes, saved features, Shadow Lab predictions, models and qualification, frozen levels. KEEPS: API keys, OANDA token, settings, downloaded market history. Cannot be undone. Tap CONFIRM.",
+                        "हटेगा: हर SAHI / GALAT रिकॉर्ड और नतीजा, AI काउंसिल वोट, सेव फ़ीचर, शैडो लैब प्रेडिक्शन, मॉडल और क्वालिफ़िकेशन, फ़्रोज़न लेवल। रहेगा: API keys, OANDA टोकन, सेटिंग्स, डाउनलोड मार्केट हिस्ट्री। वापस नहीं होगा। CONFIRM दबाएँ।",
+                        "हटेल: प्रत्येक SAHI / GALAT नोंद आणि निकाल, AI कौन्सिल मते, सेव्ह फीचर, शॅडो लॅब अंदाज, मॉडेल आणि पात्रता, गोठवलेले लेव्हल. राहील: API keys, OANDA टोकन, सेटिंग्ज, डाउनलोड मार्केट हिस्ट्री. परत येणार नाही. CONFIRM दाबा.")
+                    else -> tr(lang, "Start SAHI / GALAT and Shadow Lab from zero. Not backed up to Google: a fresh install also starts from zero.",
+                        "SAHI / GALAT और शैडो लैब शून्य से शुरू करें। Google बैकअप में नहीं: नया इंस्टॉल भी शून्य से।",
+                        "SAHI / GALAT आणि शॅडो लॅब शून्यापासून सुरू करा. Google बॅकअपमध्ये नाही: नवीन इंस्टॉलही शून्यापासून.")
+                }
+                Row1(tr(lang, "Reset prediction history", "प्रेडिक्शन हिस्ट्री रीसेट", "अंदाज हिस्ट्री रीसेट"), status, stacked = true) {
+                    SmallAction(if (armed) tr(lang, "CONFIRM", "पक्का", "खात्री") else tr(lang, "RESET", "रीसेट", "रीसेट"), danger = armed) {
+                        if (s.historyResetLine == "RUNNING") return@SmallAction
+                        if (armed) { a.onResetHistory(); confirm = "" } else confirm = "history"
                     }
                 }
             }

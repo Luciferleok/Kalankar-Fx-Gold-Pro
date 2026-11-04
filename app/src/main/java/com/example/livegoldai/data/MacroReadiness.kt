@@ -102,7 +102,7 @@ object MacroReadiness {
         val t = EventTime.parseMs(ev.isoTime) ?: return "No high-impact USD event in the loaded calendar"
         val day = SimpleDateFormat("EEE dd MMM HH:mm", Locale.US).apply { timeZone = tz }
         val hm = SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }
-        val zone = tz.getDisplayName(tz.inDaylightTime(Date(t)), TimeZone.SHORT, Locale.US)
+        val zone = OutcomeBrowser.zone(tz, t)
         val live = if (MacroWindow.isActive(events, now)) " · WINDOW ACTIVE NOW" else ""
         return "${OfficialCalendar.kind(ev.title)} (${ev.title}) · ${day.format(Date(t))} $zone · window ${hm.format(Date(t - MacroWindow.PRE_MS))}-${hm.format(Date(t + MacroWindow.postMs(ev)))}$live"
     }

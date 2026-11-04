@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  V35.7.1 (owner, 4 Nov 2026: "fresh install = zero"): the prediction ledger (SAHI / GALAT history), Shadow Lab
+  research files, frozen levels and downloaded market history are NOT backed up or moved to a new phone, so a fresh
+  install starts from zero. An ordinary app update never touches these files. Settings (language, theme, timeframe)
+  are still backed up; the encrypted keys in them cannot be read on another install (Android Keystore keys never leave
+  the phone), so they simply have to be entered again.
+-->
+<!-- Android 11 and older (Auto Backup) -->
+<full-backup-content>
+    <exclude domain="file" path="prediction_ledger.jsonl" />
+    <exclude domain="file" path="shadow_ledger.jsonl" />
+    <exclude domain="file" path="shadow_models.json" />
+    <exclude domain="file" path="level_freeze_v1.tsv" />
+    <exclude domain="file" path="history_1min.csv" />
+    <exclude domain="file" path="history_1min.manifest.json" />
+    <exclude domain="file" path="history_5min.csv" />
+    <exclude domain="file" path="history_5min.manifest.json" />
+    <exclude domain="file" path="history_15min.csv" />
+    <exclude domain="file" path="history_15min.manifest.json" />
+    <exclude domain="file" path="history_30min.csv" />
+    <exclude domain="file" path="history_30min.manifest.json" />
+    <exclude domain="file" path="history_45min.csv" />
+    <exclude domain="file" path="history_45min.manifest.json" />
+    <exclude domain="file" path="history_1h.csv" />
+    <exclude domain="file" path="history_1h.manifest.json" />
+    <exclude domain="file" path="history_2h.csv" />
+    <exclude domain="file" path="history_2h.manifest.json" />
+    <exclude domain="file" path="history_4h.csv" />
+    <exclude domain="file" path="history_4h.manifest.json" />
+    <exclude domain="file" path="history_1day.csv" />
+    <exclude domain="file" path="history_1day.manifest.json" />
+    <exclude domain="file" path="history_1week.csv" />
+    <exclude domain="file" path="history_1week.manifest.json" />
+    <exclude domain="file" path="history_1month.csv" />
+    <exclude domain="file" path="history_1month.manifest.json" />
+</full-backup-content>

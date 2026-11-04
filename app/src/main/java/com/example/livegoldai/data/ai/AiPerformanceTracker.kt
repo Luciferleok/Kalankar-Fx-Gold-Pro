@@ -72,6 +72,10 @@ class AiPerformanceTracker(private val store: LedgerStore?) {
         }
     }
 
+    /** V35.7.1: after the shared ledger file was reset */
+    @Synchronized
+    fun clearMemory() { lines.clear() }
+
     @Synchronized
     fun all(): List<AiVoteLine> = ArrayList(lines)
 

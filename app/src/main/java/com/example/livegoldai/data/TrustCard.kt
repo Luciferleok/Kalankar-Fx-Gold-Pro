@@ -61,7 +61,7 @@ object TrustCard {
     /** "15:52 IST" in the phone's time zone, with the zone named */
     fun localTs(ms: Long, tz: java.util.TimeZone = java.util.TimeZone.getDefault()): String =
         java.text.SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }.format(java.util.Date(ms)) + " " +
-            tz.getDisplayName(tz.inDaylightTime(java.util.Date(ms)), java.util.TimeZone.SHORT, Locale.US)
+            OutcomeBrowser.zone(tz, ms)
 
     /** "OFF", or "NFP@1793971800000 · dollar OBSERVED_COMPLETE (OANDA COMPUTED) · 10Y INCOMPLETE · Macro votes BUY" */
     fun newsLine(a: GoldAnalysisResult, l: AppLanguage, now: Long = System.currentTimeMillis()): String {

@@ -18,7 +18,31 @@ object AppEngine {
     val crossMarket = CrossMarketService()
     @Volatile private var dir: File? = null
 
-    fun init(filesDir: File) { if (dir == null) dir = filesDir }
+    /**
+     * V35.7.1: [noBackupDir] / install times let [RestoreGuard] move history restored from an old backup aside on a
+     * fresh install, once, before the ledger is opened (both callers: the screen and the recorder service).
+     */
+    @Synchronized
+    fun init(filesDir: File, noBackupDir: File? = null, firstInstallMs: Long = 0L, lastUpdateMs: Long = 0L) {
+        if (dir != null) return
+        if (noBackupDir != null) try { lastRestoreCheck = RestoreGuard.check(filesDir, noBackupDir, firstInstallMs, lastUpdateMs, System.currentTimeMillis()) } catch (_: Exception) { }
+        dir = filesDir
+    }
+    @Volatile var lastRestoreCheck: RestoreGuard.Outcome? = null; private set
+
+    /**
+     * V35.7.1 owner-confirmed reset: prediction ledger (with the AI council votes and saved features in the same file),
+     * Shadow Lab predictions / models / qualification. Market history, keys and settings stay. False = a cycle held
+     * the ledger lock too long: nothing was changed.
+     */
+    suspend fun resetHistory(): Boolean {
+        if (!learning.resetAll()) return false
+        try { featureStore.clearMemory() } catch (_: Exception) { }
+        try { shadow.resetAll() } catch (_: Exception) { }
+        integrityCache = null
+        api.clearCache()
+        return true
+    }
 
     // first use reads the ledger file: background threads only
     val ledgerStore: FileLedgerStore by lazy { FileLedgerStore(File(dir ?: File("."), "prediction_ledger.jsonl")) }

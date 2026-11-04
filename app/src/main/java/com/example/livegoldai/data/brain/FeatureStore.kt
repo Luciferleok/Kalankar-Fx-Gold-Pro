@@ -146,6 +146,8 @@ class FeatureStore(private val store: LedgerStore?) {
         }
     }
 
+    /** V35.7.1: after the shared ledger file was reset */
+    @Synchronized fun clearMemory() { rows.clear() }
     @Synchronized fun size(): Int = rows.size
     @Synchronized fun all(): List<FeatureRow> = ArrayList(rows.values)
     @Synchronized fun has(recordId: String): Boolean = rows.containsKey(recordId)

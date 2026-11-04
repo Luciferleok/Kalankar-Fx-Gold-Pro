@@ -49,7 +49,9 @@ class RecorderService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        AppEngine.init(filesDir)
+        // V35.7.1: same restore guard as the screen (whichever starts first runs it, once)
+        val pkg = try { packageManager.getPackageInfo(packageName, 0) } catch (_: Exception) { null }
+        AppEngine.init(filesDir, noBackupFilesDir, pkg?.firstInstallTime ?: 0L, pkg?.lastUpdateTime ?: 0L)
         // V32: the recorder can run without the screen (after a restart). Give it the same saved keys:
         // the OANDA token is read from the encrypted vault per request; the Twelve Data key only if none is set yet.
         try {

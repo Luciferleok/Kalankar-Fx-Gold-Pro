@@ -35,7 +35,11 @@ object OutcomeBrowser {
         val stopHitAtMs: Long,
         val verifiedBy: String,
         val checkedAtMs: Long,
-        val timeline: List<Pair<Long, String>>
+        val timeline: List<Pair<Long, String>>,
+        // V35.7.1: why it is right / wrong (a CORRECT call can close against the call when the target came first)
+        val reason: String = "",
+        val tags: List<String> = emptyList(),
+        val counterfactual: String = ""
     )
 
     data class Page(val kind: Kind, val interval: String, val rows: List<Row>, val total: Int, val counts: Map<Kind, Int>, val population: String)
@@ -61,7 +65,8 @@ object OutcomeBrowser {
             val dir = if (r.finalSignal == Signal.SELL) -1.0 else 1.0
             Row(r.id, r.createdAt, r.expiresAt, r.finalSignal, r.confidence, r.price, EdgeFinder.providerOf(r.dataSource), EdgeFinder.engineOf(r.engineVersion),
                 r.regime, res?.outcome?.name ?: "PENDING", res?.let { it.move * dir } ?: Double.NaN, res?.threshold ?: Double.NaN,
-                res?.mfe ?: Double.NaN, res?.mae ?: Double.NaN, res?.slHitAt ?: 0L, res?.verifySource ?: "", res?.checkedAt ?: 0L, res?.timeline ?: emptyList())
+                res?.mfe ?: Double.NaN, res?.mae ?: Double.NaN, res?.slHitAt ?: 0L, res?.verifySource ?: "", res?.checkedAt ?: 0L, res?.timeline ?: emptyList(),
+                reasonOf(res), res?.tags?.filter { it != "UNKNOWN" } ?: emptyList(), res?.counterfactual ?: "")
         }
         val pop = "${interval.uppercase(Locale.US)} BUY/SELL calls in this phone's ledger · " + when (kind) {
             Kind.CORRECT -> "outcome CORRECT (target hit, or closed the called way beyond the noise threshold)"
@@ -72,7 +77,24 @@ object OutcomeBrowser {
         return Page(kind, interval, rows, list.size, counts, pop)
     }
 
+    /** how the ledger decided it (same order as PredictionLedger.evaluate: target, stop, close direction) */
+    fun reasonOf(res: LedgerResult?): String = when {
+        res == null -> "Not checked yet"
+        res.tpHitAt > 0L -> "Target reached first at ${hm(res.tpHitAt)}"
+        res.slHitAt > 0L -> "Stop hit at ${hm(res.slHitAt)}"
+        res.outcome == LedgerOutcome.CORRECT -> "Closed the called way beyond the noise"
+        res.outcome == LedgerOutcome.INCORRECT -> "Closed the wrong way beyond the noise"
+        res.outcome == LedgerOutcome.SIDEWAYS -> "Moved less than the noise"
+        else -> res.outcome.name.replace('_', ' ').lowercase()
+    }
+
+    /** V35.7.1: "IST" for India (Android names it "GMT+05:30"), else the zone's short name */
+    fun zone(tz: TimeZone, ms: Long): String = if (tz.id == "Asia/Kolkata" || tz.id == "Asia/Calcutta") "IST"
+        else tz.getDisplayName(tz.inDaylightTime(Date(ms)), TimeZone.SHORT, Locale.US)
+
+    private fun hm(ms: Long, tz: TimeZone = TimeZone.getDefault()) = SimpleDateFormat("HH:mm", Locale.US).apply { timeZone = tz }.format(Date(ms)) + " " + zone(tz, ms)
+
     /** "04 Nov 15:51 IST" in the phone's time zone */
     fun ts(ms: Long, tz: TimeZone = TimeZone.getDefault()): String = if (ms <= 0L) "--" else
-        SimpleDateFormat("dd MMM HH:mm", Locale.US).apply { timeZone = tz }.format(Date(ms)) + " " + tz.getDisplayName(tz.inDaylightTime(Date(ms)), TimeZone.SHORT, Locale.US)
+        SimpleDateFormat("dd MMM HH:mm", Locale.US).apply { timeZone = tz }.format(Date(ms)) + " " + zone(tz, ms)
 }

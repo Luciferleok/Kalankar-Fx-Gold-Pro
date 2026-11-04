@@ -191,6 +191,30 @@ class LearningCoordinator(
         }
     }
 
+    /**
+     * V35.7.1 (owner-confirmed "Reset prediction history"): empties the ledger file and every in-memory result.
+     * Waits (up to [timeoutMs]) until no refresh / recorder cycle holds the lock, so nothing is written half-way;
+     * returns false if the lock could not be taken (nothing changed then).
+     */
+    suspend fun resetAll(timeoutMs: Long = 20_000L): Boolean {
+        val until = System.currentTimeMillis() + timeoutMs
+        while (!busy.compareAndSet(false, true)) {
+            if (System.currentTimeMillis() > until) return false
+            kotlinx.coroutines.delay(100L)
+        }
+        try {
+            store.clear()
+            state = LedgerState(emptyList(), emptyMap(), emptyList())
+            pendingEvents.clear()
+            lastTriedAt.clear()
+            lastReport = listOf("Prediction history was reset by the owner. Waiting for the first predictions to expire.")
+            lastVerifyAttemptAt = 0L; lastVerifiedCount = 0; totalVerifiedThisSession = 0; consecutiveFetchFailures = 0; lastCycleAt = 0L
+            return true
+        } finally {
+            busy.set(false)
+        }
+    }
+
     /** "Run recalibration" button: checks everything that is due and runs one cycle. Returns what happened. */
     suspend fun recalibrateNow(now: Long = System.currentTimeMillis()): List<String> {
         if (!busy.compareAndSet(false, true)) return listOf("A learning cycle is already running. Try again in a few seconds.")

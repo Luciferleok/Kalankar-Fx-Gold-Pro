@@ -146,9 +146,11 @@ private fun RecordCard(r: OutcomeBrowser.Row, lang: AppLanguage) {
         }
         Text(
             text = t("Entry ", "एंट्री ", "एंट्री ") + String.format(Locale.US, "%.2f", r.entry) + " · " + t("agreement ", "सहमति ", "सहमती ") + "${r.agreement}%" +
-                (if (!r.moveUsd.isNaN()) " · " + t("move ", "चाल ", "हालचाल ") + "${usd(r.moveUsd)} \$ (" + t("noise ±", "शोर ±", "आवाज ±") + String.format(Locale.US, "%.2f", r.thresholdUsd) + ")" else ""),
+                (if (!r.moveUsd.isNaN()) " · " + t("close move ", "क्लोज़ चाल ", "क्लोज हालचाल ") + "${usd(r.moveUsd)} \$ (" + t("noise ±", "शोर ±", "आवाज ±") + String.format(Locale.US, "%.2f", r.thresholdUsd) + ")" else ""),
             color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp)
         )
+        // V35.7.1: how it was decided (a call can be CORRECT with a negative close move when the target came first)
+        if (r.reason.isNotBlank()) Text(text = "→ " + r.reason, color = outColor, fontSize = 10.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 2.dp))
         AnimatedVisibility(visible = open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column(modifier = Modifier.padding(top = 6.dp)) {
                 Detail(t("Window ends", "विंडो समाप्त", "विंडो संपते"), OutcomeBrowser.ts(r.expiresAtMs))
@@ -157,6 +159,8 @@ private fun RecordCard(r: OutcomeBrowser.Row, lang: AppLanguage) {
                 Detail(t("Best / worst move in window", "विंडो में सबसे अच्छी / बुरी चाल", "विंडोत सर्वोत्तम / वाईट हालचाल"), "${usd(r.mfeUsd)} / ${usd(-r.maeUsd)} \$")
                 if (r.stopHitAtMs > 0L) Detail(t("Stop touched", "स्टॉप छुआ", "स्टॉप लागला"), OutcomeBrowser.ts(r.stopHitAtMs))
                 Detail(t("Checked with", "जाँचा गया", "तपासले"), r.verifiedBy.ifBlank { "--" } + if (r.checkedAtMs > 0L) " · " + OutcomeBrowser.ts(r.checkedAtMs) else "")
+                if (r.tags.isNotEmpty()) Detail(t("Failure tags", "गलती के टैग", "चुकीचे टॅग"), r.tags.joinToString(" · ") { it.replace('_', ' ') })
+                if (r.counterfactual.isNotBlank()) Detail(t("Could it be avoided?", "क्या बच सकते थे?", "टाळता आले असते?"), r.counterfactual)
                 if (r.timeline.isNotEmpty()) {
                     Text(text = t("TIMELINE", "टाइमलाइन", "टाइमलाइन"), color = GoldLight, fontSize = 9.sp, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 6.dp))
                     r.timeline.forEach { (ms, what) -> Text(text = OutcomeBrowser.ts(ms) + " · " + what, color = TextMuted, fontSize = 9.sp) }

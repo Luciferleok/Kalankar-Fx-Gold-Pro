@@ -115,6 +115,7 @@ data class GoldUiState(
     val macroReadinessFailedAt: Long = 0L,           // V35.7: last check failed; the report shown is the last successful one
     // V35.7: SAHI / GALAT list (explicit destination: kind + timeframe); null = closed
     val outcomePage: com.example.livegoldai.data.OutcomeBrowser.Page? = null,
+    val historyResetLine: String = "",               // V35.7.1: "", RUNNING, DONE <time>, BUSY
     val backgroundDepth: String = "SIGNATURE",   // FLAT / SIGNATURE / DEEP (appearance only)
     val feedKeySaved: Boolean = false,             // true when the user saved their own Twelve Data key
     // ---- V32 OANDA practice (stage 1: connection check only; the token itself is never in UI state)
@@ -212,7 +213,9 @@ class GoldViewModel @JvmOverloads constructor(
     private fun isCurrentLoad(t: com.example.livegoldai.data.RequestGate.Ticket) = loadGate.isCurrent(t, _uiState.value.selectedInterval)
 
     init {
-        com.example.livegoldai.data.AppEngine.init(application.filesDir)
+        // V35.7.1: install times let the restore guard tell a fresh install (old backup restored) from an update
+        val pkg = try { application.packageManager.getPackageInfo(application.packageName, 0) } catch (_: Exception) { null }
+        com.example.livegoldai.data.AppEngine.init(application.filesDir, application.noBackupFilesDir, pkg?.firstInstallTime ?: 0L, pkg?.lastUpdateTime ?: 0L)
         val savedModeStr = prefs.getString("selected_dashboard_mode", DashboardViewMode.UNIFIED.name)
         val initialMode = try {
             DashboardViewMode.valueOf(savedModeStr ?: DashboardViewMode.UNIFIED.name)
@@ -729,6 +732,31 @@ class GoldViewModel @JvmOverloads constructor(
             }
             // the prediction dialog stays open underneath: Back on the list returns to it
             _uiState.update { it.copy(outcomePage = page) }
+        }
+    }
+
+    /**
+     * V35.7.1 owner-confirmed "Reset prediction history": ledger (+ AI council votes and saved features in the same file),
+     * Shadow Lab predictions / models / qualification and frozen levels. Keys, token, settings and downloaded market
+     * history stay. The ledger lock is taken first, so the background recorder cannot write half-way.
+     */
+    fun resetPredictionHistory() {
+        if (_uiState.value.historyResetLine == "RUNNING") return
+        _uiState.update { it.copy(historyResetLine = "RUNNING") }
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val done = com.example.livegoldai.data.AppEngine.resetHistory()
+                    if (done) {
+                        try { aiOrchestrator.tracker.clearMemory() } catch (_: Exception) { }
+                        synchronized(frozenLevels) { frozenLevels.clear(); levelStore.save(emptyMap()) }
+                    }
+                    done
+                } catch (_: Exception) { false }
+            }
+            _uiState.update { it.copy(historyResetLine = if (ok) "DONE " + com.example.livegoldai.data.TrustCard.localTs(System.currentTimeMillis()) else "BUSY",
+                outcomePage = null) }
+            if (ok) loadData()
         }
     }
 

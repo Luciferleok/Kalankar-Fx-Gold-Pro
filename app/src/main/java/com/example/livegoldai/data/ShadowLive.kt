@@ -110,6 +110,17 @@ class ShadowLive(
     private val reports = HashMap<String, ShadowLab.Report>()
     private val lastAttempt = HashMap<String, Long>()
     private val training = HashSet<String>()
+    private var generation = 0                                // V35.7.1: bumped by resetAll; a training started before it is not saved
+
+    /** V35.7.1: owner-confirmed reset: shadow predictions, results, live models and qualification memory. Market history stays. */
+    @Synchronized
+    fun resetAll() {
+        store.clear()
+        try { modelFile.delete() } catch (_: Exception) { }
+        recs.clear(); outs.clear(); seen.clear(); models.clear(); qualified.clear(); demoted.clear(); reports.clear(); lastAttempt.clear()
+        generation++
+        loaded = true
+    }
 
     // ------------------------------------------------------------------ load / save
 
@@ -185,6 +196,7 @@ class ShadowLive(
             if (!training.add(interval)) return Result.failure(IllegalStateException("Already running"))
             lastAttempt[interval] = now
         }
+        val gen = synchronized(this) { generation }
         try {
             val (td, group) = ShadowLab.tdPlan(interval)
             val stored = history.load(td)
@@ -195,6 +207,7 @@ class ShadowLive(
             val bars = ShadowLab.group(all, group, ShadowLab.tdCandleMs(td), now)
             val rep = ShadowLab.run(interval, bars, now, man.dataHash, man.gapCount).copy(historyRevisions = man.revisions.sumOf { it.changedBars })
             synchronized(this) {
+                if (gen != generation) return Result.failure(IllegalStateException("History was reset while this test ran"))
                 reports[interval] = rep
                 val lm = rep.live
                 if (lm != null && interval in LIVE_INTERVALS && group == 1) {

@@ -111,7 +111,8 @@ fun GoldHomeScreen(
             oandaPanel = com.example.livegoldai.data.OandaText.panel(uiState.oandaHealth, uiState.oandaTokenSaved, f?.let { com.example.livegoldai.data.SourceRegistry.badge(it.source) } ?: "", now, uiState.language, uiState.oandaSync),
             oandaTesting = uiState.oandaTesting,
             oandaSyncRows = com.example.livegoldai.data.OandaText.syncRows(uiState.oandaSync, uiState.language),
-            oandaSyncing = uiState.oandaSyncing
+            oandaSyncing = uiState.oandaSyncing,
+            historyResetLine = uiState.historyResetLine
         )
         val consoleActions = com.example.livegoldai.ui.v8.SettingsConsoleActions(
             onLang = { viewModel.selectLanguage(it) },
@@ -131,7 +132,8 @@ fun GoldHomeScreen(
             onSaveOandaToken = { viewModel.saveOandaToken(it) },
             onRemoveOandaToken = { viewModel.removeOandaToken() },
             onTestOanda = { viewModel.testOanda() },
-            onSyncOanda = { viewModel.syncOandaCandles() }
+            onSyncOanda = { viewModel.syncOandaCandles() },
+            onResetHistory = { viewModel.resetPredictionHistory() }
         )
         androidx.compose.ui.window.Dialog(
             onDismissRequest = { showSettings = false },
