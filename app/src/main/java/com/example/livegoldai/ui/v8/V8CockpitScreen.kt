@@ -382,6 +382,9 @@ fun V8CockpitScreen(
             }
         }
 
+        // ---------------- V35.10 news mode banner (only around high-impact USD news)
+        V8NewsBanner(analysis, lang, now)
+
         // ---------------- V35.5-D forecast trust card (display only)
         V8TrustCard(analysis, lang, now)
 
