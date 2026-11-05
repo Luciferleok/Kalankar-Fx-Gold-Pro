@@ -530,7 +530,8 @@ fun PredictionBigCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .clickable { onOpenOutcomes("CORRECT") }
+                                    .heightIn(min = 48.dp)
+                                            .clickable(onClickLabel = "Open the correct calls of this timeframe") { onOpenOutcomes("CORRECT") }
                                     .testTag("tile_sahi")
                             ) {
                                 Column(
@@ -564,7 +565,8 @@ fun PredictionBigCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .clickable { onOpenOutcomes("WRONG") }
+                                    .heightIn(min = 48.dp)
+                                            .clickable(onClickLabel = "Open the wrong calls of this timeframe") { onOpenOutcomes("WRONG") }
                                     .testTag("tile_galat")
                             ) {
                                 Column(

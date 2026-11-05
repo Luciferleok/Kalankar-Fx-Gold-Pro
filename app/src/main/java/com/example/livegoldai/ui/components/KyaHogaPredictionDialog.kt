@@ -454,7 +454,8 @@ fun KyaHogaPredictionDialog(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(10.dp))
-                                            .clickable { onOpenOutcomes("CORRECT") }
+                                            .heightIn(min = 48.dp)
+                                            .clickable(onClickLabel = "Open the correct calls of this timeframe") { onOpenOutcomes("CORRECT") }
                                             .testTag("dialog_tile_sahi")
                                     ) {
                                         Column(
@@ -489,7 +490,8 @@ fun KyaHogaPredictionDialog(
                                             .clip(RoundedCornerShape(10.dp))
                                             // V35.7: before, this closed the dialog and opened the general analyzer (OVERVIEW, all
                                             // timeframes); now the wrong calls of THIS timeframe, dialog kept for Back
-                                            .clickable { onOpenOutcomes("WRONG") }
+                                            .heightIn(min = 48.dp)
+                                            .clickable(onClickLabel = "Open the wrong calls of this timeframe") { onOpenOutcomes("WRONG") }
                                             .testTag("dialog_tile_galat")
                                     ) {
                                         Column(
