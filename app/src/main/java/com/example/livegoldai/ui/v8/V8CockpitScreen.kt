@@ -96,6 +96,9 @@ fun V8CockpitScreen(
             letterSpacing = 3.sp, maxLines = 1, modifier = Modifier.fillMaxWidth().padding(start = 4.dp)
         )
 
+        // ---------------- V35.11 one-line verdict (first thing on HOME)
+        V8VerdictLine(analysis, lang, now)
+
         // ---------------- LEVEL 1: price + live feed
         V8Card(level = 1) {
             Row(verticalAlignment = Alignment.CenterVertically) {
