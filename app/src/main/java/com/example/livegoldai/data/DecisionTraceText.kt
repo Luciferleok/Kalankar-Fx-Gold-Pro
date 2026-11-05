@@ -26,6 +26,7 @@ object DecisionTraceText {
         "RANGE" -> t(lang, "Blocked: range filter (sideways market)", "रोका गया: रेंज फ़िल्टर (साइडवेज़ मार्केट)", "थांबवले: रेंज फिल्टर (साइडवेज मार्केट)")
         "LEARNED" -> t(lang, "Blocked: learned filter", "रोका गया: सीखा हुआ फ़िल्टर", "थांबवले: शिकलेला फिल्टर") + " (" + p.reasonText + ")"
         "BELOW_GATE" -> t(lang, "No side: pillars below the gate", "कोई पक्ष नहीं: पिलर गेट से नीचे", "कोणतीही बाजू नाही: पिलर गेटच्या खाली") + " (" + p.reasonText + ")"
+        "NEWS" -> t(lang, "Held: news safety", "रोका गया: न्यूज़ सुरक्षा", "थांबवले: न्यूज सुरक्षा") + " (" + p.reasonText + ")"
         else -> t(lang, "No side: engine safety rule", "कोई पक्ष नहीं: इंजन सुरक्षा नियम", "कोणतीही बाजू नाही: इंजिन सुरक्षा नियम")
     }
 

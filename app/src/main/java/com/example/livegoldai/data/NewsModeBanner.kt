@@ -28,7 +28,11 @@ object NewsModeBanner {
         val dollar: String,           // evidence status of this analysis, "--" before the window
         val tenY: String,
         val macro: String,            // "Macro votes SELL (used in decision)" / "Macro no vote ..." / "Macro OFF until the window opens"
-        val note: String
+        val note: String,
+        // V35.10.1: the analysis shown was made in another news phase (or is too old for the window): its dollar / 10Y
+        // evidence and Macro vote are NOT current, so they are replaced by REFRESH REQUIRED
+        val refresh: Boolean = false,
+        val safety: String = ""       // news-safety line of THIS analysis ("" = none)
     )
 
     private fun t(l: AppLanguage, en: String, hi: String, mr: String) = when (l) { AppLanguage.ENGLISH -> en; AppLanguage.HINDI -> hi; AppLanguage.MARATHI -> mr }
@@ -59,9 +63,16 @@ object NewsModeBanner {
             Stage.POST -> t(l, "Released ${span(now - t)} ago · window closes in ${span(close - now)}", "रिलीज़ हुए ${span(now - t)} · विंडो ${span(close - now)} में बंद", "रिलीज होऊन ${span(now - t)} · विंडो ${span(close - now)} मध्ये बंद")
         }
         val d = MacroEvidenceView.dollar(a).evidence; val y = MacroEvidenceView.tenY(a).evidence
-        fun state(e: com.example.livegoldai.model.MacroEvidence) = if (stage == Stage.UPCOMING) "--" else e.status.name.replace('_', ' ') + if (e.usableInWindow) " (${e.provider} ${e.sourceKind})" else ""
+        // phase the analysis was PUBLISHED in vs the phase now (same event id + PRE / POST / OFF)
+        val publishedAt = a.feed?.fetchedAtMs ?: 0L
+        val refresh = stage != Stage.UPCOMING && (publishedAt <= 0L ||
+            MacroWindow.phase(events, publishedAt) != MacroWindow.phase(events, now) || now - publishedAt > MacroWindow.IN_WINDOW_CACHE_MS)
+        val refreshText = t(l, "REFRESH REQUIRED", "रीफ़्रेश ज़रूरी", "रिफ्रेश आवश्यक")
+        fun state(e: com.example.livegoldai.model.MacroEvidence) = if (stage == Stage.UPCOMING) "--" else if (refresh) refreshText else e.status.name.replace('_', ' ') + if (e.usableInWindow) " (${e.provider} ${e.sourceKind})" else ""
         val g = a.groups.firstOrNull { it.key == "macro" }
         val macro = when {
+            refresh -> { val was = if (publishedAt <= 0L) "?" else MacroWindow.phase(events, publishedAt).substringAfter(':', "OFF")
+                t(l, "Macro vote not current (analysis phase: $was). REFRESH REQUIRED", "Macro वोट मौजूदा नहीं (विश्लेषण का चरण: $was)। रीफ़्रेश ज़रूरी", "Macro मत चालू नाही (विश्लेषणाचा टप्पा: $was). रिफ्रेश आवश्यक") }
             stage == Stage.UPCOMING -> t(l, "Macro OFF until the window opens (no vote, no weight)", "विंडो खुलने तक Macro बंद (वोट/वज़न नहीं)", "विंडो उघडेपर्यंत Macro बंद (मत/वजन नाही)")
             g?.active == true -> t(l, "Macro votes ${g.verdict.name} (used in decision)", "Macro वोट ${g.verdict.name} (फ़ैसले में शामिल)", "Macro मत ${g.verdict.name} (निर्णयात वापर)")
             else -> t(l, "Macro no vote, no weight (no usable minute data yet)", "Macro का वोट/वज़न नहीं (अभी उपयोगी मिनट डेटा नहीं)", "Macro ला मत/वजन नाही (अजून उपयोगी मिनिट डेटा नाही)")
@@ -71,6 +82,8 @@ object NewsModeBanner {
             Stage.PRE -> t(l, "Into the release Macro uses the last 60 minutes of the dollar / 10Y. Spreads widen near news; research only.", "रिलीज़ तक Macro डॉलर / 10Y के पिछले 60 मिनट देखता है। न्यूज़ के पास स्प्रेड बढ़ता है; सिर्फ़ रिसर्च।", "रिलीजपर्यंत Macro डॉलर / 10Y ची मागील 60 मिनिटे पाहतो. न्यूजजवळ स्प्रेड वाढतो; फक्त रिसर्च.")
             Stage.POST -> t(l, "After the release Macro waits for the first COMPLETED 5-minute bar (about 5 minutes). Fast moves and wide spreads; research only.", "रिलीज़ के बाद Macro पहली पूरी 5-मिनट कैंडल (लगभग 5 मिनट) का इंतज़ार करता है। तेज़ चाल, चौड़ा स्प्रेड; सिर्फ़ रिसर्च।", "रिलीजनंतर Macro पहिल्या पूर्ण 5-मिनिट कँडलची (सुमारे 5 मिनिटे) वाट पाहतो. वेगवान हालचाल, रुंद स्प्रेड; फक्त रिसर्च.")
         }
-        return Banner(stage, OfficialCalendar.kind(ev.title) + " (" + ev.title + ")", day.format(Date(t)) + " " + zone, countdown, state(d), state(y), macro, note)
+        val nm = a.newsMode
+        val safety = if (refresh || nm == null || nm.eventId != MacroWindow.eventId(ev)) "" else nm.getLocalizedDetail(l)
+        return Banner(stage, OfficialCalendar.kind(ev.title) + " (" + ev.title + ")", day.format(Date(t)) + " " + zone, countdown, state(d), state(y), macro, note, refresh, safety)
     }
 }

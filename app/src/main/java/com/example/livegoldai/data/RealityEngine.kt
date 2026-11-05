@@ -153,6 +153,8 @@ object RealityEngine {
             "" -> {}
             else -> return "SOURCE" to "SOURCE SWITCH"
         }
+        // V35.10.1: a pillar BUY / SELL held by news safety (NewsSafety)
+        a.newsMode?.hold?.takeIf { it.isNotEmpty() }?.let { return "NEWS" to "NEWS SAFETY • " + it.replace('_', ' ') }
         val tag = a.nextPrediction?.urgencyTag ?: ""
         if (tag.startsWith("FORECAST PAUSED")) return "DATA" to "DATA CHECK FAILED"
         if (tag.startsWith("WAIT • SOURCE")) return "SOURCE" to "SOURCE SWITCH"

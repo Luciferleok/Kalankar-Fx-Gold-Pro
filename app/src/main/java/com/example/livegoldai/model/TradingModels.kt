@@ -796,7 +796,12 @@ data class NewsModeStatus(
     val headlineMarathi: String = "",
     val detailEnglish: String = "",
     val detailHindi: String = "",
-    val detailMarathi: String = ""
+    val detailMarathi: String = "",
+    // V35.10.1: MacroWindow event id, news-safety hold ("" = none), completed-candle reaction, when it was measured
+    val eventId: String = "",
+    val hold: String = "",
+    val reaction: String = "",
+    val measuredAtMs: Long = 0L
 ) {
     fun getLocalizedHeadline(lang: AppLanguage): String = when (lang) {
         AppLanguage.ENGLISH -> headlineEnglish.ifBlank { headline }

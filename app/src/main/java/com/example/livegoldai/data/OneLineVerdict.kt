@@ -49,11 +49,18 @@ object OneLineVerdict {
                 "DATA" -> t(l, "price data check failed", "प्राइस डेटा जाँच फ़ेल", "प्राइस डेटा तपासणी अयशस्वी")
                 "NO_KEY" -> t(l, "no data key saved (Settings)", "डेटा key सेव नहीं (Settings)", "डेटा key सेव्ह नाही (Settings)")
                 "SOURCE" -> t(l, "data source just switched", "डेटा स्रोत अभी बदला", "डेटा स्रोत आत्ता बदलला")
+                "NEWS" -> when (a.newsMode?.hold) {
+                    "SPIKE_FREEZE" -> t(l, "news in under 15 min, pillar ${a.rawSignal?.name ?: "call"} held", "15 मिनट से कम में न्यूज़, पिलर का ${a.rawSignal?.name ?: "कॉल"} रोका", "15 मिनिटांच्या आत न्यूज, पिलरचा ${a.rawSignal?.name ?: "कॉल"} थांबवला")
+                    "FIRST_BAR" -> t(l, "news just out, waiting for the first closed candle", "न्यूज़ अभी आई, पहली बंद कैंडल का इंतज़ार", "न्यूज आत्ताच आली, पहिल्या बंद कँडलची वाट")
+                    "NO_BASELINE" -> t(l, "news reaction cannot be measured (no candle before the release)", "न्यूज़ रिएक्शन नापा नहीं जा सकता (रिलीज़ से पहले की कैंडल नहीं)", "न्यूज रिअॅक्शन मोजता येत नाही (रिलीजपूर्वीची कँडल नाही)")
+                    "AGAINST" -> t(l, "news reaction goes against the pillar ${a.rawSignal?.name ?: "call"}", "न्यूज़ रिएक्शन पिलर के ${a.rawSignal?.name ?: "कॉल"} के उलटा", "न्यूज रिअॅक्शन पिलरच्या ${a.rawSignal?.name ?: "कॉल"} च्या उलट")
+                    else -> t(l, "news reaction too small to confirm the pillar ${a.rawSignal?.name ?: "call"}", "न्यूज़ रिएक्शन पिलर के ${a.rawSignal?.name ?: "कॉल"} की पुष्टि के लिए बहुत छोटा", "न्यूज रिअॅक्शन पिलरच्या ${a.rawSignal?.name ?: "कॉल"} च्या पुष्टीसाठी खूप लहान")
+                }
                 "LEARNED" -> t(l, "a learned filter blocked it", "सीखे फ़िल्टर ने रोका", "शिकलेल्या फिल्टरने थांबवले")
                 else -> t(l, "engine safety rule", "इंजन सुरक्षा नियम", "इंजिन सुरक्षा नियम")
             }
             return Verdict("WAIT", sig, t(l, "WAIT: ", "WAIT: ", "WAIT: ") + reason,
-                listOfNotNull(dataLine, t(l, "next check $nextAt", "अगली जाँच $nextAt", "पुढील तपासणी $nextAt"), record).joinToString(" · "), dataLine != null || code in setOf("DATA", "NO_KEY", "SOURCE"))
+                listOfNotNull(dataLine, t(l, "next check $nextAt", "अगली जाँच $nextAt", "पुढील तपासणी $nextAt"), record).joinToString(" · "), dataLine != null || code in setOf("DATA", "NO_KEY", "SOURCE", "NEWS"))
         }
         val votes = a.groups.count { it.active && it.verdict == sig }
         val voting = a.groups.count { it.active }

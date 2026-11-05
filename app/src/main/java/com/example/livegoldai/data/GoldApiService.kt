@@ -1040,8 +1040,7 @@ class GoldApiService(
     fun mtfSourceOf(m: Map<String, List<PathBar>>): String = mtfSource?.let { if (it.first === m) it.second else null } ?: MTF_PAXG
 
     // ---------------- NEWS MODE ----------------
-    // High-impact USD news ke 30 min pehle se 30 min baad tak app "News Mode" mein rehta hai.
-    private val newsBaseline = mutableMapOf<String, Double>()
+    // V35.10.1: News Mode follows MacroWindow (high-impact USD, 60 min before to 30 min after); no in-memory baseline.
 
     // ForexFactory time "2026-09-24T08:30:00-04:00" (New York time) -> UTC millis
     private fun parseFfTimeMs(iso: String): Long? {
@@ -1067,96 +1066,78 @@ class GoldApiService(
         return f.format(Date(ms))
     }
 
-    private fun applyNewsMode(result: GoldAnalysisResult, events: List<EconomicEvent>): GoldAnalysisResult {
-        val now = System.currentTimeMillis()
-        val preWindow = 15 * 60_000L // Automatically activates 15 minutes prior to high-impact release
-        val postWindow = 45 * 60_000L // Stays active during high-volatility 45 min post-release window
-        val hit = events.mapNotNull { ev ->
-            if (!ev.impact.equals("High", ignoreCase = true)) null
-            else parseFfTimeMs(ev.isoTime)?.let { t -> 
-                val diff = t - now
-                if (diff in -postWindow..preWindow) Pair(ev, t) else null 
-            }
-        }.minByOrNull { abs(it.second - now) } ?: return result
-
-        val ev = hit.first
-        val t = hit.second
-        val price = result.currentPrice
-        val tech = result.overallSignal
+    /**
+     * V35.10.1: news can only HOLD the pillar decision as WAIT, never create or flip a BUY / SELL (see [NewsSafety]).
+     * One window and one event for everything: [MacroWindow] (high-impact USD, 60 min before to 30 min after).
+     * [now] is a parameter so the whole path is testable; production passes the wall clock.
+     */
+    internal fun applyNewsMode(result: GoldAnalysisResult, events: List<EconomicEvent>, now: Long = System.currentTimeMillis()): GoldAnalysisResult {
+        val c = NewsSafety.evaluate(result, events, now) ?: return result
+        val ev = c.event
+        val t = c.releaseMs
+        val tech = c.pillar
         val fcst = if (ev.forecast.isNotBlank()) " [Est: ${ev.forecast} | Prev: ${ev.previous.ifBlank { "N/A" }}]" else ""
-
-        val status = if (t > now) {
-            newsBaseline[ev.isoTime] = price
+        val mv = c.move?.let { String.format(Locale.US, "%+.2f", it) } ?: "--"
+        val holdEn = when (c.hold) {
+            "SPIKE_FREEZE" -> "News safety: the pillar ${tech.name} is held as WAIT in the last 15 minutes before the release (spreads widen)."
+            "FIRST_BAR" -> "News safety: the pillar ${tech.name} is held as WAIT until the first candle after the release has closed."
+            "NO_BASELINE" -> "News safety: the pillar ${tech.name} is held as WAIT: no completed candle before the release in this data, so the reaction cannot be measured."
+            "FLAT" -> "News safety: the pillar ${tech.name} is held as WAIT: the completed reaction ($mv) is smaller than \$5."
+            "AGAINST" -> "News safety: the pillar ${tech.name} is held as WAIT: the completed reaction ($mv) points the other way."
+            else -> if (tech == Signal.WAIT) "The pillars say WAIT. News never creates a BUY / SELL." else "The completed reaction ($mv) agrees with the pillar ${tech.name}; the pillar decision stands."
+        }
+        val holdHi = when (c.hold) {
+            "SPIKE_FREEZE" -> "न्यूज़ सुरक्षा: रिलीज़ से पहले के आख़िरी 15 मिनट में पिलर का ${tech.name} WAIT रखा गया (स्प्रेड बढ़ता है)।"
+            "FIRST_BAR" -> "न्यूज़ सुरक्षा: रिलीज़ के बाद पहली कैंडल बंद होने तक पिलर का ${tech.name} WAIT रखा गया।"
+            "NO_BASELINE" -> "न्यूज़ सुरक्षा: पिलर का ${tech.name} WAIT रखा गया: रिलीज़ से पहले की पूरी कैंडल इस डेटा में नहीं, रिएक्शन नापा नहीं जा सकता।"
+            "FLAT" -> "न्यूज़ सुरक्षा: पिलर का ${tech.name} WAIT रखा गया: पूरी कैंडल का रिएक्शन ($mv) \$5 से कम।"
+            "AGAINST" -> "न्यूज़ सुरक्षा: पिलर का ${tech.name} WAIT रखा गया: पूरी कैंडल का रिएक्शन ($mv) उल्टी दिशा में।"
+            else -> if (tech == Signal.WAIT) "पिलर WAIT कहते हैं। न्यूज़ कभी BUY / SELL नहीं बनाती।" else "पूरी कैंडल का रिएक्शन ($mv) पिलर के ${tech.name} से सहमत; पिलर का फ़ैसला कायम।"
+        }
+        val holdMr = when (c.hold) {
+            "SPIKE_FREEZE" -> "न्यूज सुरक्षा: रिलीजपूर्वीच्या शेवटच्या 15 मिनिटांत पिलरचा ${tech.name} WAIT ठेवला (स्प्रेड वाढतो)."
+            "FIRST_BAR" -> "न्यूज सुरक्षा: रिलीजनंतरची पहिली कँडल बंद होईपर्यंत पिलरचा ${tech.name} WAIT ठेवला."
+            "NO_BASELINE" -> "न्यूज सुरक्षा: पिलरचा ${tech.name} WAIT ठेवला: रिलीजपूर्वीची पूर्ण कँडल या डेटामध्ये नाही, रिअॅक्शन मोजता येत नाही."
+            "FLAT" -> "न्यूज सुरक्षा: पिलरचा ${tech.name} WAIT ठेवला: पूर्ण कँडलचा रिअॅक्शन ($mv) \$5 पेक्षा कमी."
+            "AGAINST" -> "न्यूज सुरक्षा: पिलरचा ${tech.name} WAIT ठेवला: पूर्ण कँडलचा रिअॅक्शन ($mv) उलट दिशेला."
+            else -> if (tech == Signal.WAIT) "पिलर WAIT सांगतात. न्यूज कधीही BUY / SELL बनवत नाही." else "पूर्ण कँडलचा रिअॅक्शन ($mv) पिलरच्या ${tech.name} शी सहमत; पिलरचा निर्णय कायम."
+        }
+        val status = if (!c.post) {
             val mins = (t - now) / 60_000L + 1
             NewsModeStatus(
-                phase = "PRE",
-                eventTitle = ev.title,
-                minutes = mins,
-                newsSignal = Signal.WAIT,
-                technicalSignal = tech,
-                headline = "USD ${ev.title} - In $mins min",
-                detail = "High-impact news in $mins min. Volatility spikes and spread expansion expected. Avoid fresh entries.$fcst",
+                phase = "PRE", eventTitle = ev.title, minutes = mins,
+                newsSignal = Signal.WAIT, technicalSignal = tech,
+                headline = "USD ${ev.title} - In $mins min", detail = holdEn + fcst,
                 headlineEnglish = "USD ${ev.title} • Releasing in $mins min",
-                headlineHindi = "USD ${ev.title} • ठीक $mins मिनट में रिलीज़ होगी",
-                headlineMarathi = "USD ${ev.title} • बरोबर $mins मिनिटांत प्रसिद्ध होणार",
-                detailEnglish = "High-impact economic news approaching in $mins min. Broker spreads widen rapidly and high-frequency algorithms hunt stop losses. Freeze fresh market entries until release settles.$fcst",
-                detailHindi = "हाई-इम्पैक्ट न्यूज़ ठीक $mins मिनट में आने वाली है। ब्रोकर स्प्रेड तेजी से फैलता है और दोनों तरफ स्पाइक आ सकते हैं। नई ट्रेड लेने से बचें, पहले कैंडल को स्थिर होने दें।$fcst",
-                detailMarathi = "हाय-इम्पॅक्ट न्यूज बरोबर $mins मिनिटांत येणार आहे. स्प्रेड वेगाने वाढतो आणि दोन्ही बाजूंना तीव्र स्पाइक येऊ शकतात. नवीन ट्रेड घेणे टाळा, आधी मार्केट स्थिर होऊ द्या.$fcst"
+                headlineHindi = "USD ${ev.title} • $mins मिनट में रिलीज़",
+                headlineMarathi = "USD ${ev.title} • $mins मिनिटांत प्रसिद्ध",
+                detailEnglish = holdEn + fcst, detailHindi = holdHi + fcst, detailMarathi = holdMr + fcst,
+                eventId = c.eventId, hold = c.hold, reaction = c.reaction.name, measuredAtMs = now
             )
         } else {
             val since = (now - t) / 60_000L
-            val hadBase = newsBaseline.containsKey(ev.isoTime)
-            val base = newsBaseline.getOrPut(ev.isoTime) { price }
-            val move = price - base
-            val mv = String.format(Locale.US, "%+.2f", move)
-            val sig = when {
-                since < 5 -> Signal.WAIT
-                move >= 5.0 -> Signal.BUY
-                move <= -5.0 -> Signal.SELL
-                else -> Signal.WAIT
-            }
-            val whyEng = when {
-                since < 5 -> "First 5 minutes is high-risk spike phase. Algorithmic wicks active. Wait for initial 5-min candle to close."
-                move >= 5.0 -> "Gold surged $mv from pre-release baseline. Market interpreting release as strongly bullish for Gold."
-                move <= -5.0 -> "Gold dropped $mv from pre-release baseline. Strong USD momentum pressuring Gold lower."
-                else -> "Initial price reaction neutral ($mv move). Awaiting clean breakout direction."
-            }
-            val whyHin = when {
-                since < 5 -> "शुरुआती 5 मिनट स्पाइक चरण होता है, फेक मूव बहुत आते हैं। पहली 5 मिनट कैंडल बंद होने का इंतज़ार करें।"
-                move >= 5.0 -> "गोल्ड में $mv की तेजी आई है। मार्केट इस न्यूज़ को गोल्ड के लिए सकारात्मक मान रहा है।"
-                move <= -5.0 -> "गोल्ड में $mv की गिरावट आई है। डॉलर मजबूती से गोल्ड पर दबाव बना हुआ है।"
-                else -> "अभी कोई स्पष्ट दिशा नहीं ($mv उतार-चढ़ाव)। स्पष्ट दिशा बनने की प्रतीक्षा करें।"
-            }
-            val whyMar = when {
-                since < 5 -> "सुरुवातीची 5 मिनिटे स्पाइकचा काळ असतो, खोटे मूव्ह येतात. पहिली 5 मिनिटांची कॅन्डल पूर्ण होण्याची वाट पहा."
-                move >= 5.0 -> "गोल्डमध्ये $mv ची वाढ झाली आहे. मार्केट या बातमीला गोल्डसाठी सकारात्मक मानत आहे."
-                move <= -5.0 -> "गोल्डमध्ये $mv ची घसरण झाली आहे. डॉलरच्या मजबुतीमुळे गोल्डवर दबाव आहे."
-                else -> "अद्याप कोणतीही स्पष्ट दिशा नाही ($mv चढ-उतार). दिशा स्पष्ट होईपर्यंत थांबा."
-            }
             NewsModeStatus(
-                phase = "POST",
-                eventTitle = ev.title,
-                minutes = since,
-                newsSignal = sig,
-                technicalSignal = tech,
-                headline = "USD ${ev.title} - Released $since min ago",
-                detail = whyEng,
+                phase = "POST", eventTitle = ev.title, minutes = since,
+                // research reaction only (shown, never published)
+                newsSignal = NewsSafety.reactionSignal(c.reaction), technicalSignal = tech,
+                headline = "USD ${ev.title} - Released $since min ago", detail = holdEn,
                 headlineEnglish = "USD ${ev.title} • Released $since min ago",
                 headlineHindi = "USD ${ev.title} • $since मिनट पहले रिलीज़ हुई",
                 headlineMarathi = "USD ${ev.title} • $since मिनिटांपूर्वी प्रसिद्ध झाली",
-                detailEnglish = whyEng,
-                detailHindi = whyHin,
-                detailMarathi = whyMar
+                detailEnglish = holdEn, detailHindi = holdHi, detailMarathi = holdMr,
+                eventId = c.eventId, hold = c.hold, reaction = c.reaction.name, measuredAtMs = now
             )
         }
         val updatedPlan = result.newsTradingPlan?.copy(
             isNewsActive = true,
             eventName = ev.title,
-            releaseCountdownFormatted = if (t > now) "⏰ Release in ${(t - now) / 60_000L + 1}m (Auto-Active)" else "🚨 LIVE NEWS SPIKE WINDOW ACTIVE (${(now - t) / 60_000L} min elapsed)",
+            releaseCountdownFormatted = if (t > now) "⏰ Release in ${(t - now) / 60_000L + 1}m" else "🚨 NEWS WINDOW (${(now - t) / 60_000L} min after release)",
             phase = if (t > now) NewsPhase.PRE_NEWS_COIL else NewsPhase.LIVE_NEWS_SPIKE
         )
         return result.copy(
-            overallSignal = status.newsSignal,
+            overallSignal = c.final,
+            // a held pillar BUY / SELL stays visible as the engine's raw call (PlanStamp -> INACTIVE_WAIT)
+            rawSignal = if (c.hold.isNotEmpty()) (result.rawSignal ?: tech) else result.rawSignal,
             newsMode = status,
             isNewsModeTriggered = true,
             newsTradingPlan = updatedPlan

@@ -68,7 +68,12 @@ object WhatMattersNow {
         // 2. news: active window first, else the next high-impact USD release within 3 hours
         val nm = a.newsMode
         if (nm != null) {
-            if (nm.phase == "PRE") out.add(Item("RISK",
+            // V35.10.1: News Mode now opens with the Macro window (60 min before); entries are held only in the last 15 min
+            if (nm.phase == "PRE" && nm.minutes > NewsSafety.SPIKE_FREEZE_MS / 60_000L) out.add(Item("RISK",
+                "High-impact USD news in ${nm.minutes} min: ${nm.eventTitle}. Macro window open; spreads may widen.",
+                "${nm.minutes} मिनट में हाई-इम्पैक्ट USD न्यूज़: ${nm.eventTitle}। Macro विंडो खुली; स्प्रेड बढ़ सकता है।",
+                "${nm.minutes} मिनिटांत हाय-इम्पॅक्ट USD बातमी: ${nm.eventTitle}. Macro विंडो उघडी; स्प्रेड वाढू शकतो."))
+            else if (nm.phase == "PRE") out.add(Item("RISK",
                 "High-impact USD news in ${nm.minutes} min: ${nm.eventTitle}. Fresh entries are on WAIT.",
                 "${nm.minutes} मिनट में हाई-इम्पैक्ट USD न्यूज़: ${nm.eventTitle}। नई एंट्री WAIT पर।",
                 "${nm.minutes} मिनिटांत हाय-इम्पॅक्ट USD बातमी: ${nm.eventTitle}. नवीन एंट्री WAIT वर."))

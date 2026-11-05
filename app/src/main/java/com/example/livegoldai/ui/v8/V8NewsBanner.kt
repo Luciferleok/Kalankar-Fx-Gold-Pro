@@ -46,7 +46,9 @@ internal fun V8NewsBanner(analysis: GoldAnalysisResult, lang: AppLanguage, now: 
             V8KeyValue(tr(lang, "Dollar data", "डॉलर डेटा", "डॉलर डेटा"), b.dollar, if (b.dollar.startsWith("OBSERVED")) V8.Green else V8.Amber)
             V8KeyValue(tr(lang, "10Y data", "10Y डेटा", "10Y डेटा"), b.tenY, if (b.tenY.startsWith("OBSERVED")) V8.Green else V8.Amber)
         }
-        Text(text = b.macro, color = V8.Text1, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(text = b.macro, color = if (b.refresh) V8.Amber else V8.Text1, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        // V35.10.1: what news safety did to THIS analysis's pillar decision (never a BUY / SELL of its own)
+        if (b.safety.isNotEmpty()) Text(text = b.safety, color = V8.Text1, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         Text(text = b.note, color = V8.Text3, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
