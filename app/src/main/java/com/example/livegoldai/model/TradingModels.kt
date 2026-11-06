@@ -567,6 +567,20 @@ data class TimeframeAccuracyAudit(
     }
 }
 
+/** V35.12 Proven-only gate: the record of THIS setup (timeframe + market type + side), current engine, one call per window */
+@Serializable
+data class ProvenStatus(
+    val setupKey: String,       // "5m|TREND_UP|BUY"
+    val side: Signal,           // the engine's BUY / SELL this was checked for
+    val n: Int,                 // independent checked calls of this setup
+    val correct: Int,
+    val hitPct: Int,            // -1 when n == 0
+    val lo: Int, val hi: Int,   // Wilson 95% range, -1 when n == 0
+    val minN: Int, val minPct: Int,
+    val proven: Boolean,
+    val held: Boolean           // true = the engine's BUY / SELL was published as WAIT
+)
+
 @Serializable
 data class GoldAnalysisResult(
     val symbol: String = "XAU/USD",
@@ -621,6 +635,7 @@ data class GoldAnalysisResult(
     val gateDetail: String = "",
     // V29B: what the quant engine said before any filter or source gate (null = not known)
     val rawSignal: Signal? = null,
+    val proven: ProvenStatus? = null,         // V35.12 Proven-only gate (null = not evaluated)
     // V29B: the one read-only description of this decision shared by Home, Brain and the Decision Trace
     val presentation: com.example.livegoldai.data.PredictionPresentationState? = null
 )

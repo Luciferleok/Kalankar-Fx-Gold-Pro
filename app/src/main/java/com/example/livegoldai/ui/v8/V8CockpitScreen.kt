@@ -191,6 +191,7 @@ fun V8CockpitScreen(
                             "RANGE" -> tr(lang, en, "रेंज फ़िल्टर • साइडवेज़ मार्केट", "रेंज फिल्टर • साइडवेज मार्केट")
                             "LEARNED" -> tr(lang, en, "सीखा हुआ फ़िल्टर", "शिकलेला फिल्टर")
                             "BELOW_GATE" -> tr(lang, en, en.replace("PILLARS", "पिलर"), en.replace("PILLARS", "पिलर"))
+                            "UNPROVEN" -> tr(lang, en, en.replace("NOT PROVEN", "साबित नहीं"), en.replace("NOT PROVEN", "सिद्ध नाही"))
                             "NEWS" -> tr(lang, en, en.replace("NEWS SAFETY", "न्यूज़ सुरक्षा"), en.replace("NEWS SAFETY", "न्यूज सुरक्षा"))
                             else -> tr(lang, en, "इंजन सुरक्षा नियम • क्यों? देखें", "इंजिन सुरक्षा नियम • का? पहा")
                         } },

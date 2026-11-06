@@ -52,6 +52,7 @@ object PlanText {
         "BELOW_GATE" -> t(l, "PILLARS BELOW GATE", "पिलर गेट से नीचे", "पिलर गेटखाली")
         "ENGINE_RULE" -> t(l, "ENGINE SAFETY RULE", "इंजन सुरक्षा नियम", "इंजिन सुरक्षा नियम")
         "NEWS" -> t(l, "NEWS SAFETY HOLD", "न्यूज़ सुरक्षा होल्ड", "न्यूज सुरक्षा होल्ड")
+        "UNPROVEN" -> t(l, "SETUP NOT PROVEN", "सेटअप साबित नहीं", "सेटअप सिद्ध नाही")
         else -> t(l, "NO MEASURED EDGE", "कोई मापी बढ़त नहीं", "मोजलेली आघाडी नाही")
     }
 
@@ -229,6 +230,10 @@ object PlanText {
                 "NO_KEY" -> t(l, "No Twelve Data key is saved, so no XAU/USD decision can be made.", "Twelve Data key नहीं, इसलिए XAU/USD फ़ैसला नहीं।", "Twelve Data key नाही, म्हणून XAU/USD निर्णय नाही.")
                 "LEARNED" -> t(l, "A learned filter blocked the raw $raw signal (${p.reasonText}).", "सीखे फ़िल्टर ने रॉ $raw रोका (${p.reasonText})।", "शिकलेल्या फिल्टरने रॉ $raw थांबवला (${p.reasonText}).")
                 "BELOW_GATE" -> t(l, "No side reached the 68% pillar gate (${p.reasonText}).", "कोई पक्ष 68% पिलर गेट तक नहीं पहुँचा (${p.reasonText})।", "कोणतीही बाजू 68% पिलर गेटपर्यंत पोहोचली नाही (${p.reasonText}).")
+                "UNPROVEN" -> a.proven.let { pv -> if (pv == null) t(l, "Setup not proven yet.", "सेटअप अभी साबित नहीं।", "सेटअप अजून सिद्ध नाही.") else
+                    t(l, "Proven-only mode: this ${ProvenGate.regimeLabel(pv.setupKey)} $raw setup has ${pv.correct}/${pv.n} correct; a BUY / SELL is shown only after ${pv.minN}+ checked calls at ${pv.minPct}%+.",
+                        "प्रूवन-ओनली मोड: इस ${ProvenGate.regimeLabel(pv.setupKey)} $raw सेटअप के ${pv.n} में ${pv.correct} सही; BUY / SELL तभी दिखेगा जब ${pv.minN}+ जाँची कॉल ${pv.minPct}%+ सही हों।",
+                        "प्रूव्हन-ओन्ली मोड: या ${ProvenGate.regimeLabel(pv.setupKey)} $raw सेटअपच्या ${pv.n} पैकी ${pv.correct} बरोबर; ${pv.minN}+ तपासलेल्या कॉल ${pv.minPct}%+ बरोबर असतील तेव्हाच BUY / SELL दिसेल.") }
                 "NEWS" -> (a.newsMode?.getLocalizedDetail(l) ?: t(l, "News safety held the raw $raw signal.", "न्यूज़ सुरक्षा ने रॉ $raw रोका।", "न्यूज सुरक्षेने रॉ $raw थांबवला."))
                 else -> t(l, "An engine safety rule held the signal.", "इंजन के सुरक्षा नियम ने सिग्नल रोका।", "इंजिनच्या सुरक्षा नियमाने सिग्नल थांबवला.")
             }

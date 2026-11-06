@@ -279,8 +279,11 @@ class GoldViewModel @JvmOverloads constructor(
                 val analysis = try {
                     withContext(Dispatchers.IO) {
                         val mtfCandles = try { apiService.fetchMtfCandles() } catch (_: Exception) { emptyMap() }
-                        val learned = learning.process(rawAnalysis, currentInterval, mtfCandles, mtfSource = apiService.mtfSourceOf(mtfCandles))
-                        try { shadowLive.observe(learned, currentInterval) } catch (_: Exception) { }
+                        val engineCall = learning.process(rawAnalysis, currentInterval, mtfCandles, mtfSource = apiService.mtfSourceOf(mtfCandles))
+                        // Shadow Lab compares with the ENGINE's call (unchanged), so it sees it before the publication gate
+                        try { shadowLive.observe(engineCall, currentInterval) } catch (_: Exception) { }
+                        // V35.12 Proven-only mode: publish BUY / SELL only for a proven setup (ledger already holds the engine call)
+                        val learned = com.example.livegoldai.data.ProvenGate.apply(engineCall, try { learning.currentState() } catch (_: Exception) { null })
                         val health = try { healthMonitor.build(learned, learning.stats(), mtfCandles.size) } catch (_: Exception) { null }
                         val insights = try { com.example.livegoldai.data.CockpitInsightsBuilder.build(learned) } catch (_: Exception) { null }
                         // keep showing the last AI council for this timeframe until the next run finishes
@@ -318,7 +321,8 @@ class GoldViewModel @JvmOverloads constructor(
                         } catch (_: Exception) { null })
                     }
                 } catch (_: Exception) {
-                    rawAnalysis
+                    // V35.12: on an error nothing proves the setup, so a BUY / SELL is shown as WAIT (fail closed)
+                    com.example.livegoldai.data.ProvenGate.apply(rawAnalysis, null)
                 }
                 // V33.1R.4-b: a newer load or another timeframe owns the screen now; drop this result's screen effects
                 if (!isCurrentLoad(ticket)) return@onSuccess

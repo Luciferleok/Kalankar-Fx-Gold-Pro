@@ -49,6 +49,11 @@ object OneLineVerdict {
                 "DATA" -> t(l, "price data check failed", "प्राइस डेटा जाँच फ़ेल", "प्राइस डेटा तपासणी अयशस्वी")
                 "NO_KEY" -> t(l, "no data key saved (Settings)", "डेटा key सेव नहीं (Settings)", "डेटा key सेव्ह नाही (Settings)")
                 "SOURCE" -> t(l, "data source just switched", "डेटा स्रोत अभी बदला", "डेटा स्रोत आत्ता बदलला")
+                "UNPROVEN" -> a.proven?.let { pv -> val s = pv.side.name
+                    t(l, "$s not proven yet (this setup ${pv.correct}/${pv.n} correct, need ${pv.minN}+ at ${pv.minPct}%)",
+                        "$s अभी साबित नहीं (इस सेटअप के ${pv.n} में ${pv.correct} सही, चाहिए ${pv.minN}+ पर ${pv.minPct}%)",
+                        "$s अजून सिद्ध नाही (या सेटअपच्या ${pv.n} पैकी ${pv.correct} बरोबर, हवे ${pv.minN}+ वर ${pv.minPct}%)") }
+                    ?: t(l, "setup not proven yet", "सेटअप अभी साबित नहीं", "सेटअप अजून सिद्ध नाही")
                 "NEWS" -> when (a.newsMode?.hold) {
                     "SPIKE_FREEZE" -> t(l, "news in under 15 min, pillar ${a.rawSignal?.name ?: "call"} held", "15 मिनट से कम में न्यूज़, पिलर का ${a.rawSignal?.name ?: "कॉल"} रोका", "15 मिनिटांच्या आत न्यूज, पिलरचा ${a.rawSignal?.name ?: "कॉल"} थांबवला")
                     "FIRST_BAR" -> t(l, "news just out, waiting for the first closed candle", "न्यूज़ अभी आई, पहली बंद कैंडल का इंतज़ार", "न्यूज आत्ताच आली, पहिल्या बंद कँडलची वाट")
@@ -73,6 +78,7 @@ object OneLineVerdict {
         val dir = if (sig == Signal.BUY) t(l, "up", "ऊपर", "वर") else t(l, "down", "नीचे", "खाली")
         val until = if (ts.expiresAtMs > now) t(l, "valid until ", "मान्य ", "वैध ") + TrustCard.localTs(ts.expiresAtMs) else null
         return Verdict(sig.name, sig, "${sig.name} ($status): " + t(l, "$votes of $voting pillars point $dir", "$voting में से $votes पिलर $dir", "$voting पैकी $votes पिलर $dir"),
-            listOfNotNull(dataLine, until, record).joinToString(" · "), dataLine != null || status != t(l, "qualified", "क्वालिफ़ाइड", "पात्र"))
+            listOfNotNull(dataLine, until, a.proven?.takeIf { it.proven }?.let { pv ->
+                t(l, "proven setup ${pv.correct}/${pv.n} correct (range ${pv.lo}-${pv.hi}%, past, not a promise)", "साबित सेटअप ${pv.n} में ${pv.correct} सही (रेंज ${pv.lo}-${pv.hi}%, पुराना, वादा नहीं)", "सिद्ध सेटअप ${pv.n} पैकी ${pv.correct} बरोबर (रेंज ${pv.lo}-${pv.hi}%, जुने, खात्री नाही)") } ?: record).joinToString(" · "), dataLine != null || status != t(l, "qualified", "क्वालिफ़ाइड", "पात्र"))
     }
 }

@@ -155,6 +155,8 @@ object RealityEngine {
         }
         // V35.10.1: a pillar BUY / SELL held by news safety (NewsSafety)
         a.newsMode?.hold?.takeIf { it.isNotEmpty() }?.let { return "NEWS" to "NEWS SAFETY • " + it.replace('_', ' ') }
+        // V35.12: the engine's BUY / SELL for a setup that has not proven itself yet (ProvenGate)
+        a.proven?.takeIf { it.held }?.let { return "UNPROVEN" to "NOT PROVEN • ${it.correct}/${it.n} (NEED ${it.minN}+ AT ${it.minPct}%)" }
         val tag = a.nextPrediction?.urgencyTag ?: ""
         if (tag.startsWith("FORECAST PAUSED")) return "DATA" to "DATA CHECK FAILED"
         if (tag.startsWith("WAIT • SOURCE")) return "SOURCE" to "SOURCE SWITCH"
