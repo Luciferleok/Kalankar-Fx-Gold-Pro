@@ -42,7 +42,8 @@ object OutcomeBrowser {
         val counterfactual: String = ""
     )
 
-    data class Page(val kind: Kind, val interval: String, val rows: List<Row>, val total: Int, val counts: Map<Kind, Int>, val population: String)
+    data class Page(val kind: Kind, val interval: String, val rows: List<Row>, val total: Int, val counts: Map<Kind, Int>, val population: String,
+                    val reconcile: LedgerReconcile.Summary? = null)   // V35.13 read-only price-anchor check of this timeframe
 
     const val LIMIT = 200
 
@@ -74,7 +75,7 @@ object OutcomeBrowser {
             Kind.PENDING -> "not checked yet"
             Kind.NO_EDGE -> "outcome SIDEWAYS (moved less than the noise threshold: not counted right or wrong)"
         }
-        return Page(kind, interval, rows, list.size, counts, pop)
+        return Page(kind, interval, rows, list.size, counts, pop, try { LedgerReconcile.build(state, interval) } catch (_: Exception) { null })
     }
 
     /** how the ledger decided it (same order as PredictionLedger.evaluate: target, stop, close direction) */

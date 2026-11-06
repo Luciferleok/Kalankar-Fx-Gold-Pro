@@ -346,6 +346,8 @@ class LearningCoordinator(
             horizonMin = horizon,
             barId = raw.lastUpdated,
             price = raw.currentPrice,
+            // V35.13: when that price was observed (provider quote time when plausible, else download time)
+            priceAtMs = raw.feed?.let { f -> if (f.quoteTimeMs > 0L && f.quoteTimeMs <= now + 60_000L) f.quoteTimeMs else f.fetchedAtMs } ?: 0L,
             rawSignal = rawSig,
             finalSignal = if (filter.isNotEmpty()) Signal.WAIT else rawSig,
             confidence = raw.agreementPercent.toInt(),

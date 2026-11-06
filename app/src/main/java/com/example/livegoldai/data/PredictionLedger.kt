@@ -58,7 +58,9 @@ data class LedgerRecord(
     val planStop: Double = 0.0,
     val planTp1: Double = 0.0,
     val planTp2: Double = 0.0,
-    val planMethod: String = ""          // "PLAN-V2" when the four levels above are filled
+    val planMethod: String = "",         // "PLAN-V2" when the four levels above are filled
+    // ---- V35.13: when [price] was observed (provider quote time, else download time). 0 on older records.
+    val priceAtMs: Long = 0L
 )
 
 data class PathBar(val t: Long, val o: Double, val h: Double, val l: Double, val c: Double)
@@ -192,6 +194,7 @@ object PredictionLedger {
             "ds" to r.dataSource, "sid" to r.snapshotId, "ev" to r.engineVersion, "fv" to r.featureVersion,
             "tp" to r.tpDistance
         ).apply {
+            if (r.priceAtMs > 0L) put("pxt", r.priceAtMs)
             if (r.planMethod.isNotEmpty()) { put("pe", r.planEntry); put("ps", r.planStop); put("p1", r.planTp1); put("p2", r.planTp2); put("pm", r.planMethod) }
         }
     )
@@ -210,7 +213,8 @@ object PredictionLedger {
             }.toMap(),
             dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv"),
             tpDistance = m.num("tp"),
-            planEntry = m.num("pe"), planStop = m.num("ps"), planTp1 = m.num("p1"), planTp2 = m.num("p2"), planMethod = m.str("pm")
+            planEntry = m.num("pe"), planStop = m.num("ps"), planTp1 = m.num("p1"), planTp2 = m.num("p2"), planMethod = m.str("pm"),
+            priceAtMs = m.long("pxt")
         )
     } catch (_: Exception) {
         null
@@ -421,12 +425,63 @@ object PredictionLedger {
      * Turns a real price path into a result + forensic evidence.
      * Pure function: same input -> same output.
      */
+    // ------------------------------------------------------------------ V35.13 strict window + price anchor
+    /** published price may differ from the provider's own minute by at most this (rounding / mid vs last tick) */
+    const val ANCHOR_TOL_MIN = 0.30
+    fun anchorTol(record: LedgerRecord) = max(ANCHOR_TOL_MIN, 0.05 * record.atr)
+
+    /** bar length of a path: smallest gap between bar starts (>= 1 min), 1 min when unknown */
+    fun barMs(path: PricePath): Long = path.bars.map { it.t }.sorted().zipWithNext { a, b -> b - a }.filter { it >= 60_000L }.minOrNull() ?: 60_000L
+
+    /**
+     * Only bars that START at / after publication and END at / before expiry. Before V35.13 a bar that started up to 60 s
+     * BEFORE publication (its high / low and open) and the bar that CLOSED after expiry were used too.
+     */
+    fun eligibleBars(record: LedgerRecord, path: PricePath): List<PathBar> {
+        val ms = barMs(path)
+        return path.bars.filter { it.t >= record.createdAt && it.t + ms <= record.expiresAt }.sortedBy { it.t }
+    }
+
+    /**
+     * The price a check starts from. Same instrument: the PUBLISHED price, but only when the provider's own bar of that
+     * moment confirms it (inside its high / low +- [anchorTol]); else "" + reason -> VERIFICATION_UNCERTAIN.
+     * Other instrument / old record without a source: the first eligible open (a proxy cannot confirm an XAU price).
+     */
+    fun anchor(record: LedgerRecord, path: PricePath, eligible: List<PathBar>): Pair<Double?, String> {
+        val a = instrumentOf(record.dataSource); val b = instrumentOf(path.source)
+        if (a.isEmpty() || a != b || record.price <= 0.0) return eligible.firstOrNull()?.o to ""
+        val ms = barMs(path)
+        val at = if (record.priceAtMs > 0L) record.priceAtMs else record.createdAt
+        if (record.priceAtMs > 0L && record.createdAt - record.priceAtMs > 5 * 60_000L)
+            return null to "published price was ${(record.createdAt - record.priceAtMs) / 60_000L} min old at publication"
+        val bar = path.bars.firstOrNull { at >= it.t && at < it.t + ms }
+            ?: return null to "the provider has no bar for the publication minute"
+        val tol = anchorTol(record)
+        return if (record.price >= bar.l - tol && record.price <= bar.h + tol) record.price to ""
+        else null to "published ${fmt(record.price)} is outside the provider's own bar of that minute (${fmt(bar.l)}-${fmt(bar.h)})"
+    }
+
+    /** where a verification path must start: the publication, or the minute the price was observed in (<= 5 min earlier) */
+    fun pathStart(record: LedgerRecord): Long =
+        if (record.priceAtMs in (record.createdAt - 5 * 60_000L) until record.createdAt) (record.priceAtMs / 60_000L) * 60_000L else record.createdAt
+
+    private fun uncertain(record: LedgerRecord, now: Long, source: String, why: String) =
+        emptyResult(record, now, LedgerOutcome.VERIFICATION_UNCERTAIN, source).copy(
+            timeline = listOf(now to "Not counted: $why"), counterfactual = "")
+
     fun evaluate(record: LedgerRecord, path: PricePath, now: Long): LedgerResult {
-        val bars = path.bars.filter { it.t >= record.createdAt - 60_000L && it.t < record.expiresAt }.sortedBy { it.t }
+        val bars = eligibleBars(record, path)
         if (bars.isEmpty()) {
-            return emptyResult(record, now, LedgerOutcome.DATA_FAILURE, path.source)
+            return if (path.bars.isEmpty()) emptyResult(record, now, LedgerOutcome.DATA_FAILURE, path.source)
+            else uncertain(record, now, path.source, "no complete bar inside the forecast window")
         }
-        val start = bars.first().o
+        val ms = barMs(path)
+        // the window must be covered: first full bar right after publication, last one ending right at expiry
+        if (bars.first().t > record.createdAt + ms || bars.last().t + ms < record.expiresAt - ms)
+            return uncertain(record, now, path.source, "price bars missing at the start or end of the window")
+        val (anchorPx, why) = anchor(record, path, bars)
+        if (anchorPx == null) return uncertain(record, now, path.source, why)
+        val start = anchorPx
         val end = bars.last().c
         val move = end - start
         val threshold = max(0.25 * record.atr, 0.30)
@@ -519,6 +574,7 @@ object PredictionLedger {
         // ---------- timeline replay
         val tl = ArrayList<Pair<Long, String>>()
         tl.add(record.createdAt to "Prediction ${sig.name} at ${fmt(start)} (${path.source}), confidence ${record.confidence}%")
+        if (start == record.price) tl.add(record.createdAt to "Measured from the published price, confirmed by the provider's own bar of that minute")
         if (sig != Signal.WAIT) {
             if (firstFavorAt != 0L) tl.add(firstFavorAt to "Moved ${fmt(threshold)} in predicted direction")
             if (mfe > 0) tl.add(mfeAt to "Best point: +${fmt(mfe)} in favour")
@@ -557,6 +613,7 @@ object PredictionLedger {
         if (listOf(e, s, t).any { !it.isFinite() || it <= 0.0 }) return ""
         val sell = record.finalSignal == Signal.SELL
         if (sell && !(s > e && t < e) || !sell && !(s < e && t > e)) return ""
+        // PLAN-V2 (older records) keeps its original window on purpose (V35.3-D); PLAN-V2.1 has the strict one
         val bars = path.bars.filter { it.t >= record.createdAt - 60_000L && it.t < record.expiresAt }.sortedBy { it.t }
         if (bars.isEmpty()) return ""
         var entered = false
@@ -650,6 +707,6 @@ object PredictionLedger {
         else -> key
     }
 
-    private fun fmt(v: Double) = String.format(Locale.US, "%.2f", v)
+    fun fmt(v: Double) = String.format(Locale.US, "%.2f", v)
     private fun signed(v: Double) = String.format(Locale.US, "%+.2f", v)
 }

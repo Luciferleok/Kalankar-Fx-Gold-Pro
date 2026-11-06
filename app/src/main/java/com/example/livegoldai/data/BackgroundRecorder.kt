@@ -48,7 +48,8 @@ object AppEngine {
     val ledgerStore: FileLedgerStore by lazy { FileLedgerStore(File(dir ?: File("."), "prediction_ledger.jsonl")) }
     val learning: LearningCoordinator by lazy {
         LearningCoordinator(ledgerStore) { s, e -> api.fetchPricePath(s, e) }.also { lc ->
-            lc.fetchPathFor = { r, now -> api.fetchPathFor(r.dataSource, r.createdAt, r.expiresAt, now) }
+            // V35.13: start early enough to hold the minute the published price was observed in (at most 5 min back)
+            lc.fetchPathFor = { r, now -> api.fetchPathFor(r.dataSource, PredictionLedger.pathStart(r), r.expiresAt, now) }
         }
     }
     val featureStore: FeatureStore by lazy { FeatureStore(ledgerStore) }

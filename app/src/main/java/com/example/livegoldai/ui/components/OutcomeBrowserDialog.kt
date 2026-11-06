@@ -98,6 +98,7 @@ fun OutcomeBrowserDialog(page: OutcomeBrowser.Page, lang: AppLanguage, onSelect:
                 Spacer(modifier = Modifier.height(8.dp))
                 if (page.rows.isEmpty()) Text(text = t("No record in this list yet.", "इस लिस्ट में अभी कोई रिकॉर्ड नहीं।", "या यादीत अजून नोंद नाही."), color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 20.dp))
                 LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    page.reconcile?.takeIf { it.checked > 0 }?.let { rc -> item(key = "reconcile") { ReconcileCard(rc, lang) } }
                     items(page.rows, key = { it.id }) { RecordCard(it, lang) }
                 }
             }
