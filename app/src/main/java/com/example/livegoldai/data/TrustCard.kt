@@ -122,8 +122,12 @@ object TrustCard {
         val metrics = ArrayList<Metric>()
         // 1. rule agreement (only for a call: a WAIT has no agreement number to trade on)
         val votes = a.groups.count { it.active && it.verdict == sig }
+        // V35.13.1: "below the gate" only when the pillars really were below it; a WAIT held for another reason
+        // (not proven, news safety, filters) keeps its real agreement, marked as held
+        val heldPct = if (wait && RealityEngine.waitReason(a).first != "BELOW_GATE" && a.rawSignal != null && a.rawSignal != Signal.WAIT)
+            "${a.agreementPercent.roundToInt()}% " + t(l, "(held)", "(रोका)", "(थांबवले)") else null
         metrics += Metric(Kind.RULE_AGREEMENT,
-            if (wait) t(l, "below the gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}% · $votes/${a.totalGroups} " + t(l, "pillars", "पिलर", "पिलर"),
+            if (wait) heldPct ?: t(l, "below the gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}% · $votes/${a.totalGroups} " + t(l, "pillars", "पिलर", "पिलर"),
             t(l, "weighted vote share, gate 68%: not a probability", "वेटेड वोट हिस्सा, गेट 68%: संभावना नहीं", "वेटेड मत वाटा, गेट 68%: शक्यता नाही"))
         // 2. V35.6 evidence tiers: A = same ledger regime too, B = same timeframe/side/provider/engine (regime mixed),
         //    C = general context (agreement band, everything mixed). The value is the narrowest tier with enough calls.
@@ -192,7 +196,7 @@ object TrustCard {
             t(l, "Research record, not financial advice. Past results do not guarantee future results.",
                 "रिसर्च रिकॉर्ड, वित्तीय सलाह नहीं। पिछले नतीजे भविष्य की गारंटी नहीं।", "रिसर्च नोंद, आर्थिक सल्ला नाही. मागील निकाल भविष्याची हमी नाहीत."),
             nowStatus, nowReasons + delayedNote, diagnostics(a, now, l, fresh, age, refusals, status),
-            listOf(t(l, "AGREEMENT", "सहमति", "सहमती") to (if (wait) t(l, "below gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}%"),
+            listOf(t(l, "AGREEMENT", "सहमति", "सहमती") to (if (wait) heldPct ?: t(l, "below gate", "गेट से नीचे", "गेटखाली") else "${a.agreementPercent.roundToInt()}%"),
                 t(l, "EVIDENCE", "प्रमाण", "पुरावा") to when { wait -> "--"; tier == "A" -> "A · ${p!!.tierAPct}%"; tier == "B" -> "B · ${p!!.exactHitPct}%"; else -> "N<${EdgeFinder.EXACT_MIN_N}" },
                 t(l, "DATA", "डेटा", "डेटा") to fresh),
             // V35.6: "status" is this snapshot's stamp (re-made on every refresh), not a saved publication: say when it was
