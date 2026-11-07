@@ -510,7 +510,7 @@ object RealityEngine {
             LedgerOutcome.SIDEWAYS -> "Price moved only ${f2(res.move)} (less than ${f2(res.threshold)}): no result."
             else -> "Not counted: ${res.outcome.name.replace('_', ' ')}."
         }
-        val lessonEn = if (res != null && res.tags.isNotEmpty()) "Evidence: ${res.tags.joinToString(", ")}. ${res.counterfactual}" else "Regime ${r.regime}, session ${r.session}, confidence ${r.confidence}%."
+        val lessonEn = if (res != null && res.tags.isNotEmpty()) "Evidence: ${res.tags.joinToString(", ")}. ${res.counterfactual}" else "Regime ${r.regime}, session ${r.session}, rule agreement ${r.confidence}% (not a win chance)."
         return PastPredictionAuditItem(
             id = r.id,
             timestamp = PredictionLedger.utcLabel(r.createdAt, true),

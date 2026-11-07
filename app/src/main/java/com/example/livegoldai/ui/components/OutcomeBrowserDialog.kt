@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.livegoldai.data.ForensicText
 import com.example.livegoldai.data.OutcomeBrowser
 import com.example.livegoldai.localization.AppLanguage
 import com.example.livegoldai.model.Signal
@@ -160,11 +161,12 @@ private fun RecordCard(r: OutcomeBrowser.Row, lang: AppLanguage) {
                 Detail(t("Best / worst move in window", "विंडो में सबसे अच्छी / बुरी चाल", "विंडोत सर्वोत्तम / वाईट हालचाल"), "${usd(r.mfeUsd)} / ${usd(-r.maeUsd)} \$")
                 if (r.stopHitAtMs > 0L) Detail(t("Stop touched", "स्टॉप छुआ", "स्टॉप लागला"), OutcomeBrowser.ts(r.stopHitAtMs))
                 Detail(t("Checked with", "जाँचा गया", "तपासले"), r.verifiedBy.ifBlank { "--" } + if (r.checkedAtMs > 0L) " · " + OutcomeBrowser.ts(r.checkedAtMs) else "")
-                if (r.tags.isNotEmpty()) Detail(t("Failure tags", "गलती के टैग", "चुकीचे टॅग"), r.tags.joinToString(" · ") { it.replace('_', ' ') })
-                if (r.counterfactual.isNotBlank()) Detail(t("Could it be avoided?", "क्या बच सकते थे?", "टाळता आले असते?"), r.counterfactual)
+                // V35.14: rule labels, not proven causes; hindsight worded as hindsight; agreement is not a win chance
+                if (r.tags.isNotEmpty()) Detail(ForensicText.tagsTitle(lang), ForensicText.tags(r.tags, lang))
+                if (r.counterfactual.isNotBlank()) Detail(ForensicText.counterfactualTitle(lang), ForensicText.counterfactual(r.counterfactual, lang))
                 if (r.timeline.isNotEmpty()) {
-                    Text(text = t("TIMELINE", "टाइमलाइन", "टाइमलाइन"), color = GoldLight, fontSize = 9.sp, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 6.dp))
-                    r.timeline.forEach { (ms, what) -> Text(text = OutcomeBrowser.ts(ms) + " · " + what, color = TextMuted, fontSize = 9.sp) }
+                    Text(text = t("TIMELINE", "टाइमलाइन", "टाइमलाइन"), color = GoldLight, fontSize = 11.sp, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 6.dp))
+                    r.timeline.forEach { (ms, what) -> Text(text = OutcomeBrowser.ts(ms) + " · " + ForensicText.timeline(what), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
                 }
             }
         }

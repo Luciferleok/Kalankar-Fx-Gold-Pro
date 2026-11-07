@@ -153,7 +153,7 @@ class LearningCoordinator(
             val existing = state.records.lastOrNull { RecordLink.sameCandle(it, interval, analysis.lastUpdated, now, ivMin) }
             val canRecord = !analysis.isSimulatedFallback && !PredictionLedger.isMarketClosed(now) && analysis.lastUpdated.isNotBlank()
 
-            val draft = buildRecord(analysis, analysis, interval, now, newsActive, htf, "")
+            val draft = buildRecord(analysis, analysis, interval, now, newsActive, htf, "", state.records)
             // data integrity comes first: on UNSAFE data no BUY/SELL is published, and nothing is recorded
             val dq = DataQualityEngine.assess(analysis.recentCandles, analysis.feed?.fetchedAtMs ?: 0L, !analysis.isSimulatedFallback, now, PredictionLedger.isMarketClosed(now))
             lastDataQuality = dq
@@ -167,7 +167,7 @@ class LearningCoordinator(
             val applied = RealityEngine.apply(analysis, snap1, state, mtf, interval, filter)
 
             if (existing == null && canRecord && filter != DATA_PAUSE && filter != SOURCE_PAUSE) {
-                val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter)
+                val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter, state.records)
                 if (safeAppend(listOf(PredictionLedger.encodeRecord(rec)))) {
                     state = LedgerState(state.records + rec, state.results, state.events, state.skippedLines)
                 }
@@ -302,7 +302,8 @@ class LearningCoordinator(
         now: Long,
         newsActive: Boolean,
         htf: Signal?,
-        filter: String
+        filter: String,
+        recent: List<LedgerRecord> = emptyList()
     ): LedgerRecord {
         val candles = raw.recentCandles
         val atr = PredictionLedger.atrOf(candles).let { if (it > 0) it else max(raw.tradeSetup.atrPips / 10.0, 0.5) }
@@ -337,6 +338,15 @@ class LearningCoordinator(
         // V35.8 Precision Lab: the three shadow challengers' calls, decided now and stored with the record (never shown)
         sources.putAll(PrecisionLab.decide(if (filter.isNotEmpty()) Signal.WAIT else rawSig, raw.agreementPercent.toInt(),
             PrecisionLab.stretch(candles, atr), PredictionLedger.regimeOf(candles, newsActive), newsActive, interval))
+        // V35.14 two more shadow challengers, decided only from what is known now (never shown, never change a call)
+        run {
+            val side = if (filter.isNotEmpty()) Signal.WAIT else rawSig
+            val candleOpposes = raw.groups.firstOrNull { it.key == "candlestick" }
+                ?.let { it.active && it.verdict != Signal.WAIT && side != Signal.WAIT && it.verdict != side } == true
+            val repeatZone = side != Signal.WAIT && recent.any { r -> r.interval == interval && r.barId != raw.lastUpdated && r.rawSignal == side &&
+                now - r.createdAt in 1..PrecisionLab.REPEAT_MS && kotlin.math.abs(r.price - raw.currentPrice) <= atr }
+            sources.putAll(PrecisionLab.decideExtra(side, candleOpposes, repeatZone))
+        }
 
         return LedgerRecord(
             id = "P" + java.lang.Long.toString(now, 36).uppercase() + interval.uppercase(),

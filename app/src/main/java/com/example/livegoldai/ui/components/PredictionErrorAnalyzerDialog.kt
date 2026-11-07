@@ -1,5 +1,6 @@
 package com.example.livegoldai.ui.components
 
+import com.example.livegoldai.data.ForensicText
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -656,7 +657,7 @@ private fun FailureCard(f: FailureReport, lang: AppLanguage) {
             .padding(10.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "${f.signal.name} ${f.confidence}%", color = sigColor, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Text(text = "${f.signal.name} · " + t(lang, "agreement", "सहमति", "सहमती") + " ${f.confidence}%", color = sigColor, fontWeight = FontWeight.Black, fontSize = 12.sp)
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "${f.interval.uppercase()} • ${f.createdLabel}", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.weight(1f))
             Text(text = f.outcome, color = SignalSell, fontWeight = FontWeight.Bold, fontSize = 10.sp)
@@ -665,22 +666,23 @@ private fun FailureCard(f: FailureReport, lang: AppLanguage) {
             text = String.format(Locale.US, "Entry %.2f • move %+.2f (needed %.2f) • best +%.2f • worst -%.2f", f.entryPrice, f.movePoints, f.thresholdPoints, f.maxFavorable, f.maxAdverse),
             color = TextPrimary, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp)
         )
-        Text(
-            text = f.attribution.entries.joinToString("  •  ") { "${it.key.replace('_', ' ')} ${it.value}%" },
-            color = GoldLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp)
+        // V35.14: the old "40% / 20%" were rule weights, not measured causes: shown as possible factors without percentages
+        if (f.attribution.isNotEmpty()) Text(
+            text = ForensicText.tagsTitle(lang) + ": " + ForensicText.tags(f.attribution.keys, lang),
+            color = GoldLight, fontSize = 11.sp, fontWeight = FontWeight.Medium, lineHeight = 15.sp, modifier = Modifier.padding(top = 3.dp)
         )
         Text(text = "${f.regime.replace('_', ' ')} • ${f.session.replace('_', ' ')}${if (f.newsActive) " • NEWS" else ""}", color = TextMuted, fontSize = 9.sp)
         if (open) {
             if (f.warningsIgnored.isNotEmpty()) {
-                Text(text = t(lang, "Warned the other way (and were right): ", "उल्टा बताया था (और सही थे): ", "उलट सांगितले होते (आणि बरोबर होते): ") + f.warningsIgnored.joinToString(", "),
-                    color = AmberWarning, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(text = ForensicText.warnedTitle(lang) + f.warningsIgnored.joinToString(", "),
+                    color = AmberWarning, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
-            Text(text = "↪ ${f.counterfactual}", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(text = "↪ " + ForensicText.counterfactual(f.counterfactual, lang), color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 4.dp))
             Text(text = t(lang, "REPLAY", "रिप्ले", "रिप्ले") + " (${f.verifySource})", color = GoldPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
             f.timeline.forEach { ev ->
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
-                    Text(text = ev.timeLabel, color = TextMuted, fontSize = 9.sp, modifier = Modifier.width(96.dp))
-                    Text(text = ev.text, color = TextPrimary, fontSize = 9.sp, modifier = Modifier.weight(1f))
+                    Text(text = ev.timeLabel, color = TextMuted, fontSize = 11.sp, modifier = Modifier.width(96.dp))
+                    Text(text = ForensicText.timeline(ev.text), color = TextPrimary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.weight(1f))
                 }
             }
         } else {
@@ -941,9 +943,9 @@ private fun PrecisionLabCard(list: List<com.example.livegoldai.model.PrecisionSt
             "प्रत्येक चॅलेंजर फक्त BUY/SELL ला WAIT करू शकतो. कॉल बनताना ठरते, V35.8 पासून नोंदलेल्या त्याच कॉलवर ॲपशी तुलना. तुम्हाला दिसणारे बदलत नाही; तुमच्या मंजुरीशिवाय काही लागू नाही."),
             color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
         // V35.9: honest about the test itself
-        Note(t(lang, "Three challengers are tested at the same time, so one can look better by chance. PROMISING means \"worth a longer test\", never proven; any change still needs more data and your approval. All providers and timeframes are pooled; current engine only.",
-            "तीन चैलेंजर एक साथ टेस्ट हो रहे हैं, इसलिए कोई एक संयोग से बेहतर दिख सकता है। PROMISING का मतलब \"लंबा टेस्ट करने लायक\", साबित नहीं; कोई बदलाव और डेटा और आपकी मंज़ूरी से ही। सभी प्रोवाइडर और टाइमफ़्रेम मिलाकर; सिर्फ़ मौजूदा इंजन।",
-            "तीन चॅलेंजर एकाच वेळी तपासले जात आहेत, त्यामुळे एखादा योगायोगाने चांगला दिसू शकतो. PROMISING म्हणजे \"जास्त काळ तपासण्यासारखा\", सिद्ध नाही; कोणताही बदल अधिक डेटा आणि तुमच्या मंजुरीनेच. सर्व प्रोव्हायडर आणि टाइमफ्रेम एकत्र; फक्त सध्याचे इंजिन."))
+        Note(t(lang, "${list.size} challengers are tested at the same time, so one can look better by chance. PROMISING means \"worth a longer test\", never proven; any change still needs more data and your approval. All providers and timeframes are pooled; current engine only.",
+            "${list.size} चैलेंजर एक साथ टेस्ट हो रहे हैं, इसलिए कोई एक संयोग से बेहतर दिख सकता है। PROMISING का मतलब \"लंबा टेस्ट करने लायक\", साबित नहीं; कोई बदलाव और डेटा और आपकी मंज़ूरी से ही। सभी प्रोवाइडर और टाइमफ़्रेम मिलाकर; सिर्फ़ मौजूदा इंजन।",
+            "${list.size} चॅलेंजर एकाच वेळी तपासले जात आहेत, त्यामुळे एखादा योगायोगाने चांगला दिसू शकतो. PROMISING म्हणजे \"जास्त काळ तपासण्यासारखा\", सिद्ध नाही; कोणताही बदल अधिक डेटा आणि तुमच्या मंजुरीनेच. सर्व प्रोव्हायडर आणि टाइमफ्रेम एकत्र; फक्त सध्याचे इंजिन."))
         list.forEach { p ->
             val vc = when (p.verdict) { "PROMISING" -> SignalBuy; "WORSE" -> SignalSell; "COLLECTING" -> GoldPrimary; else -> TextSecondary }
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {

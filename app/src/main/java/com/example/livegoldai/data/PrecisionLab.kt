@@ -30,6 +30,10 @@ object PrecisionLab {
     const val LATE_AGREEMENT = 85
     const val LATE_STRETCH_ATR = 1.5
     val SHORT_TFS = setOf("2m", "3m", "4m")
+    // V35.14 (owner, 7 Nov 2026): two more hypotheses from the owner's failed 5M calls of 5-6 Nov; like the first three
+    // they are judged ONLY on calls recorded after they existed, so the calls that suggested them never judge them
+    const val CANDLE = "ch:candle"; const val REPEAT = "ch:repeat"
+    const val REPEAT_MS = 30 * 60_000L
     const val MIN_KEPT = 50
     const val MIN_SKIPPED = 20
 
@@ -49,6 +53,15 @@ object PrecisionLab {
             SHORT to if (interval.lowercase() in SHORT_TFS) Signal.WAIT else side
         )
     }
+
+    /**
+     *  CANDLE : WAIT when the Candlestick pillar votes against the call
+     *  REPEAT : WAIT when the engine already made the same call on this timeframe in the last 30 min within 1 ATR of
+     *           the price (the same zone again, as in 23:54-00:39 on 5-6 Nov)
+     */
+    fun decideExtra(side: Signal, candleOpposes: Boolean, repeatZone: Boolean): Map<String, Signal> =
+        if (side == Signal.WAIT) mapOf(CANDLE to Signal.WAIT, REPEAT to Signal.WAIT)
+        else mapOf(CANDLE to if (candleOpposes) Signal.WAIT else side, REPEAT to if (repeatZone) Signal.WAIT else side)
 
     private fun decided(state: LedgerState) = state.records.filter { r -> r.finalSignal != Signal.WAIT &&
         when (state.resultOf(r.id)?.outcome) { LedgerOutcome.CORRECT, LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> true; else -> false } }
@@ -70,7 +83,9 @@ object PrecisionLab {
         return listOf(
             Triple(LATE, "LATE SIGNAL (agreement ≥ 85% and stretched ≥ 1.5 ATR)", "WAIT when agreement >= 85% and price >= 1.5 ATR from its 20-bar mean"),
             Triple(QUIET, "RANGE / NEWS", "WAIT in a range market or a news event"),
-            Triple(SHORT, "SHORT TIMEFRAMES (2m–4m)", "WAIT on 2m, 3m and 4m")
+            Triple(SHORT, "SHORT TIMEFRAMES (2m–4m)", "WAIT on 2m, 3m and 4m"),
+            Triple(CANDLE, "CANDLESTICK AGAINST", "WAIT when the Candlestick pillar votes against the call"),
+            Triple(REPEAT, "SAME ZONE AGAIN", "WAIT when the same call was made in the last 30 min within 1 ATR")
         ).map { (key, title, rule) ->
             // only calls recorded after the challenger existed, and (V35.9) only the current engine: another engine's calls are
             // a different production to compare with

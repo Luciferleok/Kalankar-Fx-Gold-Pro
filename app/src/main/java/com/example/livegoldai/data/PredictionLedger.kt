@@ -564,16 +564,17 @@ object PredictionLedger {
             }
             if (tags.isEmpty()) { tags.add("UNKNOWN"); weights["UNKNOWN"] = 1 }
             counterfactual = when {
-                warnings.isNotEmpty() -> "If the app had obeyed ${prettySource(warnings.first())} (it pointed the other way) and shown WAIT, this loss would have been avoided."
-                tags.contains("TIMEFRAME_CONFLICT") -> "If predictions against the higher timeframe were blocked, this loss would have been avoided."
-                else -> "No recorded signal warned against this prediction. No simple rule would have avoided it."
+                // V35.14: hindsight from one call, never a tested rule
+                warnings.isNotEmpty() -> "Hindsight: ${prettySource(warnings.first())} pointed the other way. A WAIT on such a signal is not proven to help; it is being tested forward in the shadow lab."
+                tags.contains("TIMEFRAME_CONFLICT") -> "Hindsight: this call went against the higher timeframe. Blocking such calls is not proven to help."
+                else -> "No pillar pointed the other way at the time."
             }
         }
         val attribution = normalizeTo100(weights)
 
         // ---------- timeline replay
         val tl = ArrayList<Pair<Long, String>>()
-        tl.add(record.createdAt to "Prediction ${sig.name} at ${fmt(start)} (${path.source}), confidence ${record.confidence}%")
+        tl.add(record.createdAt to "Prediction ${sig.name} at ${fmt(start)} (${path.source}), rule agreement ${record.confidence}% (not a win chance)")
         if (start == record.price) tl.add(record.createdAt to "Measured from the published price, confirmed by the provider's own bar of that minute")
         if (sig != Signal.WAIT) {
             if (firstFavorAt != 0L) tl.add(firstFavorAt to "Moved ${fmt(threshold)} in predicted direction")

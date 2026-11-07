@@ -546,8 +546,9 @@ fun V8CockpitScreen(
 @Composable
 private fun HomeTile(k: String, v: String, sub: String, modifier: Modifier, vc: androidx.compose.ui.graphics.Color = V8.Text1) {
     Column(modifier = modifier) {
-        Text(text = k, color = V8.Text3, fontSize = 8.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
-        Text(text = v, color = vc, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-        Text(text = sub, color = V8.Text3, fontSize = 8.sp, maxLines = 1)
+        // V35.14: values like "TREND DOWN" wrap instead of being cut to "TREND"; labels readable (>= 10sp)
+        Text(text = k, color = V8.Text3, fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, maxLines = 1)
+        Text(text = v, color = vc, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 2, lineHeight = 16.sp)
+        Text(text = sub, color = V8.Text3, fontSize = 10.sp, maxLines = 2, lineHeight = 13.sp)
     }
 }
