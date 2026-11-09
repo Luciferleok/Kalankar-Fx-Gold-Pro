@@ -167,7 +167,9 @@ class LearningCoordinator(
             val applied = RealityEngine.apply(analysis, snap1, state, mtf, interval, filter)
 
             if (existing == null && canRecord && filter != DATA_PAUSE && filter != SOURCE_PAUSE) {
+                // V36-A: also store what HOME will publish (the same ProvenGate the screen applies, on the same ledger)
                 val rec = buildRecord(analysis, applied, interval, now, newsActive, htf, filter, state.records)
+                    .let { r -> r.copy(publishedSignal = try { ProvenGate.apply(applied, state).overallSignal } catch (_: Exception) { Signal.WAIT }) }
                 if (safeAppend(listOf(PredictionLedger.encodeRecord(rec)))) {
                     state = LedgerState(state.records + rec, state.results, state.events, state.skippedLines)
                 }

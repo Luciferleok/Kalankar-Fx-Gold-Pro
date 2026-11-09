@@ -39,7 +39,10 @@ object OutcomeBrowser {
         // V35.7.1: why it is right / wrong (a CORRECT call can close against the call when the target came first)
         val reason: String = "",
         val tags: List<String> = emptyList(),
-        val counterfactual: String = ""
+        val counterfactual: String = "",
+        // V36-A: what HOME showed (null on records written before V36) and how the result was checked ("" = older method)
+        val published: Signal? = null,
+        val evalVersion: String = ""
     )
 
     data class Page(val kind: Kind, val interval: String, val rows: List<Row>, val total: Int, val counts: Map<Kind, Int>, val population: String,
@@ -67,7 +70,7 @@ object OutcomeBrowser {
             Row(r.id, r.createdAt, r.expiresAt, r.finalSignal, r.confidence, r.price, EdgeFinder.providerOf(r.dataSource), EdgeFinder.engineOf(r.engineVersion),
                 r.regime, res?.outcome?.name ?: "PENDING", res?.let { it.move * dir } ?: Double.NaN, res?.threshold ?: Double.NaN,
                 res?.mfe ?: Double.NaN, res?.mae ?: Double.NaN, res?.slHitAt ?: 0L, res?.verifySource ?: "", res?.checkedAt ?: 0L, res?.timeline ?: emptyList(),
-                reasonOf(res), res?.tags?.filter { it != "UNKNOWN" } ?: emptyList(), res?.counterfactual ?: "")
+                reasonOf(res), res?.tags?.filter { it != "UNKNOWN" } ?: emptyList(), res?.counterfactual ?: "", r.publishedSignal, res?.evalVersion ?: "")
         }
         val pop = "${interval.uppercase(Locale.US)} BUY/SELL calls in this phone's ledger · " + when (kind) {
             Kind.CORRECT -> "outcome CORRECT (target hit, or closed the called way beyond the noise threshold)"

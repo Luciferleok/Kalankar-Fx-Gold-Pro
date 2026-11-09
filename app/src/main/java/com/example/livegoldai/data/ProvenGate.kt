@@ -18,7 +18,9 @@ import kotlin.math.roundToInt
  * PUBLICATION ONLY: it runs after the ledger record and after Shadow Lab has seen the engine's call, so the ledger keeps
  * recording the engine's own call (that is what builds the record this gate needs), Shadow Lab and Precision Lab compare
  * with the unchanged engine, and no threshold, weight or old record changes. It can only turn BUY / SELL into WAIT.
- * A past record is no promise: even a proven setup can be wrong.
+ * A past record is no promise: even a setup that met the minimum can be wrong. V36-A: 30 calls at 55% is a MINIMUM
+ * SAMPLE, not proof of an edge (17/30 has a 95% range of about 39-73%), so it is shown as "minimum sample met" with its
+ * range, never as "proven".
  */
 object ProvenGate {
     const val VERSION = "PG1"
@@ -32,6 +34,8 @@ object ProvenGate {
         val pool = EdgeFinder.independent(state.records.filter { r ->
             r.interval.equals(interval, true) && r.regime == regime && r.finalSignal == side &&
                 r.engineVersion == PredictionLedger.ENGINE_VERSION &&
+                // V36-A: only results checked with the current method (EV2); older methods are not mixed in
+                state.resultOf(r.id)?.evalVersion == PredictionLedger.EVAL_VERSION &&
                 when (state.resultOf(r.id)?.outcome) { LedgerOutcome.CORRECT, LedgerOutcome.INCORRECT, LedgerOutcome.INVALIDATED -> true; else -> false }
         })
         val n = pool.size

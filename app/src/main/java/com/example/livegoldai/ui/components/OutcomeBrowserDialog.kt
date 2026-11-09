@@ -155,6 +155,13 @@ private fun RecordCard(r: OutcomeBrowser.Row, lang: AppLanguage) {
         if (r.reason.isNotBlank()) Text(text = "→ " + r.reason, color = outColor, fontSize = 10.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 2.dp))
         AnimatedVisibility(visible = open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column(modifier = Modifier.padding(top = 6.dp)) {
+                // V36-A: engine call vs what HOME actually showed, and which check method produced this result
+                Detail(t("Shown on HOME", "HOME पर दिखा", "HOME वर दिसले"), when (val p = r.published) {
+                    null -> t("not recorded (older record)", "दर्ज नहीं (पुराना रिकॉर्ड)", "नोंद नाही (जुनी नोंद)")
+                    r.side -> p.name
+                    else -> p.name + t(" (engine said ${r.side.name}, held)", " (इंजन ने ${r.side.name} कहा, रोका)", " (इंजिनने ${r.side.name} सांगितले, थांबवले)")
+                })
+                Detail(t("Check method", "जाँच तरीका", "तपासणी पद्धत"), if (r.evalVersion.isEmpty()) t("older method (before V36)", "पुराना तरीका (V36 से पहले)", "जुनी पद्धत (V36 पूर्वी)") else r.evalVersion + t(" (current)", " (मौजूदा)", " (सध्याची)"))
                 Detail(t("Window ends", "विंडो समाप्त", "विंडो संपते"), OutcomeBrowser.ts(r.expiresAtMs))
                 Detail(t("Provider / engine", "प्रोवाइडर / इंजन", "प्रोव्हायडर / इंजिन"), "${r.provider} · ${r.engine}")
                 Detail(t("Market type then", "तब मार्केट", "तेव्हा मार्केट"), r.regime.ifBlank { "--" })

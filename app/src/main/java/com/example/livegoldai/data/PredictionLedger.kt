@@ -60,7 +60,9 @@ data class LedgerRecord(
     val planTp2: Double = 0.0,
     val planMethod: String = "",         // "PLAN-V2" when the four levels above are filled
     // ---- V35.13: when [price] was observed (provider quote time, else download time). 0 on older records.
-    val priceAtMs: Long = 0L
+    val priceAtMs: Long = 0L,
+    // ---- V36-A: what HOME showed for this candle after the publication gate (ProvenGate); null on older records
+    val publishedSignal: Signal? = null
 )
 
 data class PathBar(val t: Long, val o: Double, val h: Double, val l: Double, val c: Double)
@@ -95,7 +97,9 @@ data class LedgerResult(
     /** Symmetric path result: which side was touched first at 1 x ATR. +1 with the call, -1 against, 0 neither / same bar / WAIT. */
     val pathHit: Int = 0,
     /** V34.2 plan check (v2), separate from [outcome] (which learning keeps using): see PredictionLedger.planOutcome. "" = not checked */
-    val planOutcome: String = ""
+    val planOutcome: String = "",
+    /** V36-A: how this result was checked. "" = written before V36 (pre-V35.13 window/anchor or not stamped) */
+    val evalVersion: String = ""
 )
 
 data class LedgerEvent(
@@ -195,6 +199,7 @@ object PredictionLedger {
             "tp" to r.tpDistance
         ).apply {
             if (r.priceAtMs > 0L) put("pxt", r.priceAtMs)
+            r.publishedSignal?.let { put("pub", it.name) }
             if (r.planMethod.isNotEmpty()) { put("pe", r.planEntry); put("ps", r.planStop); put("p1", r.planTp1); put("p2", r.planTp2); put("pm", r.planMethod) }
         }
     )
@@ -214,7 +219,8 @@ object PredictionLedger {
             dataSource = m.str("ds"), snapshotId = m.str("sid"), engineVersion = m.str("ev"), featureVersion = m.str("fv"),
             tpDistance = m.num("tp"),
             planEntry = m.num("pe"), planStop = m.num("ps"), planTp1 = m.num("p1"), planTp2 = m.num("p2"), planMethod = m.str("pm"),
-            priceAtMs = m.long("pxt")
+            priceAtMs = m.long("pxt"),
+            publishedSignal = m.str("pub").takeIf { it.isNotEmpty() }?.let { runCatching { Signal.valueOf(it) }.getOrNull() }
         )
     } catch (_: Exception) {
         null
@@ -228,7 +234,7 @@ object PredictionLedger {
             "att" to r.attribution, "warn" to r.warnings, "cf" to r.counterfactual,
             "tl" to r.timeline.map { listOf(it.first, it.second) },
             "sm" to r.sourceMatch, "bs" to r.basis, "bn" to r.basisNoise, "vc" to r.verifyConfidence, "tph" to r.tpHitAt, "ph" to r.pathHit
-        ).apply { if (r.planOutcome.isNotEmpty()) put("po", r.planOutcome) }
+        ).apply { if (r.planOutcome.isNotEmpty()) put("po", r.planOutcome); if (r.evalVersion.isNotEmpty()) put("ev", r.evalVersion) }
     )
 
     private fun decodeResult(m: Map<String, Any?>): LedgerResult? = try {
@@ -248,7 +254,7 @@ object PredictionLedger {
                 t to txt
             },
             sourceMatch = m.str("sm"), basis = m.num("bs"), basisNoise = m.num("bn"), verifyConfidence = m.str("vc"),
-            tpHitAt = m.long("tph"), pathHit = m.int("ph"), planOutcome = m.str("po")
+            tpHitAt = m.long("tph"), pathHit = m.int("ph"), planOutcome = m.str("po"), evalVersion = m.str("ev")
         )
     } catch (_: Exception) {
         null
@@ -425,6 +431,25 @@ object PredictionLedger {
      * Turns a real price path into a result + forensic evidence.
      * Pure function: same input -> same output.
      */
+    // ------------------------------------------------------------------ V36-A evaluation version
+    /**
+     * EV2 = V35.13 strict window + published-price anchor + V36-A bar integrity (gaps / duplicates) + same-bar
+     * stop-and-target counted as AMBIGUOUS (not counted). Results without it were checked by an older method.
+     */
+    const val EVAL_VERSION = "EV2"
+    /** missing bars allowed inside a window: a minute with no ticks can be absent from a provider's candles */
+    const val MAX_MISSING_BARS = 2
+
+    /** "" when the bars inside the window are usable, else why not (duplicates with different prices, holes) */
+    fun barIntegrity(bars: List<PathBar>, ms: Long): String {
+        val byT = bars.groupBy { it.t }
+        byT.values.firstOrNull { g -> g.distinctBy { listOf(it.o, it.h, it.l, it.c) }.size > 1 }?.let { return "two different bars for the same minute" }
+        val ts = byT.keys.sorted()
+        var missing = 0L; var worst = 0L
+        for (i in 1 until ts.size) { val gap = (ts[i] - ts[i - 1]) / ms - 1; if (gap > 0) { missing += gap; worst = max(worst, gap) } }
+        return if (missing > MAX_MISSING_BARS || worst > MAX_MISSING_BARS) "$missing bars missing inside the window" else ""
+    }
+
     // ------------------------------------------------------------------ V35.13 strict window + price anchor
     /** published price may differ from the provider's own minute by at most this (rounding / mid vs last tick) */
     const val ANCHOR_TOL_MIN = 0.30
@@ -439,7 +464,7 @@ object PredictionLedger {
      */
     fun eligibleBars(record: LedgerRecord, path: PricePath): List<PathBar> {
         val ms = barMs(path)
-        return path.bars.filter { it.t >= record.createdAt && it.t + ms <= record.expiresAt }.sortedBy { it.t }
+        return path.bars.filter { it.t >= record.createdAt && it.t + ms <= record.expiresAt }.distinct().sortedBy { it.t }
     }
 
     /**
@@ -467,7 +492,7 @@ object PredictionLedger {
 
     private fun uncertain(record: LedgerRecord, now: Long, source: String, why: String) =
         emptyResult(record, now, LedgerOutcome.VERIFICATION_UNCERTAIN, source).copy(
-            timeline = listOf(now to "Not counted: $why"), counterfactual = "")
+            timeline = listOf(now to "Not counted: $why"), counterfactual = "", evalVersion = EVAL_VERSION)
 
     fun evaluate(record: LedgerRecord, path: PricePath, now: Long): LedgerResult {
         val bars = eligibleBars(record, path)
@@ -479,6 +504,7 @@ object PredictionLedger {
         // the window must be covered: first full bar right after publication, last one ending right at expiry
         if (bars.first().t > record.createdAt + ms || bars.last().t + ms < record.expiresAt - ms)
             return uncertain(record, now, path.source, "price bars missing at the start or end of the window")
+        barIntegrity(bars, ms).takeIf { it.isNotEmpty() }?.let { return uncertain(record, now, path.source, it) }
         val (anchorPx, why) = anchor(record, path, bars)
         if (anchorPx == null) return uncertain(record, now, path.source, why)
         val start = anchorPx
@@ -531,6 +557,8 @@ object PredictionLedger {
 
         val outcome = when {
             sig == Signal.WAIT -> if (abs(move) < 2 * threshold) LedgerOutcome.WAIT_FLAT else LedgerOutcome.WAIT_MISSED
+            // V36-A: target and stop inside the same bar: the order is unknown, so it is not counted either way
+            sameBar -> LedgerOutcome.VERIFICATION_UNCERTAIN
             tpHitAt != 0L -> LedgerOutcome.CORRECT
             slHitAt != 0L -> LedgerOutcome.INVALIDATED
             dirScore == 1 -> LedgerOutcome.CORRECT
@@ -580,7 +608,7 @@ object PredictionLedger {
             if (firstFavorAt != 0L) tl.add(firstFavorAt to "Moved ${fmt(threshold)} in predicted direction")
             if (mfe > 0) tl.add(mfeAt to "Best point: +${fmt(mfe)} in favour")
             if (tpHitAt != 0L) tl.add(tpHitAt to "Target 1 (${fmt(record.tpDistance)}) reached before the stop -> win")
-            if (slHitAt != 0L) tl.add(slHitAt to "Stop-loss distance (${fmt(record.slDistance)}) hit" + if (sameBar) " (target and stop inside the same bar: counted as stop)" else "")
+            if (slHitAt != 0L) tl.add(slHitAt to "Stop-loss distance (${fmt(record.slDistance)}) hit" + if (sameBar) " (target and stop inside the same bar: order unknown, not counted)" else "")
         }
         tl.add(record.expiresAt to "Expiry: ${fmt(end)} (move ${signed(move)}) -> ${outcome.name}")
         tl.sortBy { it.first }
@@ -589,7 +617,8 @@ object PredictionLedger {
             id = record.id, checkedAt = now, outcome = outcome, verifySource = path.source,
             startPx = start, endPx = end, move = move, threshold = threshold, mfe = mfe, mae = mae,
             slHitAt = slHitAt, realizedRange = realizedRange, tags = tags, attribution = attribution,
-            warnings = warnings, counterfactual = counterfactual, timeline = tl, tpHitAt = tpHitAt, pathHit = pathHit
+            warnings = warnings, counterfactual = counterfactual, timeline = tl, tpHitAt = tpHitAt, pathHit = pathHit,
+            evalVersion = EVAL_VERSION
         )
     }
 
