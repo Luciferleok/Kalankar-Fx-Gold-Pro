@@ -13,6 +13,8 @@
 #   KOTLIN_HOME  folder of the Kotlin compiler (kotlinc/bin, kotlinc/lib); default: kotlinc on PATH
 #   JOBS         parallel jobs (default: number of CPUs)
 set -u
+# Some tests check IST times (the owner's phone): pin the zone so every machine (CI runs in UTC) gives the same result
+export TZ=Asia/Kolkata
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$ROOT"
 if [ -n "${KOTLIN_HOME:-}" ]; then KC="$KOTLIN_HOME/bin/kotlinc"; KR="$KOTLIN_HOME/bin/kotlin"; LIB="$KOTLIN_HOME/lib"
