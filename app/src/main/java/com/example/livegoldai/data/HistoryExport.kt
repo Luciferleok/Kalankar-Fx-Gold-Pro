@@ -34,8 +34,10 @@ object HistoryExport {
         require(destination.canonicalPath !in sourceFiles.map { it.second.canonicalPath }) {
             "Destination cannot overwrite history"
         }
+        require(!destination.exists()) { "Export destination already exists" }
         destination.parentFile?.mkdirs()
         val tmp = File(destination.parentFile ?: File("."), destination.name + ".partial")
+        require(!tmp.exists()) { "Incomplete export already exists" }
         require(tmp.canonicalPath !in sourceFiles.map { it.second.canonicalPath }) {
             "Temporary export path cannot overwrite history"
         }
