@@ -231,7 +231,13 @@ class LearningCoordinator(
 
     private fun runCycle(now: Long, newResults: Int) {
         val audit = PredictionAudit.build(state)
-        val out = LearningEngine.runCycle(state, now, newResults, audit.promotionLocked, audit.lockReason)
+        // V37-B safety default: learned filters may research in SHADOW, but cannot become live
+        // until a separate, explicit owner-approval mechanism is implemented and tested.
+        // Keep the health lock too; never silently promote a filter from a background cycle.
+        val approvalPending = true
+        val out = LearningEngine.runCycle(state, now, newResults,
+            promotionLocked = audit.promotionLocked || approvalPending,
+            lockReason = if (audit.promotionLocked) audit.lockReason else "Owner approval required before live promotion")
         if (out.newEvents.isNotEmpty()) {
             if (safeAppend(out.newEvents.map { PredictionLedger.encodeEvent(it) })) {
                 state = LedgerState(state.records, state.results, state.events + out.newEvents, state.skippedLines)
