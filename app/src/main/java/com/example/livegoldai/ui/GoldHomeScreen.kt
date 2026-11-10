@@ -232,7 +232,8 @@ fun GoldHomeScreen(
         PredictionErrorAnalyzerDialog(
             analysis = uiState.data!!,
             onDismiss = { viewModel.closePredictionErrorAnalyzer() },
-            onRecalibrate = { viewModel.recalibratePredictionEngine() }
+            onRecalibrate = { viewModel.recalibratePredictionEngine() },
+            onFilterDecision = { id, approve -> viewModel.decideLearnedFilter(id, approve) }
         )
     }
 

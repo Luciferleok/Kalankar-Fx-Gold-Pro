@@ -861,6 +861,14 @@ class GoldViewModel @JvmOverloads constructor(
         }
     }
 
+    /** V37-A.2: owner's approve / decline for a learned filter that passed its shadow test */
+    fun decideLearnedFilter(id: String, approve: Boolean) {
+        viewModelScope.launch {
+            try { withContext(Dispatchers.IO) { learning.decideFilter(id, approve) } } catch (_: Exception) { }
+            loadData(isInitial = false)
+        }
+    }
+
     fun recalibratePredictionEngine() {
         viewModelScope.launch {
             try {

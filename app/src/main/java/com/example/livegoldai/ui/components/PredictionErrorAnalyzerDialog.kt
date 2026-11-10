@@ -1,5 +1,7 @@
 package com.example.livegoldai.ui.components
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.OutlinedButton
 import com.example.livegoldai.data.ForensicText
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -69,7 +71,8 @@ import java.util.Locale
 fun PredictionErrorAnalyzerDialog(
     analysis: GoldAnalysisResult,
     onDismiss: () -> Unit,
-    onRecalibrate: () -> Unit = {}
+    onRecalibrate: () -> Unit = {},
+    onFilterDecision: (String, Boolean) -> Unit = { _, _ -> }   // V37-A.2: owner approves / declines a READY filter
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
@@ -176,7 +179,7 @@ fun LearningCenterContent(
                     0 -> OverviewTab(s, lang, analysis.pulse)
                     1 -> AccuracyTab(s, lang)
                     2 -> FailuresTab(s, lang)
-                    3 -> CorrectionsTab(s, lang)
+                    3 -> CorrectionsTab(s, lang, onFilterDecision)
                     4 -> LiveTab(s, lang)
                     else -> HistoryTab(s, lang)
                 }
@@ -692,17 +695,18 @@ private fun FailureCard(f: FailureReport, lang: AppLanguage) {
 }
 
 @Composable
-private fun CorrectionsTab(s: LearningSnapshot, lang: AppLanguage) {
+private fun CorrectionsTab(s: LearningSnapshot, lang: AppLanguage, onDecision: (String, Boolean) -> Unit = { _, _ -> }) {
     Note(t(lang,
-        "Each candidate is a simple rule that turns a BUY/SELL into WAIT. It needs ${s.minimumSamples}+ past samples where the blocked predictions were clearly worse (statistically, not by luck), then must win again on NEW predictions in a silent shadow test before it is used. If it stops helping, it is removed automatically.",
-        "हर उम्मीदवार एक आसान नियम है जो BUY/SELL को WAIT में बदलता है। इसके लिए ${s.minimumSamples}+ पुराने सैंपल चाहिए जहाँ रोकी गई प्रेडिक्शन साफ तौर पर (किस्मत से नहीं) खराब थीं, फिर नई प्रेडिक्शन पर चुपचाप शैडो टेस्ट पास करना होता है। काम करना बंद करे तो अपने-आप हट जाता है।",
-        "प्रत्येक उमेदवार एक सोपा नियम आहे जो BUY/SELL ला WAIT मध्ये बदलतो. त्यासाठी ${s.minimumSamples}+ जुने नमुने हवे जिथे थांबवलेले अंदाज स्पष्टपणे (नशिबाने नाही) वाईट होते, मग नवीन अंदाजांवर शांतपणे शॅडो टेस्ट पास करावी लागते. उपयोग थांबला तर आपोआप काढला जातो."))
-    s.candidates.forEach { CandidateCard(it, lang) }
+        "Each candidate is a simple rule that turns a BUY/SELL into WAIT. It needs ${s.minimumSamples}+ past samples where the blocked predictions were clearly worse (statistically, not by luck), then must win again on NEW predictions in a silent shadow test. Then it waits for YOUR approval: nothing is switched on by itself. If it stops helping, it is removed automatically.",
+        "हर उम्मीदवार एक आसान नियम है जो BUY/SELL को WAIT में बदलता है। इसके लिए ${s.minimumSamples}+ पुराने सैंपल चाहिए जहाँ रोकी गई प्रेडिक्शन साफ तौर पर (किस्मत से नहीं) खराब थीं, फिर नई प्रेडिक्शन पर चुपचाप शैडो टेस्ट पास करना होता है। फिर यह आपकी मंज़ूरी का इंतज़ार करता है: अपने-आप कुछ चालू नहीं होता। काम करना बंद करे तो अपने-आप हट जाता है।",
+        "प्रत्येक उमेदवार एक सोपा नियम आहे जो BUY/SELL ला WAIT मध्ये बदलतो. त्यासाठी ${s.minimumSamples}+ जुने नमुने हवे जिथे थांबवलेले अंदाज स्पष्टपणे (नशिबाने नाही) वाईट होते, मग नवीन अंदाजांवर शांतपणे शॅडो टेस्ट पास करावी लागते. मग तो तुमच्या मंजुरीची वाट पाहतो: आपोआप काहीही चालू होत नाही. उपयोग थांबला तर आपोआप काढला जातो."))
+    s.candidates.forEach { CandidateCard(it, lang, onDecision) }
 }
 
 @Composable
-private fun CandidateCard(c: CorrectionCandidate, lang: AppLanguage) {
+private fun CandidateCard(c: CorrectionCandidate, lang: AppLanguage, onDecision: (String, Boolean) -> Unit = { _, _ -> }) {
     val stageColor = when (c.stage) {
+        "READY" -> AmberWarning
         "PROMOTED" -> SignalBuy
         "SHADOW" -> GoldPrimary
         "CANDIDATE" -> AmberWarning
@@ -745,6 +749,22 @@ private fun CandidateCard(c: CorrectionCandidate, lang: AppLanguage) {
         }
         Text(text = necessityText(c.necessity, lang), color = stageColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         if (c.note.isNotBlank()) Text(text = c.note, color = TextMuted, fontSize = 9.sp)
+        // V37-A.2: the owner decides; nothing is switched on by itself
+        if (c.stage == "READY") {
+            Text(text = t(lang, "Passed its shadow test. Switch it on? It can only turn a BUY / SELL into WAIT, and it is removed automatically if it stops helping.",
+                "शैडो टेस्ट पास। इसे चालू करें? यह सिर्फ़ BUY / SELL को WAIT कर सकता है, और काम करना बंद करे तो अपने-आप हट जाता है।",
+                "शॅडो टेस्ट पास. हा चालू करायचा? तो फक्त BUY / SELL ला WAIT करू शकतो, आणि उपयोग थांबला तर आपोआप काढला जातो."),
+                color = TextPrimary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { onDecision(c.id, false) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                    Text(t(lang, "Decline", "मना करें", "नकार द्या"), color = TextSecondary)
+                }
+                Button(onClick = { onDecision(c.id, true) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = GoldPrimary)) {
+                    Text(t(lang, "Approve", "मंज़ूर करें", "मंजूर करा"), color = ObsidianBackground)
+                }
+            }
+        }
     }
 }
 

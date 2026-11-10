@@ -229,6 +229,22 @@ class LearningCoordinator(
         }
     }
 
+    /** V37-A.2: the owner approves or declines a filter that passed its shadow test. Returns what happened. */
+    suspend fun decideFilter(id: String, approve: Boolean, now: Long = System.currentTimeMillis()): String {
+        if (!busy.compareAndSet(false, true)) return "A learning cycle is running. Try again in a few seconds."
+        try {
+            val audit = PredictionAudit.build(state)
+            val (ev, msg) = LearningEngine.ownerDecision(state, id, approve, now, audit.promotionLocked, audit.lockReason)
+            if (ev != null) {
+                if (!safeAppend(listOf(PredictionLedger.encodeEvent(ev)))) return "Could not save the decision. Nothing changed."
+                state = LedgerState(state.records, state.results, state.events + ev, state.skippedLines)
+            }
+            return msg
+        } finally {
+            busy.set(false)
+        }
+    }
+
     private fun runCycle(now: Long, newResults: Int) {
         val audit = PredictionAudit.build(state)
         val out = LearningEngine.runCycle(state, now, newResults, audit.promotionLocked, audit.lockReason)

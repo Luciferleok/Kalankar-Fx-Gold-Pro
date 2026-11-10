@@ -181,13 +181,29 @@ object LearningEngine {
 
     data class CycleOutput(val newEvents: List<LedgerEvent>, val report: List<String>)
 
+    /** V37-A.2: stage of a filter that passed its shadow test and waits for the owner */
+    const val READY = "READY"
+
+    /**
+     * The owner's answer for a READY filter: approve -> PROMOTED (switched on, still rolled back automatically if it stops
+     * helping), decline -> REJECTED. Null when the filter is not READY, or (approve only) while promotion is locked.
+     */
+    fun ownerDecision(state: LedgerState, id: String, approve: Boolean, now: Long, promotionLocked: Boolean = false, lockReason: String = ""): Pair<LedgerEvent?, String> {
+        val h = hypotheses.firstOrNull { it.id == id } ?: return null to "Unknown filter $id."
+        if (lastEvent(state, id)?.stage != READY) return null to "$id is not waiting for approval."
+        if (approve && promotionLocked) return null to "Cannot switch on $id now: $lockReason."
+        return if (approve) LedgerEvent(now, "cand", id, "PROMOTED", "Approved by the owner after a passed shadow test.") to "$id switched on: ${h.en}."
+        else LedgerEvent(now, "cand", id, "REJECTED", "Declined by the owner.") to "$id declined; it stays off."
+    }
+
     /** One learning cycle. Only appends events; never edits past data. */
     fun runCycle(state: LedgerState, now: Long, newResults: Int, promotionLocked: Boolean = false, lockReason: String = ""): CycleOutput {
         val events = ArrayList<LedgerEvent>()
         val report = ArrayList<String>()
         report.add("Checked results: $newResults new, ${finalDecided(state).size} decided in total.")
 
-        var shadowRunning = hypotheses.any { lastEvent(state, it.id)?.stage == "SHADOW" }
+        // V37-A.2: a filter waiting for the owner's approval (READY) also holds the single shadow slot
+        var shadowRunning = hypotheses.any { lastEvent(state, it.id)?.stage.let { s -> s == "SHADOW" || s == READY } }
         var active = activeFilterIds(state).size
         val eligible = ArrayList<Pair<Hypothesis, Eval>>()
 
@@ -203,20 +219,23 @@ object LearningEngine {
                             // model health gate: nothing may change live signals while the engine itself is under review
                             report.add("PROMOTION LOCKED for ${h.id}: $lockReason.")
                         } else if (passes) {
-                            events.add(LedgerEvent(now, "cand", h.id, "PROMOTED",
-                                "Shadow test passed: blocked ${e.blockedN} predictions that were only ${fmt1(e.blockedAcc)}% correct; accuracy ${fmt1(e.baseline)}% -> ${fmt1(e.keptAcc)}%"))
-                            report.add("PROMOTED ${h.id}: ${h.en}.")
-                            active++
+                            // V37-A.2 (owner, 10 Nov 2026): a passed filter is NOT switched on by itself any more; it waits
+                            // for the owner's approval in LEARN > CORRECTIONS (ownerDecision)
+                            events.add(LedgerEvent(now, "cand", h.id, READY,
+                                "Shadow test passed: blocked ${e.blockedN} predictions that were only ${fmt1(e.blockedAcc)}% correct; accuracy ${fmt1(e.baseline)}% -> ${fmt1(e.keptAcc)}%. Waiting for the owner's approval."))
+                            report.add("READY ${h.id}: ${h.en}. Waiting for the owner's approval.")
                         } else {
                             events.add(LedgerEvent(now, "cand", h.id, "REJECTED",
                                 "Shadow test failed: blocked predictions were ${fmt1(e.blockedAcc)}% correct vs ${fmt1(e.keptAcc)}% for the rest (needs <= 45% and 10 points lower)"))
                             report.add("REJECTED ${h.id} after shadow test.")
                         }
-                        shadowRunning = false
+                        // V37-A.2: a passed (READY, or locked) filter keeps the slot until the owner decides
+                        shadowRunning = passes
                     } else {
                         report.add("${h.id} in shadow test: ${e.blockedN}/$SHADOW_SAMPLES samples.")
                     }
                 }
+                READY -> report.add("${h.id} passed its shadow test and waits for the owner's approval (LEARN > CORRECTIONS).")
                 "PROMOTED" -> {
                     // judge on the most recent blocked predictions, so a changed market is noticed quickly
                     val e = evaluate(h, state, recentWindowStart(h, state, last.at, 2 * ROLLBACK_SAMPLES))
@@ -382,6 +401,7 @@ object LearningEngine {
 
         val engineState = when {
             decidedAll.isEmpty() -> "OBSERVING"
+            candidates.any { it.stage == READY } -> "AWAITING_APPROVAL"
             candidates.any { it.stage == "SHADOW" } -> "SHADOW_TESTING"
             candidates.any { it.stage == "CANDIDATE" } -> "CANDIDATE_FOUND"
             history.firstOrNull()?.let { it.event == "PROMOTED" } == true && (state.events.lastOrNull { it.kind == "cand" }?.at ?: 0L) > now - day -> "PROMOTED"
@@ -440,7 +460,7 @@ object LearningEngine {
     }
 
     private fun stageOrder(s: String) = when (s) {
-        "PROMOTED" -> 0; "SHADOW" -> 1; "CANDIDATE" -> 2; "COLLECTING" -> 3; "ROLLED_BACK" -> 4; "REJECTED" -> 5; else -> 6
+        READY -> 0; "PROMOTED" -> 1; "SHADOW" -> 2; "CANDIDATE" -> 3; "COLLECTING" -> 4; "ROLLED_BACK" -> 5; "REJECTED" -> 6; else -> 7
     }
 
     private fun candidateView(h: Hypothesis, state: LedgerState): CorrectionCandidate {
@@ -448,8 +468,9 @@ object LearningEngine {
         val stageFromEvent = last?.stage
         val since = if (stageFromEvent == "REJECTED" || stageFromEvent == "ROLLED_BACK") last.at else 0L
         val e = evaluate(h, state, since)
-        val shadow = if (stageFromEvent == "SHADOW" || stageFromEvent == "PROMOTED") evaluate(h, state, last.at) else null
+        val shadow = if (stageFromEvent == "SHADOW" || stageFromEvent == "PROMOTED" || stageFromEvent == READY) evaluate(h, state, last.at) else null
         val stage = when (stageFromEvent) {
+            READY -> READY
             "SHADOW" -> "SHADOW"
             "PROMOTED" -> "PROMOTED"
             else -> when {
