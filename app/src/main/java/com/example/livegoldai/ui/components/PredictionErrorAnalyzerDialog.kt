@@ -84,7 +84,7 @@ fun PredictionErrorAnalyzerDialog(
             color = ObsidianBackground,
             border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.6f))
         ) {
-            LearningCenterContent(analysis = analysis, onRecalibrate = onRecalibrate, onDismiss = onDismiss)
+            LearningCenterContent(analysis = analysis, onRecalibrate = onRecalibrate, onDismiss = onDismiss, onFilterDecision = onFilterDecision)
         }
     }
 }
@@ -95,6 +95,7 @@ fun LearningCenterContent(
     analysis: GoldAnalysisResult,
     onRecalibrate: () -> Unit,
     onDismiss: (() -> Unit)? = null,
+    onFilterDecision: (String, Boolean) -> Unit = { _, _ -> },   // V37-A.2
     modifier: Modifier = Modifier,
     shadow: com.example.livegoldai.data.ShadowLab.Report? = null,
     shadowRunning: Boolean = false,

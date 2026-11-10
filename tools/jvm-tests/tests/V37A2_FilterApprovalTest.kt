@@ -44,6 +44,9 @@ fun main() {
     val R = "app/src/main/java/com/example/livegoldai/"
     val d = File(R + "ui/components/PredictionErrorAnalyzerDialog.kt").readText()
     check("Approve / Decline buttons, 48dp", d.contains("if (c.stage == \"READY\")") && d.contains("onDecision(c.id, true)") && d.contains("onDecision(c.id, false)") && d.contains("heightIn(min = 48.dp)"))
+    // CI #226: the parameter must reach LearningCenterContent (used by the dialog AND the LEARN tab)
+    check("both entry points pass the decision down", d.contains("onFilterDecision = onFilterDecision)") && d.contains("    onFilterDecision: (String, Boolean) -> Unit = { _, _ -> },   // V37-A.2") &&
+        Regex("4 -> LearningCenterContent\\([\\s\\S]{0,300}onFilterDecision = \\{ id, approve -> viewModel.decideLearnedFilter").containsMatchIn(File(R + "ui/GoldHomeScreen.kt").readText()))
     check("screen -> view model -> coordinator", File(R + "ui/GoldHomeScreen.kt").readText().contains("viewModel.decideLearnedFilter(id, approve)") &&
         File(R + "ui/GoldViewModel.kt").readText().contains("learning.decideFilter(id, approve)") && File(R + "data/LearningCoordinator.kt").readText().contains("LearningEngine.ownerDecision("))
     check("engine never writes PROMOTED by itself any more", !File(R + "data/LearningEngine.kt").readText().contains("LedgerEvent(now, \"cand\", h.id, \"PROMOTED\""))

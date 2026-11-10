@@ -449,6 +449,7 @@ fun GoldHomeScreen(
                     4 -> LearningCenterContent(
                         analysis = analysis,
                         onRecalibrate = { viewModel.recalibratePredictionEngine() },
+                        onFilterDecision = { id, approve -> viewModel.decideLearnedFilter(id, approve) },
                         shadow = uiState.shadowReport,
                         shadowRunning = uiState.shadowRunning,
                         shadowError = uiState.shadowError,
