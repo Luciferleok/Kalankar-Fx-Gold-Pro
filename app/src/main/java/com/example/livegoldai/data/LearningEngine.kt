@@ -182,7 +182,7 @@ object LearningEngine {
     data class CycleOutput(val newEvents: List<LedgerEvent>, val report: List<String>)
 
     /** One learning cycle. Only appends events; never edits past data. */
-    fun runCycle(state: LedgerState, now: Long, newResults: Int, promotionLocked: Boolean = false, lockReason: String = ""): CycleOutput {
+    fun runCycle(state: LedgerState, now: Long, newResults: Int, promotionLocked: Boolean = true, lockReason: String = "Owner approval required"): CycleOutput {
         val events = ArrayList<LedgerEvent>()
         val report = ArrayList<String>()
         report.add("Checked results: $newResults new, ${finalDecided(state).size} decided in total.")
